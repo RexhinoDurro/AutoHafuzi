@@ -1,0 +1,121 @@
+
+// src/components/AdminDashboard.tsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Car } from '../types/car';
+import { getStoredAuth } from '../utils/auth';
+
+const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const [cars, setCars] = useState<Car[]>([]);
+  const { token } = getStoredAuth();
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/admin/login');
+      return;
+    }
+
+    fetchCars();
+  }, [token, navigate]);
+
+  const fetchCars = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/cars/', {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+      const data = await response.json();
+      setCars(data);
+    } catch (error) {
+      console.error('Error fetching cars:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this car?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/cars/delete/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setCars(cars.filter(car => car.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting car:', error);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <button
+          onClick={() => navigate('/admin/add-car')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          Add New Car
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-lg">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-6 py-3 text-left">Image</th>
+              <th className="px-6 py-3 text-left">make</th>
+              <th className="px-6 py-3 text-left">Model</th>
+              <th className="px-6 py-3 text-left">Year</th>
+              <th className="px-6 py-3 text-left">Price</th>
+              <th className="px-6 py-3 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cars.map((car) => (
+              <tr key={car.id} className="border-t">
+                <td className="px-6 py-4">
+                  {car.image ? (
+                    <img
+                      src={`http://localhost:8000${car.image}`}
+                      alt={`${car.brand} ${car.model}`}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
+                      <span className="text-gray-400">No Image</span>
+                    </div>
+                  )}
+                </td>
+                <td className="px-6 py-4">{car.brand}</td>
+                <td className="px-6 py-4">{car.model}</td>
+                <td className="px-6 py-4">{car.year}</td>
+                <td className="px-6 py-4">${car.price.toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => navigate(`/admin/edit-car/${car.id}`)}
+                    className="text-blue-600 hover:text-blue-800 mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(car.id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
