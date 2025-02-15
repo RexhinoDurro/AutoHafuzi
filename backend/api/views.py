@@ -1,15 +1,11 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Car, CarMake, CarModel
 from .serializers import CarSerializer, CarMakeSerializer, CarModelSerializer
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-
-# 1. Create a new car (POST)
 
 @api_view(['POST'])
 def admin_login(request):
@@ -27,7 +23,6 @@ def admin_login(request):
         'error': 'Invalid credentials'
     }, status=status.HTTP_401_UNAUTHORIZED)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_car(request):
@@ -45,80 +40,7 @@ def add_car(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# 2. Retrieve all cars (GET)
 @api_view(["GET"])
-def get_cars(request):
-    cars = Car.objects.all()
-    serializer = CarSerializer(cars, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-# 3. Retrieve a single car by ID (GET)
-@api_view(["GET"])
-def get_car(request, car_id):
-    try:
-        car = Car.objects.get(id=car_id)
-        serializer = CarSerializer(car)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Car.DoesNotExist:
-        return Response({"error": "Car not found"}, status=status.HTTP_404_NOT_FOUND)
-    
-@api_view(["POST"])
-def add_car(request):
-    data = request.data.copy()
-    image = request.FILES.get('image')
-    if image:
-        data['image'] = image
-    
-    serializer = CarSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-# 4. Update a car by ID (PUT)
-@api_view(['PUT'])
-@permission_classes([IsAuthenticated])
-def update_car(request, car_id):
-    if not request.user.is_staff:
-        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        car = Car.objects.get(id=car_id)
-        serializer = CarSerializer(car, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    except Car.DoesNotExist:
-        return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
-
-# 5. Delete a car by ID (DELETE)
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def delete_car(request, car_id):
-    if not request.user.is_staff:
-        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
-    
-    try:
-        car = Car.objects.get(id=car_id)
-        car.delete()
-        return Response({'message': 'Car deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-    except Car.DoesNotExist:
-        return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-
-@api_view(['GET'])
-def get_makes(request):
-    makes = CarMake.objects.all()
-    serializer = CarMakeSerializer(makes, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
-def get_models(request, make_id):
-    models = CarModel.objects.filter(make_id=make_id)
-    serializer = CarModelSerializer(models, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
 def get_cars(request):
     queryset = Car.objects.all()
     
@@ -145,3 +67,52 @@ def get_cars(request):
     serializer = CarSerializer(queryset, many=True)
     return Response(serializer.data)
 
+@api_view(["GET"])
+def get_car(request, car_id):
+    try:
+        car = Car.objects.get(id=car_id)
+        serializer = CarSerializer(car)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Car.DoesNotExist:
+        return Response({"error": "Car not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_car(request, car_id):
+    if not request.user.is_staff:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        car = Car.objects.get(id=car_id)
+        serializer = CarSerializer(car, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Car.DoesNotExist:
+        return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_car(request, car_id):
+    if not request.user.is_staff:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        car = Car.objects.get(id=car_id)
+        car.delete()
+        return Response({'message': 'Car deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Car.DoesNotExist:
+        return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_makes(request):
+    makes = CarMake.objects.all()
+    serializer = CarMakeSerializer(makes, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def get_models(request, make_id):
+    models = CarModel.objects.filter(make_id=make_id)
+    serializer = CarModelSerializer(models, many=True)
+    return Response(serializer.data)
