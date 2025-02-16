@@ -14,7 +14,12 @@ interface Model {
 interface FilterProps {
   onFilterChange: (filters: any) => void;
 }
-
+interface FilterState {
+  make?: string;
+  model?: string;
+  year?: string;
+  max_price?: number;
+}
 const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const [makes, setMakes] = useState<Make[]>([]);
   const [models, setModels] = useState<Model[]>([]);

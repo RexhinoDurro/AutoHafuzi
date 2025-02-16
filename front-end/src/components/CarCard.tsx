@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Car } from "../types/car";
 import { useLanguage } from "../context/LanguageContext";
+import { Link } from "react-router-dom";  // Change this import
 
 interface CarCardProps {
   car: Car;
@@ -15,7 +16,7 @@ const CarCard = ({ car }: CarCardProps) => {
     if (currentLanguage.code !== "en") {
       translateText(car.description, currentLanguage.code);
     } else {
-      setTranslatedDescription(car.description); // Default to original if English
+      setTranslatedDescription(car.description);
     }
   }, [car.description, currentLanguage.code]);
 
@@ -31,17 +32,20 @@ const CarCard = ({ car }: CarCardProps) => {
       setTranslatedDescription(response.data.translatedText);
     } catch (error) {
       console.error("Translation failed:", error);
-      setTranslatedDescription(text); // Fallback to original
+      setTranslatedDescription(text);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
+    <Link 
+      to={`/car/${car.id}`}
+      className="block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+    >
       <div className="relative h-48">
         {car.image ? (
           <img
             src={`http://localhost:8000${car.image}`}
-            alt={`${car.brand} ${car.model}`}
+            alt={`${car.brand} ${car.model_name}`}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -51,23 +55,21 @@ const CarCard = ({ car }: CarCardProps) => {
         )}
       </div>
       <div className="p-4">
-        <h3 className="text-xl font-bold mb-2">{car.brand} {car.model}</h3>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">{car.year}</span>
+        <h3 className="text-base font-bold text-gray-700">{car.brand} {car.model_name}</h3>
+        <div className="">
           <span className="text-lg font-semibold text-blue-600">
             ${car.price.toLocaleString()}
           </span>
         </div>
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            className="w-4 h-4 rounded-full border"
-            style={{ backgroundColor: car.color }}
-          />
-          <span className="text-sm text-gray-600">{car.color}</span>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-gray-600">{car.year}</span>
         </div>
         <p className="text-gray-600 text-sm line-clamp-2">{translatedDescription}</p>
+        <div>
+          <p>created at: {car.created_at}</p>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

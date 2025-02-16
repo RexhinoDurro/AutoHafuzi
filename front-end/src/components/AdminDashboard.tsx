@@ -1,5 +1,3 @@
-
-// src/components/AdminDashboard.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car } from '../types/car';
@@ -52,8 +50,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <button
@@ -68,21 +75,22 @@ const AdminDashboard = () => {
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 text-left">Image</th>
-              <th className="px-6 py-3 text-left">make</th>
+              <th className="px-6 py-3 text-left">Make</th>
               <th className="px-6 py-3 text-left">Model</th>
               <th className="px-6 py-3 text-left">Year</th>
               <th className="px-6 py-3 text-left">Price</th>
+              <th className="px-6 py-3 text-left">Created At</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {cars.map((car) => (
-              <tr key={car.id} className="border-t">
+              <tr key={car.id} className="border-t hover:bg-gray-50">
                 <td className="px-6 py-4">
                   {car.image ? (
                     <img
                       src={`http://localhost:8000${car.image}`}
-                      alt={`${car.brand} ${car.model}`}
+                      alt={`${car.brand} ${car.model_name}`}
                       className="w-20 h-20 object-cover rounded"
                     />
                   ) : (
@@ -92,9 +100,10 @@ const AdminDashboard = () => {
                   )}
                 </td>
                 <td className="px-6 py-4">{car.brand}</td>
-                <td className="px-6 py-4">{car.model}</td>
+                <td className="px-6 py-4">{car.model_name}</td>
                 <td className="px-6 py-4">{car.year}</td>
-                <td className="px-6 py-4">${car.price.toLocaleString()}</td>
+                <td className="px-6 py-4">€{car.price.toLocaleString()}</td>
+                <td className="px-6 py-4">{formatDate(car.created_at)}</td>
                 <td className="px-6 py-4">
                   <button
                     onClick={() => navigate(`/admin/edit-car/${car.id}`)}

@@ -10,6 +10,9 @@ urlpatterns = [
     path('cars/delete/<int:car_id>/', views.delete_car, name='delete_car'),
     path('makes/', views.get_makes, name='get_makes'),
     path('models/<int:make_id>/', views.get_models, name='get_models'),
+    path('cars/<int:car_id>/images/', views.add_car_images, name='add_car_images'),
+    path('cars/images/<int:image_id>/', views.delete_car_image, name='delete_car_image'),
+    
     
     # New admin authentication URL
     path('admin/login/', views.admin_login, name='admin_login'),

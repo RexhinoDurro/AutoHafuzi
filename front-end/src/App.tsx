@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 import CarForm from './components/CarForm';
+import CarDetail from './pages/CarDetail';  // Add this import
 import { getStoredAuth } from './utils/auth';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -30,6 +31,17 @@ function App() {
               <>
                 <Navbar />
                 <Home />
+              </>
+            }
+          />
+          
+          {/* Add CarDetail route */}
+          <Route
+            path="/car/:id"
+            element={
+              <>
+                <Navbar />
+                <CarDetail />
               </>
             }
           />
