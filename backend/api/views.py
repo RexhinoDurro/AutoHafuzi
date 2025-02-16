@@ -42,11 +42,13 @@ def add_car(request):
 
 @api_view(["GET"])
 def get_cars(request):
+    print("Received filter params:", request.GET)
     queryset = Car.objects.all()
     
     # Filter by make
     make_id = request.GET.get('make')
     if make_id:
+        print(f"Filtering by make: {make_id}")
         queryset = queryset.filter(make_id=make_id)
     
     # Filter by model

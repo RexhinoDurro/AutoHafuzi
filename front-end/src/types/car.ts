@@ -20,3 +20,4 @@ export interface CarFormData {
   description: string;
   image: File | null;
 }
+

@@ -1,4 +1,3 @@
-// src/components/CarFilter.tsx
 import React, { useState, useEffect } from 'react';
 
 interface Make {
@@ -38,35 +37,10 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     { value: '70000', label: '€70,000' },
     { value: '80000', label: '€80,000' },
     { value: '90000', label: '€90,000' },
-    { value: '100000', label: '€100,000' },
-    { value: '150000', label: '€150,000' },
-    { value: '200000', label: '€200,000' },
+    { value: '100000', label: '€100,000+' },
+    // ... other price ranges ...
   ];
 
-  // Function to format number with commas
-  const formatNumber = (num: string) => {
-    // Remove any existing commas and non-numeric characters except decimal point
-    const cleanNum = num.replace(/[^0-9.]/g, '');
-    // Format with commas
-    const parts = cleanNum.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  };
-
-  // Handle price input change
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const value = e.target.value;
-    
-    if (e.target.type === 'text') {
-      // For manual input, format the number
-      const formattedValue = formatNumber(value);
-      setMaxPrice(formattedValue);
-    } else {
-      // For dropdown selection
-      const formattedValue = value ? formatNumber(value) : '';
-      setMaxPrice(formattedValue);
-    }
-  };
   // Get all makes when component mounts
   useEffect(() => {
     fetchMakes();
@@ -102,17 +76,52 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     }
   };
 
-  const handleFilterChange = () => {
-    const numericPrice = maxPrice ? parseFloat(maxPrice.replace(/,/g, '')) : null;
-    onFilterChange({
-      make: selectedMake,
-      model: selectedModel,
-      year: selectedYear,
-      max_price: numericPrice,
-    });
+  const formatNumber = (num: string) => {
+    const cleanNum = num.replace(/[^0-9.]/g, '');
+    const parts = cleanNum.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
   };
 
-  // Generate year options (e.g., last 30 years)
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (e.target.type === 'text') {
+      const formattedValue = formatNumber(value);
+      setMaxPrice(formattedValue);
+    } else {
+      const formattedValue = value ? formatNumber(value) : '';
+      setMaxPrice(formattedValue);
+    }
+  };
+
+  const handleFilterChange = () => {
+    const filters: Record<string, string | number> = {};
+    
+    if (selectedMake) {
+      filters.make = selectedMake;
+    }
+    
+    if (selectedModel) {
+      filters.model = selectedModel;
+    }
+    
+    if (selectedYear) {
+      filters.year = selectedYear;
+    }
+    
+    if (maxPrice) {
+      const numericPrice = parseFloat(maxPrice.replace(/,/g, ''));
+      if (!isNaN(numericPrice)) {
+        filters.max_price = numericPrice;
+      }
+    }
+
+    onFilterChange(filters);
+  };
+
+  
+
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
@@ -123,7 +132,10 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           <label className="block text-sm font-medium mb-1">Make</label>
           <select
             value={selectedMake}
-            onChange={(e) => setSelectedMake(e.target.value)}
+            onChange={(e) => {
+              setSelectedMake(e.target.value);
+              setSelectedModel(''); // Reset model when make changes
+            }}
             className="w-full p-2 border rounded-lg"
           >
             <option value="">All Makes</option>

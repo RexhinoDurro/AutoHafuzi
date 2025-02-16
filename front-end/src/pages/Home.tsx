@@ -8,14 +8,27 @@ const Home = () => {
 
   const fetchCars = async (filters = {}) => {
     try {
-      const queryParams = new URLSearchParams(filters);
-      const response = await fetch(`http://localhost:8000/api/cars/?${queryParams}`);
+      const queryParams = new URLSearchParams();
+      
+      // Add each filter to the query params
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+      
+      const url = `http://localhost:8000/api/cars/?${queryParams}`;
+      console.log('Fetching cars with URL:', url); // Add this line
+      console.log('Filters:', filters); // Add this line
+      
+      const response = await fetch(url);
       const data = await response.json();
       setCars(data);
     } catch (error) {
       console.error('Error fetching cars:', error);
     }
   };
+  
 
   useEffect(() => {
     fetchCars();

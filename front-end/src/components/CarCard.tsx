@@ -1,12 +1,40 @@
-// src/components/CarCard.tsx
-import React from 'react';
-import { Car } from '../types/car';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Car } from "../types/car";
+import { useLanguage } from "../context/LanguageContext";
 
 interface CarCardProps {
   car: Car;
 }
 
 const CarCard = ({ car }: CarCardProps) => {
+  const { currentLanguage, t } = useLanguage();
+  const [translatedDescription, setTranslatedDescription] = useState(car.description);
+
+  useEffect(() => {
+    if (currentLanguage.code !== "en") {
+      translateText(car.description, currentLanguage.code);
+    } else {
+      setTranslatedDescription(car.description); // Default to original if English
+    }
+  }, [car.description, currentLanguage.code]);
+
+  const translateText = async (text: string, targetLang: string) => {
+    try {
+      const response = await axios.post("https://libretranslate.com/translate", {
+        q: text,
+        source: "en",
+        target: targetLang,
+        format: "text",
+      });
+
+      setTranslatedDescription(response.data.translatedText);
+    } catch (error) {
+      console.error("Translation failed:", error);
+      setTranslatedDescription(text); // Fallback to original
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105">
       <div className="relative h-48">
@@ -18,7 +46,7 @@ const CarCard = ({ car }: CarCardProps) => {
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-400">No Image Available</span>
+            <span className="text-gray-400">{t("noImageAvailable")}</span>
           </div>
         )}
       </div>
@@ -37,7 +65,7 @@ const CarCard = ({ car }: CarCardProps) => {
           />
           <span className="text-sm text-gray-600">{car.color}</span>
         </div>
-        <p className="text-gray-600 text-sm line-clamp-2">{car.description}</p>
+        <p className="text-gray-600 text-sm line-clamp-2">{translatedDescription}</p>
       </div>
     </div>
   );
