@@ -1,3 +1,4 @@
+# serializers.py
 from rest_framework import serializers
 from .models import Car, CarMake, CarModel, CarImage
 
@@ -11,13 +12,20 @@ class CarModelSerializer(serializers.ModelSerializer):
         model = CarModel
         fields = ['id', 'name', 'make']
 
-
-    
 class CarImageSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+    
+    def get_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
+
     class Meta:
         model = CarImage
-        fields = ['id', 'image', 'is_primary', 'order']
-
+        fields = ['id', 'image', 'is_primary', 'order', 'url']
 
 class CarSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='make.name', read_only=True)
@@ -26,7 +34,17 @@ class CarSerializer(serializers.ModelSerializer):
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all(), write_only=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
     images = CarImageSerializer(many=True, read_only=True)
+    image = serializers.SerializerMethodField()
 
+    def get_image(self, obj):
+        """Return the primary image URL for backward compatibility"""
+        primary = obj.primary_image
+        if primary and primary.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(primary.image.url)
+            return primary.image.url
+        return None
 
     class Meta:
         model = Car
@@ -40,9 +58,7 @@ class CarSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        """
-        Check that the model belongs to the selected make
-        """
+        """Check that the model belongs to the selected make"""
         if data.get('model') and data.get('make'):
             if data['model'].make != data['make']:
                 raise serializers.ValidationError(

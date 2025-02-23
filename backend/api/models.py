@@ -1,3 +1,4 @@
+# models.py
 from django.db import models
 
 class CarMake(models.Model):
@@ -18,7 +19,7 @@ class CarModel(models.Model):
 
 class CarImage(models.Model):
     car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='car_images/')
+    image = models.ImageField(upload_to='car_images/', default='default.jpg')
     is_primary = models.BooleanField(default=False)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -28,21 +29,7 @@ class CarImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.car} ({'primary' if self.is_primary else 'secondary'})"
-    
-    image = models.ImageField(upload_to='car_images/', null=True, blank=True)  # Keep for backwards compatibility
 
-    def set_primary_image(self, image_id):
-        # Clear existing primary images
-        self.images.filter(is_primary=True).update(is_primary=False)
-        # Set new primary image
-        image = self.images.get(id=image_id)
-        image.is_primary = True
-        image.save()
-        # Update main image field
-        self.image = image.image
-        self.save()
-    
-    
 class Car(models.Model):
     make = models.ForeignKey(CarMake, on_delete=models.CASCADE)
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
@@ -50,10 +37,9 @@ class Car(models.Model):
     color = models.CharField(max_length=50, default="Black")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     description = models.TextField(blank=True)
-    image = models.ImageField(upload_to='car_images/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Add missing properties from CarDetail.tsx
+    # Car specifications
     body_type = models.CharField(max_length=50, default="Sedan")
     is_used = models.BooleanField(default=True)
     drivetrain = models.CharField(max_length=50, default="FWD")
@@ -72,7 +58,19 @@ class Car(models.Model):
     weight = models.IntegerField(default=1200)  # in kg
     emission_class = models.CharField(max_length=50, default="Euro 6")
     fuel_type = models.CharField(max_length=50, default="Petrol")
-    options = models.JSONField(default=list)  # Stores a list of options
+    options = models.JSONField(default=list)
+
+    @property
+    def primary_image(self):
+        """Get the primary image or None if no images exist"""
+        return self.images.filter(is_primary=True).first()
+
+    def set_primary_image(self, image_id):
+        """Set a new primary image"""
+        self.images.filter(is_primary=True).update(is_primary=False)
+        image = self.images.get(id=image_id)
+        image.is_primary = True
+        image.save()
 
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.year})"

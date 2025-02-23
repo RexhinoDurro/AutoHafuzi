@@ -1,19 +1,19 @@
 from django.urls import path
-from . import views
+from .views import (
+    get_cars, get_car, add_car, update_car, delete_car,
+    admin_login, get_makes, get_models,
+    add_car_images, delete_car_image
+)
 
 urlpatterns = [
-    # Existing URLs
-    path('cars/', views.get_cars, name='get_cars'),
-    path('cars/<int:car_id>/', views.get_car, name='get_car'),
-    path('cars/add/', views.add_car, name='add_car'),
-    path('cars/update/<int:car_id>/', views.update_car, name='update_car'),
-    path('cars/delete/<int:car_id>/', views.delete_car, name='delete_car'),
-    path('makes/', views.get_makes, name='get_makes'),
-    path('models/<int:make_id>/', views.get_models, name='get_models'),
-    path('cars/<int:car_id>/images/', views.add_car_images, name='add_car_images'),
-    path('cars/images/<int:image_id>/', views.delete_car_image, name='delete_car_image'),
-    
-    
-    # New admin authentication URL
-    path('admin/login/', views.admin_login, name='admin_login'),
+    path('cars/', get_cars, name='get_cars'),
+    path('cars/<int:car_id>/', get_car, name='get_car'),
+    path('cars/add/', add_car, name='add_car'),
+    path('cars/update/<int:car_id>/', update_car, name='update_car'),
+    path('cars/delete/<int:car_id>/', delete_car, name='delete_car'),
+    path('makes/', get_makes, name='get_makes'),
+    path('models/<int:make_id>/', get_models, name='get_models'),
+    path('cars/<int:car_id>/images/', add_car_images, name='add_car_images'),
+    path('cars/images/<int:image_id>/', delete_car_image, name='delete_car_image'),
+    path('admin/login/', admin_login, name='admin_login'),
 ]
