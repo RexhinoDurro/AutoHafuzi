@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface Image {
+interface CarImage {
   id: number;
   image: string;
+  is_primary?: boolean;
+  order?: number;
 }
 
 interface ImageGalleryProps {
-  images: Image[];
+  images: CarImage[];
   onDeleteImage?: (id: number) => void;
   isEditing?: boolean;
 }
@@ -34,7 +36,7 @@ const ImageGallery = ({ images, onDeleteImage, isEditing = false }: ImageGallery
   return (
     <div className="relative w-full h-96">
       <img
-        src={`http://localhost:8000${images[currentIndex].image}`}
+        src={images[currentIndex].image}
         alt={`Car image ${currentIndex + 1}`}
         className="w-full h-full object-cover rounded-lg"
       />

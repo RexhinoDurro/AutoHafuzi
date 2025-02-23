@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Car } from "../types/car";
 import { useLanguage } from "../context/LanguageContext";
-import { Link } from "react-router-dom";  // Change this import
+import { Link } from "react-router-dom";
 
 interface CarCardProps {
   car: Car;
@@ -63,10 +63,16 @@ const CarCard = ({ car }: CarCardProps) => {
         </div>
         <div className="flex justify-between items-center mb-2">
           <span className="text-gray-600">{car.year}</span>
+          <span className="text-gray-600">{car.mileage.toLocaleString()} km</span>
         </div>
         <p className="text-gray-600 text-sm line-clamp-2">{translatedDescription}</p>
-        <div>
-          <p>created at: {car.created_at}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.fuel_type}</span>
+          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.gearbox}</span>
+          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.body_type}</span>
+        </div>
+        <div className="mt-2">
+          <p className="text-xs text-gray-500">Created: {new Date(car.created_at).toLocaleDateString()}</p>
         </div>
       </div>
     </Link>

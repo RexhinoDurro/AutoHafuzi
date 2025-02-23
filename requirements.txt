@@ -1,0 +1,7 @@
+django
+googletrans==4.0.0-rc1
+djangorestframework
+django-cors-headers
+mysqlclient
+pymysql
+pillow

@@ -5,7 +5,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
-import CarForm from './components/CarForm';
+import CarForm from './components/CarForm/CarForm';
 import CarDetail from './pages/CarDetail';  // Add this import
 import { getStoredAuth } from './utils/auth';
 

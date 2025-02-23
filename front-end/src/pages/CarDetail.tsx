@@ -1,36 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-
-interface Car {
-  id: number;
-  brand: string;
-  model_name: string;
-  year: number;
-  price: number;
-  color: string;
-  description: string;
-  image: string;
-  body_type: string;
-  is_used: boolean;
-  drivetrain: string;
-  seats: number;
-  doors: number;
-  mileage: number;
-  first_registration: string;
-  general_inspection_date: string;
-  full_service_history: boolean;
-  customs_paid: boolean;
-  power: number;
-  gearbox: string;
-  engine_size: number;
-  gears: number;
-  cylinders: number;
-  weight: number;
-  emission_class: string;
-  fuel_type: string;
-  options: string[];
-  created_at: string;
-}
+import ImageGallery from '../components/ImageGallery';
+import { Car } from '../types/car';
 
 const CarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -78,14 +49,8 @@ const CarDetail: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
           <div className="space-y-6">
-            {car.image && (
-              <img
-                src={`http://localhost:8000${car.image}`}
-                alt={`${car.brand} ${car.model_name}`}
-                className="w-full h-96 object-cover rounded-lg"
-              />
-            )}
-            </div>
+            <ImageGallery images={car.images} />
+          </div>
             
             <div className="space-y-4">
               <h1 className="text-3xl font-bold">{car.brand} {car.model_name}</h1>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car } from '../types/car';
 import { getStoredAuth } from '../utils/auth';
@@ -25,9 +25,20 @@ const AdminDashboard = () => {
         },
       });
       const data = await response.json();
-      setCars(data);
+      console.log('Fetched Cars:', data);
+
+      // Handle both paginated and direct array responses
+      if ('results' in data && Array.isArray(data.results)) {
+        setCars(data.results);
+      } else if (Array.isArray(data)) {
+        setCars(data);
+      } else {
+        setCars([]);
+        console.error("Unexpected response format:", data);
+      }
     } catch (error) {
       console.error('Error fetching cars:', error);
+      setCars([]);
     }
   };
 
