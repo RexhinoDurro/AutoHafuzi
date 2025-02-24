@@ -126,15 +126,23 @@ export const useCarForm = (id?: string) => {
     }
   }, [id, token]);
 
+  // FIXED: Assign unique IDs to each image
   const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    const newTempImages = Array.from(e.target.files).map(file => ({
-      id: nextTempId,
-      file,
-      preview: URL.createObjectURL(file)
-    }));
+    
+    let currentTempId = nextTempId;
+    const newTempImages = Array.from(e.target.files).map(file => {
+      const imageId = currentTempId;
+      currentTempId -= 1;
+      return {
+        id: imageId,
+        file,
+        preview: URL.createObjectURL(file)
+      };
+    });
+    
     setTempImages(prev => [...prev, ...newTempImages]);
-    setNextTempId(prevId => prevId - 1);
+    setNextTempId(currentTempId);
     e.target.value = '';
   };
 
@@ -144,27 +152,97 @@ export const useCarForm = (id?: string) => {
       return;
     }
     try {
-      await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
+      const response = await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
         method: 'DELETE',
         headers: { Authorization: `Token ${token}` },
       });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete image: ${response.status}`);
+      }
+      
+      // Update the formData to remove the deleted image
+      setFormData(prevData => ({
+        ...prevData,
+        images: prevData.images.filter(img => img.id !== imageId)
+      }));
+      
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error deleting image');
     }
   };
 
+  // FIXED: Prepare form data for submission with proper type conversions
+  const prepareFormDataForSubmission = (data: CarFormData) => {
+    return {
+      ...data,
+      // Use parseNumericValue to handle conversions
+      year: parseNumericValue(data.year, new Date().getFullYear()),
+      price: parseNumericValue(data.price, 0),
+      seats: parseNumericValue(data.seats, 5),
+      doors: parseNumericValue(data.doors, 4),
+      mileage: parseNumericValue(data.mileage, 0),
+      power: parseNumericValue(data.power, 100),
+      engine_size: parseNumericValue(data.engine_size, 1.6),
+      gears: parseNumericValue(data.gears, 5),
+      cylinders: parseNumericValue(data.cylinders, 4),
+      weight: parseNumericValue(data.weight, 1200),
+      options: Array.isArray(data.options) ? data.options : []
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     try {
-      await fetch(id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD, {
+      // Step 1: Create or update car with properly formatted data
+      const preparedData = prepareFormDataForSubmission(formData);
+      
+      const response = await fetch(id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD, {
         method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(preparedData),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server response:', errorData);
+        throw new Error(errorData.error || `Failed to save car: ${response.status}`);
+      }
+      
+      const carData = await response.json();
+      const carId = id || carData.id;
+      
+      // Step 2: Upload any temporary images
+      if (tempImages.length > 0 && carId) {
+        const imageFormData = new FormData();
+        tempImages.forEach(img => {
+          imageFormData.append('images', img.file);
+        });
+        
+        const imageResponse = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carId), {
+          method: 'POST',
+          headers: { Authorization: `Token ${token}` },
+          body: imageFormData,
+        });
+        
+        if (!imageResponse.ok) {
+          const imageErrorData = await imageResponse.json();
+          console.error('Image upload error:', imageErrorData);
+          throw new Error('Failed to upload images');
+        }
+        
+        // Clear temporary images after successful upload
+        setTempImages([]);
+      }
+      
       if (id) await fetchCarDetails();
+      return true; // Return success
     } catch (error) {
+      console.error('Full error details:', error);
       setError(error instanceof Error ? error.message : 'Error submitting form');
+      return false; // Return failure
     } finally {
       setIsLoading(false);
     }
@@ -173,8 +251,11 @@ export const useCarForm = (id?: string) => {
   useEffect(() => {
     fetchMakes();
     if (id) fetchCarDetails();
-    return () => tempImages.forEach(image => URL.revokeObjectURL(image.preview));
-  }, [fetchMakes, fetchCarDetails, id, tempImages]);
+    // Cleanup function to revoke object URLs
+    return () => {
+      tempImages.forEach(image => URL.revokeObjectURL(image.preview));
+    };
+  }, [fetchMakes, fetchCarDetails, id]);
 
   return { isLoading, isMakesLoading, isModelsLoading, error, makes, models, formData, setFormData, newOption, setNewOption, tempImages, handleImagesUpload, handleImageDelete, handleSubmit };
 };

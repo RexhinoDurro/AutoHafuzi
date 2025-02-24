@@ -98,7 +98,13 @@ const AdminDashboard = () => {
             {cars.map((car) => (
               <tr key={car.id} className="border-t hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  {car.image ? (
+                  {car.images && car.images.length > 0 ? (
+                    <img
+                      src={`http://localhost:8000${car.images[0].image}`}
+                      alt={`${car.brand} ${car.model_name}`}
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  ) : car.image ? (
                     <img
                       src={`http://localhost:8000${car.image}`}
                       alt={`${car.brand} ${car.model_name}`}

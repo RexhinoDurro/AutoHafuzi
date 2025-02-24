@@ -51,12 +51,15 @@ const CarDetail: React.FC = () => {
           <div className="space-y-6">
             <ImageGallery images={car.images} />
           </div>
-            
-            <div className="space-y-4">
-              <h1 className="text-3xl font-bold">{car.brand} {car.model_name}</h1>
-              <h2 className="text-2xl font-semibold text-blue-600">${car.price.toLocaleString()}</h2>
-            </div>
           
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold">{car.brand} {car.model_name}</h1>
+            <h2 className="text-2xl font-semibold text-blue-600">
+              ${typeof car.price === 'number' 
+                ? car.price.toLocaleString() 
+                : Number(car.price).toLocaleString()}
+            </h2>
+          </div>
 
           <div className="space-y-8">
             <section className="space-y-4">
@@ -120,7 +123,7 @@ const CarDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-gray-600">First Registration</p>
-                  <p className="font-medium">{car.first_registration}</p>
+                  <p className="font-medium">{car.first_registration || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Service History</p>
@@ -128,12 +131,12 @@ const CarDetail: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-gray-600">Inspection Date</p>
-                  <p className="font-medium">{car.general_inspection_date}</p>
+                  <p className="font-medium">{car.general_inspection_date || 'N/A'}</p>
                 </div>
               </div>
             </section>
 
-            {car.options.length > 0 && (
+            {car.options && car.options.length > 0 && (
               <section className="space-y-4">
                 <h3 className="text-xl font-semibold">Additional Features</h3>
                 <div className="grid grid-cols-2 gap-2">

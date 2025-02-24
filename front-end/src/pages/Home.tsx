@@ -28,7 +28,8 @@ const Home = () => {
       if (!response.ok) throw new Error('Failed to fetch cars');
 
       const data = await response.json();
-      setCars(data);
+      // Fix: Extract the cars from the results array
+      setCars(data.results || []);
     } catch (error) {
       console.error('Error fetching cars:', error);
       setError('Failed to load cars. Please try again.');
@@ -41,14 +42,10 @@ const Home = () => {
     fetchCars();
   }, []);
 
-  const handleFilterChange = (filters: Record<string, string | number | null>) => {
-    fetchCars(filters);
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Available Cars</h1>
-      <CarFilter onFilterChange={handleFilterChange} />
+      <CarFilter onFilterChange={(filters) => fetchCars(filters)} />
       
       {loading && <p className="text-center text-gray-500">Loading cars...</p>}
       {error && <p className="text-center text-red-500">{error}</p>}

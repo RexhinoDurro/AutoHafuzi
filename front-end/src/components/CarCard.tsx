@@ -44,7 +44,7 @@ const CarCard = ({ car }: CarCardProps) => {
       <div className="relative h-48">
         {car.image ? (
           <img
-            src={`http://localhost:8000${car.image}`}
+            src={car.image} // Fix: Use the full URL directly from the API
             alt={`${car.brand} ${car.model_name}`}
             className="w-full h-full object-cover"
           />
@@ -58,7 +58,7 @@ const CarCard = ({ car }: CarCardProps) => {
         <h3 className="text-base font-bold text-gray-700">{car.brand} {car.model_name}</h3>
         <div className="">
           <span className="text-lg font-semibold text-blue-600">
-            ${car.price.toLocaleString()}
+            ${Number(car.price).toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between items-center mb-2">

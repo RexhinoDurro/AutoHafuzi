@@ -87,20 +87,31 @@ const CarForm = () => {
   };
 
   const validateDates = () => {
+    // Create date objects, ensuring we use UTC to avoid timezone issues
     const today = new Date();
-    const firstReg = new Date(formData.first_registration);
-    const inspection = new Date(formData.general_inspection_date);
-    const created = new Date(formData.created_at);
-
-    if (firstReg > today) {
-      return 'First registration date cannot be in the future';
+    
+    // Only validate if the dates exist
+    if (formData.first_registration) {
+      const firstReg = new Date(formData.first_registration);
+      if (firstReg > today) {
+        return 'First registration date cannot be in the future';
+      }
     }
-    if (inspection < today) {
-      return 'General inspection date must be in the future';
+    
+    if (formData.general_inspection_date) {
+      const inspection = new Date(formData.general_inspection_date);
+      if (inspection < today) {
+        return 'General inspection date must be in the future';
+      }
     }
-    if (created > today) {
-      return 'Created date cannot be in the future';
+    
+    if (formData.created_at) {
+      const created = new Date(formData.created_at);
+      if (created > today) {
+        return 'Created date cannot be in the future';
+      }
     }
+    
     return null;
   };
 
@@ -335,7 +346,10 @@ const CarForm = () => {
                 type="number"
                 min="0"
                 value={formData.mileage}
-                onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) })}
+                onChange={(e) => setFormData({ 
+                  ...formData, 
+                  mileage: e.target.value === '' ? 0 : parseInt(e.target.value) 
+                })}
                 className="w-full p-2 border rounded-lg"
               />
             </div>
