@@ -196,58 +196,83 @@ export const useCarForm = (id?: string) => {
     setIsLoading(true);
     setError('');
     try {
-      // Step 1: Create or update car with properly formatted data
-      const preparedData = prepareFormDataForSubmission(formData);
-      
-      const response = await fetch(id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD, {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
-        body: JSON.stringify(preparedData),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Server response:', errorData);
-        throw new Error(errorData.error || `Failed to save car: ${response.status}`);
-      }
-      
-      const carData = await response.json();
-      const carId = id || carData.id;
-      
-      // Step 2: Upload any temporary images
-      if (tempImages.length > 0 && carId) {
-        const imageFormData = new FormData();
-        tempImages.forEach(img => {
-          imageFormData.append('images', img.file);
+        // Step 1: Create or update car with properly formatted data
+        const preparedData = prepareFormDataForSubmission(formData);
+        
+        const response = await fetch(id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD, {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+            body: JSON.stringify(preparedData),
         });
         
-        const imageResponse = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carId), {
-          method: 'POST',
-          headers: { Authorization: `Token ${token}` },
-          body: imageFormData,
-        });
-        
-        if (!imageResponse.ok) {
-          const imageErrorData = await imageResponse.json();
-          console.error('Image upload error:', imageErrorData);
-          throw new Error('Failed to upload images');
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Server response:', errorData);
+            throw new Error(errorData.error || `Failed to save car: ${response.status}`);
         }
         
-        // Clear temporary images after successful upload
-        setTempImages([]);
-      }
-      
-      if (id) await fetchCarDetails();
-      return true; // Return success
+        const carData = await response.json();
+        const carId = id || carData.id;
+        
+        // Step 2: Upload any temporary images
+        if (tempImages.length > 0 && carId) {
+            console.log(`Uploading ${tempImages.length} images for car ID: ${carId}`);
+            
+            const imageFormData = new FormData();
+            tempImages.forEach((img, index) => {
+                console.log(`Appending image ${index + 1}:`, img.file.name, img.file.type, img.file.size);
+                imageFormData.append('images', img.file);
+            });
+            
+            const imageUploadUrl = API_ENDPOINTS.CARS.IMAGES.UPLOAD(carId);
+            console.log('Image upload URL:', imageUploadUrl);
+            
+            const imageResponse = await fetch(imageUploadUrl, {
+                method: 'POST',
+                headers: { Authorization: `Token ${token}` },
+                // Don't set Content-Type here, let the browser set it with the boundary
+                body: imageFormData,
+            });
+            
+            if (!imageResponse.ok) {
+                let errorMessage = `Image upload failed with status: ${imageResponse.status}`;
+                try {
+                    const imageErrorData = await imageResponse.json();
+                    console.error('Image upload error:', imageErrorData);
+                    errorMessage = `Failed to upload images: ${JSON.stringify(imageErrorData)}`;
+                } catch (e) {
+                    console.error('Failed to parse error response:', e);
+                }
+                throw new Error(errorMessage);
+            }
+            
+            // After successful upload, fetch the updated car data to get the new images
+            const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carId), {
+                headers: { Authorization: `Token ${token}` },
+            });
+            
+            if (updatedCarResponse.ok) {
+                const updatedCar = await updatedCarResponse.json();
+                setFormData({
+                    ...updatedCar,
+                    make: updatedCar.make_id.toString(),
+                    model: updatedCar.model_id.toString(),
+                });
+            }
+            
+            // Clear temporary images after successful upload
+            setTempImages([]);
+        }
+        
+        return true; // Return success
     } catch (error) {
-      console.error('Full error details:', error);
-      setError(error instanceof Error ? error.message : 'Error submitting form');
-      return false; // Return failure
+        console.error('Full error details:', error);
+        setError(error instanceof Error ? error.message : 'Error submitting form');
+        return false; // Return failure
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
-
+};
   useEffect(() => {
     fetchMakes();
     if (id) fetchCarDetails();

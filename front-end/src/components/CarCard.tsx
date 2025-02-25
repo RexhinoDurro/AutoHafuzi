@@ -36,15 +36,29 @@ const CarCard = ({ car }: CarCardProps) => {
     }
   };
 
+  // Get the primary image or the first image if no primary is set
+  const getDisplayImage = () => {
+    if (car.images && car.images.length > 0) {
+      const primaryImage = car.images.find(img => img.is_primary);
+      if (primaryImage) {
+        return primaryImage.image;
+      }
+      return car.images[0].image;
+    }
+    return car.image;
+  };
+
+  const displayImage = getDisplayImage();
+
   return (
     <Link 
       to={`/car/${car.id}`}
       className="block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105 cursor-pointer"
     >
       <div className="relative h-48">
-        {car.image ? (
+        {displayImage ? (
           <img
-            src={car.image} // Fix: Use the full URL directly from the API
+            src={displayImage.startsWith('http') ? displayImage : `http://localhost:8000${displayImage}`}
             alt={`${car.brand} ${car.model_name}`}
             className="w-full h-full object-cover"
           />

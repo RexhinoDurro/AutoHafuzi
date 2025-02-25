@@ -1,97 +1,111 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { CarImage } from '../types/car';
 
-interface CarImage {
+interface TempImage {
   id: number;
-  image: string;
-  url?: string;
-  is_primary?: boolean;
-  order?: number;
+  preview: string;
 }
 
-interface ImageGalleryProps {
-  images: CarImage[];
-  onDeleteImage?: (id: number) => void;
-  isEditing?: boolean;
+interface CarImageCarouselProps {
+  images: (CarImage | TempImage)[];
+  baseUrl?: string;
 }
 
-const ImageGallery = ({ images, onDeleteImage, isEditing = false }: ImageGalleryProps) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export const CarImageCarousel: React.FC<CarImageCarouselProps> = ({ 
+  images, 
+  baseUrl = 'http://localhost:8000' 
+}) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  
+  // Helper function to determine if an image is a temporary image
+  const isTempImage = (image: CarImage | TempImage): image is TempImage => {
+    return 'preview' in image;
+  };
 
-  const nextImage = () => {
-    if (images.length > 1) {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+  // Helper function to get the correct image URL
+  const getImageUrl = (image: CarImage | TempImage): string => {
+    if (isTempImage(image)) {
+      return image.preview;
+    } else {
+      // Check if image.image already contains http:// or https://
+      if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
+        return image.image;
+      }
+      // Make sure image.image doesn't start with a slash if baseUrl ends with one
+      const imagePath = image.image.startsWith('/') ? image.image : `/${image.image}`;
+      return `${baseUrl}${imagePath}`;
     }
   };
 
-  const prevImage = () => {
-    if (images.length > 1) {
-      setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
-    }
-  };
-
-  // Handle empty images array
   if (!images || images.length === 0) {
     return (
-      <div className="w-full h-96 bg-gray-100 flex items-center justify-center rounded-lg">
+      <div className="w-full h-96 bg-gray-200 flex items-center justify-center rounded">
         <p className="text-gray-500">No images available</p>
       </div>
     );
   }
 
-  // Get the correct image URL, prioritizing url property if available
-  const getImageUrl = (image: CarImage) => {
-    return image.url || image.image || '';
-  };
-
   return (
-    <div className="relative w-full h-96">
-      <img
-        src={getImageUrl(images[currentIndex])}
-        alt={`Car image ${currentIndex + 1}`}
-        className="w-full h-full object-cover rounded-lg"
-      />
-      
-      {images.length > 1 && (
-        <>
-          <button
-            onClick={prevImage}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white hover:bg-black/70"
-            aria-label="Previous image"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          <button
-            onClick={nextImage}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 p-2 rounded-full text-white hover:bg-black/70"
-            aria-label="Next image"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </>
-      )}
-      
-      {isEditing && onDeleteImage && (
-        <button
-          onClick={() => onDeleteImage(images[currentIndex].id)}
-          className="absolute top-2 right-2 bg-red-500 p-2 rounded-full text-white hover:bg-red-600"
-          aria-label="Delete image"
-        >
-          <X size={20} />
-        </button>
-      )}
-      
-      {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-          {images.map((_, index) => (
+    <div className="space-y-4">
+      {/* Main selected image */}
+      <div className="w-full h-96 relative overflow-hidden rounded-lg shadow">
+        <img 
+          src={getImageUrl(images[selectedIndex])}
+          alt={`Car view ${selectedIndex + 1}`} 
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            console.error(`Failed to load image: ${getImageUrl(images[selectedIndex])}`);
+            e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Image+Not+Found';
+          }}
+        />
+        
+        {/* Navigation arrows */}
+        {images.length > 1 && (
+          <>
             <button
-              key={index}
-              onClick={() => setCurrentIndex(index)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                currentIndex === index ? 'bg-white w-4' : 'bg-white/50'
-              }`}
-              aria-label={`Go to image ${index + 1}`}
-            />
+              onClick={() => setSelectedIndex(prev => (prev === 0 ? images.length - 1 : prev - 1))}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+              aria-label="Previous image"
+            >
+              &#10094;
+            </button>
+            <button
+              onClick={() => setSelectedIndex(prev => (prev === images.length - 1 ? 0 : prev + 1))}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+              aria-label="Next image"
+            >
+              &#10095;
+            </button>
+          </>
+        )}
+        
+        {/* Image counter */}
+        <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+          {selectedIndex + 1} / {images.length}
+        </div>
+      </div>
+      
+      {/* Thumbnails */}
+      {images.length > 1 && (
+        <div className="flex space-x-2 overflow-x-auto py-2">
+          {images.map((image, index) => (
+            <div 
+              key={image.id}
+              className={`
+                cursor-pointer flex-shrink-0 h-20 w-20 rounded overflow-hidden border-2
+                ${index === selectedIndex ? 'border-blue-500' : 'border-transparent'}
+              `}
+              onClick={() => setSelectedIndex(index)}
+            >
+              <img 
+                src={getImageUrl(image)}
+                alt={`Thumbnail ${index + 1}`} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Thumbnail';
+                }}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -99,4 +113,4 @@ const ImageGallery = ({ images, onDeleteImage, isEditing = false }: ImageGallery
   );
 };
 
-export default ImageGallery;
+export default CarImageCarousel;

@@ -221,6 +221,31 @@ const CarForm = () => {
 
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6 space-y-6">
+         {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept={ALLOWED_FILE_TYPES.join(',')}
+                    multiple
+                    onChange={handleImageUpload}
+                    className="w-full border border-gray-300 p-2 rounded"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Max file size: 5MB. Supported formats: JPEG, PNG, WebP
+                  </p>
+                  {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+                  {(formData.images?.length > 0 || tempImages.length > 0) && (
+                    <ImageGallery
+                      images={[...(formData.images || []), ...tempImages]}
+                      onDeleteImage={handleImageDelete}
+                      isEditing={true}
+                      baseUrl={API_BASE_URL}
+                    />
+                  )}
+                </div>
         {/* Basic Information Section */}
         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>

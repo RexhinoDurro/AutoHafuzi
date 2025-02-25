@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ImageGallery from '../components/ImageGallery';
+import CarImageCarousel from '../components/ImageGallery';
 import { Car } from '../types/car';
 
 const CarDetail: React.FC = () => {
@@ -49,7 +49,8 @@ const CarDetail: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
           <div className="space-y-6">
-            <ImageGallery images={car.images} />
+            {/* Replace ImageGallery with CarImageCarousel */}
+            <CarImageCarousel images={car.images} />
           </div>
           
           <div className="space-y-4">

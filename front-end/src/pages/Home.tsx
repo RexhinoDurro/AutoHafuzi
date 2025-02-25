@@ -57,8 +57,12 @@ const Home = () => {
           !loading && <p className="col-span-full text-center text-gray-500">No cars found.</p>
         )}
       </div>
+
+
+      
     </div>
   );
 };
+
 
 export default Home;

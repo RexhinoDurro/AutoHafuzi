@@ -70,6 +70,18 @@ const AdminDashboard = () => {
     });
   };
 
+  // Function to get the primary image or the first image if no primary is set
+  const getDisplayImage = (car: Car) => {
+    if (car.images && car.images.length > 0) {
+      const primaryImage = car.images.find(img => img.is_primary);
+      if (primaryImage) {
+        return `http://localhost:8000${primaryImage.image}`;
+      }
+      return `http://localhost:8000${car.images[0].image}`;
+    }
+    return car.image ? `http://localhost:8000${car.image}` : undefined;
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -98,15 +110,9 @@ const AdminDashboard = () => {
             {cars.map((car) => (
               <tr key={car.id} className="border-t hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  {car.images && car.images.length > 0 ? (
+                  {getDisplayImage(car) ? (
                     <img
-                      src={`http://localhost:8000${car.images[0].image}`}
-                      alt={`${car.brand} ${car.model_name}`}
-                      className="w-20 h-20 object-cover rounded"
-                    />
-                  ) : car.image ? (
-                    <img
-                      src={`http://localhost:8000${car.image}`}
+                      src={getDisplayImage(car)}
                       alt={`${car.brand} ${car.model_name}`}
                       className="w-20 h-20 object-cover rounded"
                     />

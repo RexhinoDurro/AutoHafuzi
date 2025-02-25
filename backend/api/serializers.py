@@ -34,7 +34,6 @@ class CarSerializer(serializers.ModelSerializer):
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all(), write_only=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
     images = CarImageSerializer(many=True, read_only=True)
-    image = serializers.SerializerMethodField()
 
     def get_image(self, obj):
         """Return the primary image URL for backward compatibility"""
@@ -50,7 +49,7 @@ class CarSerializer(serializers.ModelSerializer):
         model = Car
         fields = [
             'id', 'brand', 'model_name', 'make', 'model', 'year', 'color', 'price', 
-            'description', 'image', 'created_at', 'images',
+            'description', 'created_at', 'images',
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
             'first_registration', 'general_inspection_date', 'full_service_history', 
             'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 

@@ -29,12 +29,6 @@ def add_car_images(request, car_id):
             )
             created_images.append(new_image.id)
             
-        if not car.image and files:
-            primary_image = car.images.filter(is_primary=True).first()
-            if primary_image:
-                car.image = primary_image.image
-                car.save()
-            
         return Response({
             'message': 'Images uploaded successfully',
             'count': len(created_images),
