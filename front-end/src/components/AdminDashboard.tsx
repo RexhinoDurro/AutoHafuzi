@@ -75,11 +75,11 @@ const AdminDashboard = () => {
     if (car.images && car.images.length > 0) {
       const primaryImage = car.images.find(img => img.is_primary);
       if (primaryImage) {
-        return `http://localhost:8000${primaryImage.image}`;
+        return primaryImage.image;
       }
-      return `http://localhost:8000${car.images[0].image}`;
+      return car.images[0].image;
     }
-    return car.image ? `http://localhost:8000${car.image}` : undefined;
+    return undefined;
   };
 
   return (
@@ -112,7 +112,7 @@ const AdminDashboard = () => {
                 <td className="px-6 py-4">
                   {getDisplayImage(car) ? (
                     <img
-                      src={getDisplayImage(car)}
+                      src={getDisplayImage(car)?.startsWith('http') ? getDisplayImage(car) : `http://localhost:8000${getDisplayImage(car)}`}
                       alt={`${car.brand} ${car.model_name}`}
                       className="w-20 h-20 object-cover rounded"
                     />

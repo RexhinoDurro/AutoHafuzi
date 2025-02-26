@@ -1,16 +1,21 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Car, CarMake, CarModel, CarImage
+from .models import Car, CarMake, CarModel, CarImage, CarVariant
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarMake
         fields = ['id', 'name']
+        
+class CarVariantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarVariant
+        fields = ['id', 'name', 'model']
 
 class CarModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarModel
-        fields = ['id', 'name', 'make']
+        fields = ['id', 'name', 'make','variants']
 
 class CarImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
@@ -30,6 +35,7 @@ class CarImageSerializer(serializers.ModelSerializer):
 class CarSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='make.name', read_only=True)
     model_name = serializers.CharField(source='model.name', read_only=True)
+    variant_name = serializers.CharField(source='variant.name', read_only=True)
     make = serializers.PrimaryKeyRelatedField(queryset=CarMake.objects.all(), write_only=True)
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all(), write_only=True)
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
@@ -48,7 +54,7 @@ class CarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model_name', 'make', 'model', 'year', 'color', 'price', 
+            'id', 'brand', 'model_name', 'make', 'model','variant', 'year', 'color', 'price', 
             'description', 'created_at', 'images',
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
             'first_registration', 'general_inspection_date', 'full_service_history', 

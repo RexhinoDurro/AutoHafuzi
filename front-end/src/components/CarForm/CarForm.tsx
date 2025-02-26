@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
@@ -24,9 +24,11 @@ const CarForm = () => {
     isLoading,
     isMakesLoading,
     isModelsLoading,
+    isVariantsLoading,
     error,
     makes,
     models,
+    variants,
     formData,
     setFormData,
     newOption,
@@ -34,13 +36,21 @@ const CarForm = () => {
     handleSubmit,
     handleImagesUpload,
     handleImageDelete,
-    tempImages
+    tempImages,
+    fetchVariants
   } = useCarForm(id);
 
   // State for form validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const currentYear = useMemo(() => new Date().getFullYear(), []);
+
+  // Load variants when model changes
+  useEffect(() => {
+    if (formData.model) {
+      fetchVariants(formData.model);
+    }
+  }, [formData.model, fetchVariants]);
 
   // Format price with commas
   const formatPrice = (price: number | string): string => {
@@ -231,7 +241,7 @@ const CarForm = () => {
               </label>
               <select
                 value={formData.make}
-                onChange={(e) => setFormData({ ...formData, make: e.target.value, model: '' })}
+                onChange={(e) => setFormData({ ...formData, make: e.target.value, model: '', variant: '' })}
                 className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
                 required
                 disabled={isMakesLoading}
@@ -252,7 +262,7 @@ const CarForm = () => {
               </label>
               <select
                 value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value, variant: '' })}
                 className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
                 required
                 disabled={!formData.make || isModelsLoading}
@@ -269,7 +279,27 @@ const CarForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Variant
+              </label>
+              <select
+                value={formData.variant || ''}
+                onChange={(e) => setFormData({ ...formData, variant: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+                disabled={!formData.model || isVariantsLoading}
+              >
+                <option value="">Select Variant</option>
+                {variants.map((variant) => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name}
+                  </option>
+                ))}
+              </select>
+              {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year <span className="text-red-500">*</span>
@@ -303,20 +333,20 @@ const CarForm = () => {
               </select>
               {validationErrors.color && <p className="text-red-500 text-xs mt-1">{validationErrors.color}</p>}
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (€) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formatPrice(formData.price)}
-                onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value) })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-                required
-              />
-              {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
-            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price (€) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formatPrice(formData.price)}
+              onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value) })}
+              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+              required
+            />
+            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
           </div>
         </div>
 

@@ -3,7 +3,7 @@ from .car_views import (
     get_cars, get_car, add_car, update_car, delete_car
 )
 from .image_views import add_car_images, delete_car_image
-from .make_model_views import get_makes, get_models
+from .make_model_views import get_makes, get_models, VariantListView
 
 __all__ = [
     'admin_login',
@@ -16,4 +16,5 @@ __all__ = [
     'delete_car_image',
     'get_makes',
     'get_models',
+    'VariantListView'
 ]

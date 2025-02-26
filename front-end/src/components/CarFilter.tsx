@@ -11,6 +11,12 @@ interface Model {
   make: number;
 }
 
+interface Variant {
+  id: number;
+  name: string;
+  model: number;
+}
+
 interface FilterProps {
   onFilterChange: (filters: FilterState) => void;
 }
@@ -18,6 +24,7 @@ interface FilterProps {
 interface FilterState {
   make?: string;
   model?: string;
+  variant?: string;
   year?: string;
   min_price?: string;
   max_price?: string;
@@ -31,6 +38,7 @@ interface FilterState {
 const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const [makes, setMakes] = useState<Make[]>([]);
   const [models, setModels] = useState<Model[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [filters, setFilters] = useState<FilterState>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -71,9 +79,20 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
       fetchModels(filters.make);
     } else {
       setModels([]);
-      setFilters(prev => ({ ...prev, model: undefined }));
+      setVariants([]);
+      setFilters(prev => ({ ...prev, model: undefined, variant: undefined }));
     }
   }, [filters.make]);
+
+  // Get variants when model is selected
+  useEffect(() => {
+    if (filters.model) {
+      fetchVariants(filters.model);
+    } else {
+      setVariants([]);
+      setFilters(prev => ({ ...prev, variant: undefined }));
+    }
+  }, [filters.model]);
 
   const fetchMakes = async () => {
     try {
@@ -92,6 +111,16 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
       setModels(data);
     } catch (error) {
       console.error('Error fetching models:', error);
+    }
+  };
+
+  const fetchVariants = async (modelId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/variants/${modelId}/`);
+      const data = await response.json();
+      setVariants(data);
+    } catch (error) {
+      console.error('Error fetching variants:', error);
     }
   };
 
@@ -119,7 +148,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Basic Filters */}
+        {/* Make Filter */}
         <div>
           <label className="block text-sm font-medium mb-1">Make</label>
           <select
@@ -136,6 +165,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </select>
         </div>
 
+        {/* Model Filter */}
         <div>
           <label className="block text-sm font-medium mb-1">Model</label>
           <select
@@ -153,6 +183,25 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </select>
         </div>
 
+        {/* Variant Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Variant</label>
+          <select
+            value={filters.variant || ''}
+            onChange={(e) => handleFilterChange('variant', e.target.value)}
+            className="w-full p-2 border rounded-lg"
+            disabled={!filters.model}
+          >
+            <option value="">All Variants</option>
+            {variants.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {variant.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Year Filter */}
         <div>
           <label className="block text-sm font-medium mb-1">Year</label>
           <select
@@ -168,24 +217,8 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
             ))}
           </select>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Max Price (€)</label>
-          <select
-            value={filters.max_price || ''}
-            onChange={(e) => handleFilterChange('max_price', e.target.value)}
-            className="w-full p-2 border rounded-lg"
-          >
-            {priceRanges.map((range) => (
-              <option key={range.value} value={range.value}>
-                {range.label}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      {/* Toggle for advanced filters */}
       <div className="mt-4">
         <button
           type="button"
@@ -296,6 +329,21 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
             >
               <option value="">No Minimum</option>
               {priceRanges.slice(1).map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Max Price (€)</label>
+            <select
+              value={filters.max_price || ''}
+              onChange={(e) => handleFilterChange('max_price', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              {priceRanges.map((range) => (
                 <option key={range.value} value={range.value}>
                   {range.label}
                 </option>

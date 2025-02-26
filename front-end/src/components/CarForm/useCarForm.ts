@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FormData as CarFormData, Make, Model } from '../../types/car';
+import { FormData as CarFormData, Make, Model, Variant } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
 
@@ -22,9 +22,11 @@ export const useCarForm = (id?: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isMakesLoading, setIsMakesLoading] = useState(false);
   const [isModelsLoading, setIsModelsLoading] = useState(false);
+  const [isVariantsLoading, setIsVariantsLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [makes, setMakes] = useState<Make[]>([]);
   const [models, setModels] = useState<Model[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
   const [newOption, setNewOption] = useState<string>('');
   const [tempImages, setTempImages] = useState<TempImage[]>([]);
   const [nextTempId, setNextTempId] = useState(-1);
@@ -32,6 +34,7 @@ export const useCarForm = (id?: string) => {
   const [formData, setFormData] = useState<CarFormData>({
     make: '',
     model: '',
+    variant: '',
     year: new Date().getFullYear(),
     color: '',
     price: 0,
@@ -99,6 +102,28 @@ export const useCarForm = (id?: string) => {
     }
   }, [token]);
 
+  const fetchVariants = useCallback(async (modelId: string) => {
+    if (!modelId) {
+      setVariants([]);
+      return;
+    }
+    setIsVariantsLoading(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.VARIANTS(modelId), {
+        headers: { Authorization: `Token ${token}` },
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Invalid response format');
+      setVariants(data);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error fetching variants');
+      setVariants([]);
+    } finally {
+      setIsVariantsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (formData.make) {
       fetchModels(formData.make);
@@ -114,17 +139,29 @@ export const useCarForm = (id?: string) => {
       });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      setFormData({
+      
+      // Save the current data
+      const carData = {
+        ...formData,
         ...data,
-        make: data.make_id.toString(),
-        model: data.model_id.toString(),
-      });
+        make: data.make_id?.toString() || '',
+        model: data.model_id?.toString() || '',
+        variant: data.variant_id?.toString() || '',
+      };
+      
+      setFormData(carData);
+      
+      // If we have a model, fetch the variants
+      if (carData.model) {
+        fetchVariants(carData.model);
+      }
+      
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error fetching car details');
     } finally {
       setIsLoading(false);
     }
-  }, [id, token]);
+  }, [id, token, fetchVariants]);
 
   // FIXED: Assign unique IDs to each image
   const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,6 +294,7 @@ export const useCarForm = (id?: string) => {
                     ...updatedCar,
                     make: updatedCar.make_id.toString(),
                     model: updatedCar.model_id.toString(),
+                    variant: updatedCar.variant_id?.toString() || '',
                 });
             }
             
@@ -272,7 +310,8 @@ export const useCarForm = (id?: string) => {
     } finally {
         setIsLoading(false);
     }
-};
+  };
+
   useEffect(() => {
     fetchMakes();
     if (id) fetchCarDetails();
@@ -282,5 +321,23 @@ export const useCarForm = (id?: string) => {
     };
   }, [fetchMakes, fetchCarDetails, id]);
 
-  return { isLoading, isMakesLoading, isModelsLoading, error, makes, models, formData, setFormData, newOption, setNewOption, tempImages, handleImagesUpload, handleImageDelete, handleSubmit };
+  return { 
+    isLoading, 
+    isMakesLoading, 
+    isModelsLoading, 
+    isVariantsLoading,
+    error, 
+    makes, 
+    models, 
+    variants,
+    formData, 
+    setFormData, 
+    newOption, 
+    setNewOption, 
+    tempImages, 
+    handleImagesUpload, 
+    handleImageDelete, 
+    handleSubmit,
+    fetchVariants
+  };
 };

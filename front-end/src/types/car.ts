@@ -1,9 +1,11 @@
 export interface Car {
   id: number;
-  make_id: number;     // Add this
-  model_id: number;    // Add this
+  make_id: number;
+  model_id: number;
+  variant_id?: number;    // Added variant ID
   brand: string;
   model_name: string;
+  variant_name?: string;  // Added variant name
   year: number;
   color: string;
   price: number;
@@ -54,13 +56,22 @@ export interface Model {
   id: number;
   name: string;
   make: number;
+  variants?: Variant[];  // Added variants relationship
+}
+
+export interface Variant {  // Added Variant interface
+  id: number;
+  name: string;
+  model: number;
 }
 
 export interface FormData {
   make: string;
   model: string;
+  variant?: string;       // Added variant
   brand?: string;   
-  model_name?: string; 
+  model_name?: string;
+  variant_name?: string;  // Added variant_name
   year: number;
   color: string;
   price: number;

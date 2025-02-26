@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     get_cars, get_car, add_car, update_car, delete_car,
     admin_login, get_makes, get_models,
-    add_car_images, delete_car_image
+    add_car_images, delete_car_image, VariantListView
 )
 
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
     path('cars/<int:car_id>/', get_car, name='get_car'),
     path('cars/add/', add_car, name='add_car'),
     path('cars/update/<int:car_id>/', update_car, name='update_car'),
+    path('variants/<int:model_id>/', VariantListView.as_view(), name='variant-list'),
     path('cars/delete/<int:car_id>/', delete_car, name='delete_car'),
     path('makes/', get_makes, name='get_makes'),
     path('models/<int:make_id>/', get_models, name='get_models'),

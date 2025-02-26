@@ -16,6 +16,16 @@ class CarModel(models.Model):
 
     def __str__(self):
         return f"{self.make.name} {self.name}"
+    
+class CarVariant(models.Model):
+    model = models.ForeignKey(CarModel, on_delete=models.CASCADE, related_name='variants')
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ['model', 'name']
+
+    def __str__(self):
+        return f"{self.model.make.name} {self.model.name} {self.name}"
 
 class CarImage(models.Model):
     car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
@@ -59,7 +69,10 @@ class Car(models.Model):
     emission_class = models.CharField(max_length=50, default="Euro 6")
     fuel_type = models.CharField(max_length=50, default="Petrol")
     options = models.JSONField(default=list)
-
+    
+    class Meta:
+        ordering = ['-created_at']
+        
     @property
     def primary_image(self):
         """Get the primary image or None if no images exist"""
@@ -74,3 +87,5 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.year})"
+    
+    

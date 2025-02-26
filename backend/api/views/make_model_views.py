@@ -1,8 +1,9 @@
 # make_model_views.py
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from ..models import CarMake, CarModel
-from ..serializers import CarMakeSerializer, CarModelSerializer
+from rest_framework.views import APIView
+from ..models import CarMake, CarModel, CarVariant
+from ..serializers import CarMakeSerializer, CarModelSerializer, CarVariantSerializer
 
 @api_view(['GET'])
 def get_makes(request):
@@ -16,6 +17,16 @@ def get_models(request, make_id):
     serializer = CarModelSerializer(models, many=True)
     return Response(serializer.data)
 
+class VariantListView(APIView):
+    def get(self, request, model_id):
+        try:
+            model = CarModel.objects.get(id=model_id)
+            variants = CarVariant.objects.filter(model=model)
+            serializer = CarVariantSerializer(variants, many=True)
+            return Response(serializer.data)
+        except CarModel.DoesNotExist:
+            return Response({"error": "Model not found"}, status=404)
+        
 # views.py
 from .auth_views import admin_login
 from .car_views import (
