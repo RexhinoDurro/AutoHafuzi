@@ -186,7 +186,7 @@ const CarForm = () => {
     await handleSubmit(e);
     const success = true; // Assuming handleSubmit always succeeds, adjust as needed
     if (success) {
-      navigate('/admin/dashboard');
+      navigate('/auth/dashboard');
     }
   };
 
@@ -203,7 +203,7 @@ const CarForm = () => {
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
       <button
-        onClick={() => navigate('/admin/dashboard')}
+        onClick={() => navigate('/auth/dashboard')}
         className="text-gray-600 hover:text-gray-800"
       >
         Back to Dashboard
@@ -286,7 +286,13 @@ const CarForm = () => {
               </label>
               <select
                 value={formData.variant || ''}
-                onChange={(e) => setFormData({ ...formData, variant: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    variant: value === '' ? '' : value // Keep as empty string if empty, otherwise use the value
+                  });
+                }}
                 className="w-full p-2 border rounded-lg"
                 disabled={!formData.model || isVariantsLoading}
               >
@@ -299,6 +305,8 @@ const CarForm = () => {
               </select>
               {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
             </div>
+
+            {/*rest of the form */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

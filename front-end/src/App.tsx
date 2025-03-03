@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { token } = getStoredAuth();
   
   if (!token) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
   
   return <>{children}</>;
@@ -47,9 +47,9 @@ function App() {
           />
           
           {/* Admin routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/auth/login" element={<AdminLogin />} />
           <Route
-            path="/admin/dashboard"
+            path="/auth/dashboard"
             element={
               <ProtectedRoute>
                 <AdminDashboard />
@@ -57,7 +57,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/add-car"
+            path="/auth/add-car"
             element={
               <ProtectedRoute>
                 <CarForm />
@@ -65,7 +65,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/edit-car/:id"
+            path="/auth/edit-car/:id"
             element={
               <ProtectedRoute>
                 <CarForm />

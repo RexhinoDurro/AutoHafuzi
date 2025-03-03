@@ -43,6 +43,7 @@ class CarImage(models.Model):
 class Car(models.Model):
     make = models.ForeignKey(CarMake, on_delete=models.CASCADE)
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
+    variant = models.ForeignKey(CarVariant, on_delete=models.CASCADE, null=True, blank=True)
     year = models.IntegerField()
     color = models.CharField(max_length=50, default="Black")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)

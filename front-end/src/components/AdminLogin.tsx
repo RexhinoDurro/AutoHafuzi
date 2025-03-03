@@ -16,7 +16,7 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/admin/login/', {
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ const AdminLogin = () => {
       if (response.ok) {
         const data = await response.json();
         setStoredAuth(data.token);
-        navigate('/admin/dashboard');
+        navigate('/auth/dashboard');
       } else {
         setError('Invalid credentials');
       }

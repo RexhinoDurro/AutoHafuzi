@@ -10,7 +10,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/admin/login');
+      navigate('/auth/login');
       return;
     }
 
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <button
-          onClick={() => navigate('/admin/add-car')}
+          onClick={() => navigate('/auth/add-car')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           Add New Car
@@ -129,7 +129,7 @@ const AdminDashboard = () => {
                 <td className="px-6 py-4">{formatDate(car.created_at)}</td>
                 <td className="px-6 py-4">
                   <button
-                    onClick={() => navigate(`/admin/edit-car/${car.id}`)}
+                    onClick={() => navigate(`/auth/edit-car/${car.id}`)}
                     className="text-blue-600 hover:text-blue-800 mr-4"
                   >
                     Edit

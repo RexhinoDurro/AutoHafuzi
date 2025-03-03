@@ -2,16 +2,16 @@
 export const API_BASE_URL = 'http://localhost:8000';
 
 export const API_ENDPOINTS = {
-  MAKES: '/api/makes',
-  MODELS: (makeId: string) => `/api/makes/${makeId}/models`,
-  VARIANTS: (modelId: string) => `/api/models/${modelId}/variants`,
+  MAKES: `${API_BASE_URL}/api/makes/`,
+  MODELS: (makeId: string) => `${API_BASE_URL}/api/models/${makeId}/`,
+  VARIANTS: (modelId: string) => `${API_BASE_URL}/api/variants/${modelId}/`,
   CARS: {
-    ADD: '/api/cars',
-    UPDATE: (id: string) => `/api/cars/${id}`,
-    GET: (id: string) => `/api/cars/${id}`,
+    ADD: `${API_BASE_URL}/api/cars/add/`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/cars/${id}/`,
+    GET: (id: string) => `${API_BASE_URL}/api/cars/${id}/`,
     IMAGES: {
-      UPLOAD: (carId: string | number) => `/api/cars/${carId}/images`,
-      DELETE: (imageId: number) => `/api/cars/images/${imageId}`,
+      UPLOAD: (carId: string | number) => `${API_BASE_URL}/api/cars/${carId}/images/`,
+      DELETE: (imageId: number) => `${API_BASE_URL}/api/cars/images/${imageId}/`,
     },
   },
 };

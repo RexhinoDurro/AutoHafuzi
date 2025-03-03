@@ -91,6 +91,7 @@ def add_car(request):
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     data = request.data.copy()
+    print(f"Received data: {data}") 
     
     for key in ['is_used', 'full_service_history', 'customs_paid']:
         if key in data and isinstance(data[key], str):
@@ -108,8 +109,8 @@ def add_car(request):
     
     serializer = CarSerializer(data=data)
     if not serializer.is_valid():
+        print(f"Serializer errors: {serializer.errors}")  # Debug log
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
     serializer.save()
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
