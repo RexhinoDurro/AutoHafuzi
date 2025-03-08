@@ -32,11 +32,22 @@ export const useCarForm = (id?: string) => {
   const [nextTempId, setNextTempId] = useState(-1);
 
   const [formData, setFormData] = useState<CarFormData>({
+    make_id: undefined,
+    model_id: undefined,
+    variant_id: undefined,
     make: '',
     model: '',
     variant: '',
     year: new Date().getFullYear(),
-    color: '',
+    exterior_color: '',
+    exterior_color_id: undefined,
+    exterior_color_name: '',
+    exterior_color_hex: '',
+    interior_color: '',
+    interior_color_id: undefined,
+    interior_color_name: '',
+    interior_color_hex: '',
+    interior_upholstery: '',
     price: 0,
     description: '',
     image: null,
@@ -130,6 +141,18 @@ export const useCarForm = (id?: string) => {
     }
   }, [formData.make, fetchModels]);
 
+  useEffect(() => {
+    if (formData.make_id) {
+      fetchModels(formData.make_id.toString());
+    }
+  }, [formData.make_id, fetchModels]);
+
+  useEffect(() => {
+    if (formData.model_id) {
+      fetchVariants(formData.model_id.toString());
+    }
+  }, [formData.model_id, fetchVariants]);
+
   const fetchCarDetails = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
@@ -147,6 +170,13 @@ export const useCarForm = (id?: string) => {
         make: data.make_id?.toString() || '',
         model: data.model_id?.toString() || '',
         variant: data.variant_id?.toString() || '',
+        exterior_color_id: data.exterior_color_id,
+        exterior_color_name: data.exterior_color_name,
+        exterior_color_hex: data.exterior_color_hex,
+        interior_color_id: data.interior_color_id,
+        interior_color_name: data.interior_color_name,
+        interior_color_hex: data.interior_color_hex,
+        interior_upholstery: data.interior_upholstery,
       };
       
       setFormData(carData);
@@ -208,65 +238,114 @@ export const useCarForm = (id?: string) => {
     }
   };
 
-  // IMPROVED: Better form data preparation for submission
-  const prepareFormDataForSubmission = (data: CarFormData) => {
-    // Create a new FormData object for multipart/form-data submission
-    const formDataObj = new FormData();
+  // FIXED: Better form data preparation for submission to handle make and model properly
+const prepareFormDataForSubmission = (data: CarFormData) => {
+  if (!data) {
+    throw new Error('Form data is undefined');
+  }
+  
+  // Create a new FormData object for multipart/form-data submission
+  const formDataObj = new FormData();
+  
+  // Make and Model handling
+  if (data.make_id) {
+    formDataObj.append('make', data.make_id.toString());
+  }
+  
+  if (data.model_id) {
+    formDataObj.append('model', data.model_id.toString());
+  }
+  
+  // Variant handling - Only add if variant_id exists
+  if (data.variant_id) {
+    formDataObj.append('variant', data.variant_id.toString());
+  }
+  
+  // Year
+  formDataObj.append('year', parseNumericValue(data.year, new Date().getFullYear()).toString());
+  
+  // Color handling
+  if (data.exterior_color_id) {
+    formDataObj.append('exterior_color', data.exterior_color_id.toString());
+  }
+  
+  if (data.interior_color_id) {
+    formDataObj.append('interior_color', data.interior_color_id.toString());
+  }
+  
+  // Price
+  formDataObj.append('price', parseNumericValue(data.price, 0).toString());
+  
+  // Description
+  formDataObj.append('description', data.description || '');
+  
+  // Car specifications
+  formDataObj.append('body_type', data.body_type || 'Sedan');
+  formDataObj.append('is_used', data.is_used ? 'true' : 'false');
+  formDataObj.append('drivetrain', data.drivetrain || 'FWD');
+  formDataObj.append('seats', parseNumericValue(data.seats, 5).toString());
+  formDataObj.append('doors', parseNumericValue(data.doors, 4).toString());
+  formDataObj.append('mileage', parseNumericValue(data.mileage, 0).toString());
+  
+  // Date handling
+  if (data.created_at) {
+    formDataObj.append('created_at', data.created_at);
+  }
+  
+  if (data.first_registration) {
+    formDataObj.append('first_registration', data.first_registration);
+  }
+  
+  if (data.general_inspection_date) {
+    formDataObj.append('general_inspection_date', data.general_inspection_date);
+  }
+  
+  // Boolean fields
+  formDataObj.append('full_service_history', data.full_service_history ? 'true' : 'false');
+  formDataObj.append('customs_paid', data.customs_paid ? 'true' : 'false');
+  
+  // Technical specifications
+  formDataObj.append('power', parseNumericValue(data.power, 100).toString());
+  formDataObj.append('gearbox', data.gearbox || 'Manual');
+  formDataObj.append('engine_size', parseNumericValue(data.engine_size, 1.6).toString());
+  formDataObj.append('gears', parseNumericValue(data.gears, 5).toString());
+  formDataObj.append('cylinders', parseNumericValue(data.cylinders, 4).toString());
+  formDataObj.append('weight', parseNumericValue(data.weight, 1200).toString());
+  formDataObj.append('emission_class', data.emission_class || 'Euro 6');
+  formDataObj.append('fuel_type', data.fuel_type || 'Petrol');
+  
+  // Upholstery handling - optional
+  if (data.interior_upholstery) {
+    formDataObj.append('interior_upholstery', data.interior_upholstery);
+  }
+  
+  // FIXED OPTIONS HANDLING - Try multiple approaches
+  if (Array.isArray(data.option_ids) && data.option_ids.length > 0) {
+    // For FormData/multipart submissions, DRF expects multiple fields with the same name
+    // rather than a JSON array
+    data.option_ids.forEach(optionId => {
+      formDataObj.append('options', optionId.toString());
+    });
     
-    // Properly handle required fields
-    formDataObj.append('make', data.make);
-    formDataObj.append('model', data.model);
-    
-    // Handle variant - only append if it exists
-    if (data.variant && data.variant !== '') {
-      formDataObj.append('variant', data.variant);
-    }
-    
-    // Handle numeric fields with proper parsing
-    formDataObj.append('year', parseNumericValue(data.year, new Date().getFullYear()).toString());
-    formDataObj.append('price', parseNumericValue(data.price, 0).toString());
-    formDataObj.append('seats', parseNumericValue(data.seats, 5).toString());
-    formDataObj.append('doors', parseNumericValue(data.doors, 4).toString());
-    formDataObj.append('mileage', parseNumericValue(data.mileage, 0).toString());
-    formDataObj.append('power', parseNumericValue(data.power, 100).toString());
-    formDataObj.append('engine_size', parseNumericValue(data.engine_size, 1.6).toString());
-    formDataObj.append('gears', parseNumericValue(data.gears, 5).toString());
-    formDataObj.append('cylinders', parseNumericValue(data.cylinders, 4).toString());
-    formDataObj.append('weight', parseNumericValue(data.weight, 1200).toString());
-    
-    // Handle boolean fields as strings for Django processing
-    formDataObj.append('is_used', data.is_used ? 'true' : 'false');
-    formDataObj.append('full_service_history', data.full_service_history ? 'true' : 'false');
-    formDataObj.append('customs_paid', data.customs_paid ? 'true' : 'false');
-    
-    // Handle string fields
-    formDataObj.append('color', data.color || '');
-    formDataObj.append('description', data.description || '');
-    formDataObj.append('body_type', data.body_type || '');
-    formDataObj.append('drivetrain', data.drivetrain || '');
-    formDataObj.append('gearbox', data.gearbox || '');
-    formDataObj.append('emission_class', data.emission_class || '');
-    formDataObj.append('fuel_type', data.fuel_type || '');
-    
-    // Handle date fields
-    if (data.created_at) formDataObj.append('created_at', data.created_at);
-    if (data.first_registration) formDataObj.append('first_registration', data.first_registration);
-    if (data.general_inspection_date) formDataObj.append('general_inspection_date', data.general_inspection_date);
-    
-    // Handle options array as JSON string
-    if (Array.isArray(data.options) && data.options.length > 0) {
-      formDataObj.append('options', JSON.stringify(data.options));
-    } else {
-      formDataObj.append('options', JSON.stringify([]));
-    }
-    
-    // Handle image if present
-    if (data.image instanceof File) {
-      formDataObj.append('image', data.image);
-    }
-    
-    return formDataObj;
-  };
+    console.log('Sending options as multiple fields with same key:', data.option_ids);
+  } else {
+    // Don't send options field at all for no options
+    console.log('No options to send');
+  }
+  
+  // Debug log the key data being sent
+  console.log('Form data being submitted:', {
+    make: data.make_id,
+    model: data.model_id,
+    variant: data.variant_id,
+    exterior_color: data.exterior_color_id,
+    interior_color: data.interior_color_id,
+    first_registration: data.first_registration,
+    options: data.option_ids || []
+  });
+  
+  return formDataObj;
+};
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -359,6 +438,13 @@ export const useCarForm = (id?: string) => {
             make: updatedCar.make_id.toString(),
             model: updatedCar.model_id.toString(),
             variant: updatedCar.variant_id?.toString() || '',
+            exterior_color_id: updatedCar.exterior_color_id,
+            exterior_color_name: updatedCar.exterior_color_name,
+            exterior_color_hex: updatedCar.exterior_color_hex,
+            interior_color_id: updatedCar.interior_color_id,
+            interior_color_name: updatedCar.interior_color_name,
+            interior_color_hex: updatedCar.interior_color_hex,
+            interior_upholstery: updatedCar.interior_upholstery,
           });
         }
         

@@ -1,78 +1,120 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CarFront, Phone, ChevronDown } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext'; // Import the language context
-import { Language } from '../context/LanguageContext';
+import { CarFront, Phone, CarIcon, Home, Users, Menu, X } from 'lucide-react';
+import logo from '../assets/logo.png'
 
 const Navbar = () => {
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const { currentLanguage, setLanguage, t } = useLanguage(); // Use language context
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const languages: Language[] = [
-    { code: "en", name: "English", flag: "🇬🇧" },
-    { code: "de", name: "German", flag: "🇩🇪" },
-    { code: "sq", name: "Albanian", flag: "🇦🇱" },
-    { code: "it", name: "Italian", flag: "🇮🇹" },
-  ];
-  
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between h-16">
-          {/* Left side */}
-          <div className="flex items-center space-x-4">
+    <>
+      <nav className="bg-black">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between h-16 items-center">
+            {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <CarFront className="h-8 w-8 text-green-600" />
-              <span className="text-xl font-bold text-green-600">{t("Auto Hafuzi")}</span>
-            </Link>
-          </div>
-
-          {/* Right side */}
-          <div className="flex items-center space-x-8">
-            <Link to="/rental" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <CarFront className="h-5 w-5" />
-              <span className="font-medium">{t("rental")}</span>
+              <img 
+                src={logo} 
+                alt="Company Logo" 
+                className="h-10"
+              />
             </Link>
 
-            <Link to="/contact" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <Phone className="h-5 w-5" />
-              <span className="font-medium">{t("contact")}</span>
-            </Link>
+            {/* Desktop Navigation Links */}
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <Home className="h-5 w-5" />
+                <span className="font-medium">Home</span>
+              </Link>
 
-            {/* Language Selector */}
-            <div className="relative">
+              <Link to="/about" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <Users className="h-5 w-5" />
+                <span className="font-medium">About Us</span>
+              </Link>
+
+              <Link to="/cars" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <CarIcon className="h-5 w-5" />
+                <span className="font-medium">Cars for Sale</span>
+              </Link>
+
+              <Link to="/contact" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <Phone className="h-5 w-5" />
+                <span className="font-medium">Contact</span>
+              </Link>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
               <button 
-                onClick={() => setIsLanguageOpen(!isLanguageOpen)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                onClick={toggleMenu} 
+                className="text-white focus:outline-none"
               >
-                <span className="text-xl">{currentLanguage.flag}</span>
-                <ChevronDown className="h-4 w-4 text-gray-600" />
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
-
-              {/* Dropdown Menu */}
-              {isLanguageOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => {
-                        setLanguage(lang);
-                        setIsLanguageOpen(false);
-                      }}
-                      className="flex items-center space-x-3 px-4 py-2 w-full text-left hover:bg-gray-100 transition-colors"
-                    >
-                      <span className="text-xl">{lang.flag}</span>
-                      <span className="text-gray-700">{lang.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
+      </nav>
+
+      {/* Mobile Menu Sliding Panel */}
+      <div 
+        className={`fixed top-0 right-0 w-64 h-full bg-black shadow-lg transform transition-transform duration-300 ease-in-out z-50 md:hidden 
+        ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        {/* Close Button */}
+        <div className="flex justify-end p-4">
+          <button 
+            onClick={toggleMenu} 
+            className="text-red-500 hover:text-red-700 focus:outline-none"
+          >
+            <X className="h-8 w-8" />
+          </button>
+        </div>
+
+        {/* Mobile Menu Links */}
+        <div className="flex flex-col space-y-6 px-6 pt-4">
+          <Link 
+            to="/" 
+            onClick={toggleMenu} 
+            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
+          >
+            <Home className="h-5 w-5" />
+            <span>Home</span>
+          </Link>
+          <Link 
+            to="/about" 
+            onClick={toggleMenu} 
+            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
+          >
+            <Users className="h-5 w-5" />
+            <span>About Us</span>
+          </Link>
+          <Link 
+            to="/cars" 
+            onClick={toggleMenu} 
+            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
+          >
+            <CarIcon className="h-5 w-5" />
+            <span>Cars for Sale</span>
+          </Link>
+          <Link 
+            to="/contact" 
+            onClick={toggleMenu} 
+            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
+          >
+            <Phone className="h-5 w-5" />
+            <span>Contact</span>
+          </Link>
+        </div>
       </div>
-    </nav>
+
+      {/* Overlay to dim background when menu is open */}
+
+    </>
   );
 };
 

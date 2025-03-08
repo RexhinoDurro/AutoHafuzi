@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Car, CarMake, CarModel, CarImage, CarVariant
+from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,6 +17,16 @@ class CarModelSerializer(serializers.ModelSerializer):
         model = CarModel
         fields = ['id', 'name', 'make','variants']
 
+class ExteriorColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExteriorColor
+        fields = ['id', 'name', 'hex_code']
+
+class InteriorColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InteriorColor
+        fields = ['id', 'name', 'upholstery', 'hex_code']
+
 class CarImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     
@@ -31,15 +41,47 @@ class CarImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarImage
         fields = ['id', 'image', 'is_primary', 'order', 'url']
+        
+class OptionSerializer(serializers.ModelSerializer):
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    
+    class Meta:
+        model = Option
+        fields = ['id', 'name', 'category', 'category_display']
 
 class CarSerializer(serializers.ModelSerializer):
     brand = serializers.CharField(source='make.name', read_only=True)
     model_name = serializers.CharField(source='model.name', read_only=True)
     variant_name = serializers.SerializerMethodField()
-    make = serializers.PrimaryKeyRelatedField(queryset=CarMake.objects.all(), write_only=True)
-    model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all(), write_only=True)
+    make = serializers.PrimaryKeyRelatedField(queryset=CarMake.objects.all())
+    model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all())
+    variant = serializers.PrimaryKeyRelatedField(queryset=CarVariant.objects.all(), required=False, allow_null=True)
+    
+    # Add exterior and interior color serialization
+    exterior_color = serializers.PrimaryKeyRelatedField(
+        queryset=ExteriorColor.objects.all(), 
+        required=False, 
+        allow_null=True
+    )
+    exterior_color_name = serializers.CharField(source='exterior_color.name', read_only=True)
+    exterior_color_hex = serializers.CharField(source='exterior_color.hex_code', read_only=True)
+    
+    interior_color = serializers.PrimaryKeyRelatedField(
+        queryset=InteriorColor.objects.all(), 
+        required=False, 
+        allow_null=True
+    )
+    interior_color_name = serializers.CharField(source='interior_color.name', read_only=True)
+    interior_upholstery = serializers.CharField(source='interior_color.upholstery', read_only=True)
+    interior_color_hex = serializers.CharField(source='interior_color.hex_code', read_only=True)
+    
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
     images = CarImageSerializer(many=True, read_only=True)
+    options = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        queryset=Option.objects.all(),
+        required=False
+    )
     
     def get_variant_name(self, obj):
         if obj.variant:
@@ -59,13 +101,15 @@ class CarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-        'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant', 'year', 'color', 'price', 
-        'description', 'created_at', 'images',
-        'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
-        'first_registration', 'general_inspection_date', 'full_service_history', 
-        'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 
-        'weight', 'emission_class', 'fuel_type', 'options'
-    ]
+            'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant', 'year', 
+            'exterior_color', 'exterior_color_name', 'exterior_color_hex',
+            'interior_color', 'interior_color_name', 'interior_upholstery', 'interior_color_hex',
+            'price', 'description', 'created_at', 'images',
+            'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
+            'first_registration', 'general_inspection_date', 'full_service_history', 
+            'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 
+            'weight', 'emission_class', 'fuel_type', 'options'
+        ]
 
     def validate(self, data):
         """Check that the model belongs to the selected make and variant belongs to the model"""
@@ -80,4 +124,5 @@ class CarSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"variant": "This variant does not belong to the selected model."}
                 )
+        
         return data

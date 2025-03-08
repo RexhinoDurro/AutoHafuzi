@@ -5,6 +5,9 @@ export const API_ENDPOINTS = {
   MAKES: `${API_BASE_URL}/api/makes/`,
   MODELS: (makeId: string) => `${API_BASE_URL}/api/models/${makeId}/`,
   VARIANTS: (modelId: string) => `${API_BASE_URL}/api/variants/${modelId}/`,
+  OPTIONS: {
+       LIST: `${API_BASE_URL}/api/options/list/`,
+     },
   CARS: {
     ADD: `${API_BASE_URL}/api/cars/add/`,
     UPDATE: (id: string) => `${API_BASE_URL}/api/cars/${id}/`,

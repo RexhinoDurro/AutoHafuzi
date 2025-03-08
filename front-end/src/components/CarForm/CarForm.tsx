@@ -2,15 +2,15 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
-import { API_BASE_URL } from '../../config/api';
-import { CarImage, TempImage } from '../../types/car';
+import { API_BASE_URL, API_ENDPOINTS } from '../../config/api';
+import { CarImage, TempImage, ExteriorColor, InteriorColor } from '../../types/car';
 import {
   BODY_TYPES,
   DRIVETRAINS,
   GEARBOX_TYPES,
   FUEL_TYPES,
   EMISSION_CLASSES,
-  COLORS
+  UPHOLSTERY_TYPES
 } from './constants';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -31,8 +31,6 @@ const CarForm = () => {
     variants,
     formData,
     setFormData,
-    newOption,
-    setNewOption,
     handleSubmit,
     handleImagesUpload,
     handleImageDelete,
@@ -42,6 +40,26 @@ const CarForm = () => {
 
   // State for form validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [availableOptions, setAvailableOptions] = useState<Array<{id: number, name: string}>>([]);
+  const [selectedOptions, setSelectedOptions] = useState<Array<number>>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("COMFORT");
+  const [categorizedOptions, setCategorizedOptions] = useState<Record<string, Array<{id: number, name: string, category: string}>>>({
+    COMFORT: [],
+    ENTERTAINMENT: [],
+    SAFETY: [],
+    EXTRAS: []
+  });
+  // New state for colors
+  const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
+  const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
+  const [isColorsLoading, setIsColorsLoading] = useState<boolean>(false);
+
+  const optionCategories = {
+    COMFORT: 'Comfort & Convenience',
+    ENTERTAINMENT: 'Entertainment & Media',
+    SAFETY: 'Safety & Security',
+    EXTRAS: 'Extras'
+  };
 
   const currentYear = useMemo(() => new Date().getFullYear(), []);
 
@@ -61,6 +79,17 @@ const CarForm = () => {
   // Parse price from formatted string to number
   const parsePrice = (formattedPrice: string): number => {
     return parseFloat(formattedPrice.replace(/,/g, '')) || 0;
+  };
+
+  // Format mileage with commas
+  const formatMileage = (mileage: number | string): string => {
+    if (!mileage) return '';
+    return mileage.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // Parse mileage from formatted string to number
+  const parseMileage = (formattedMileage: string): number => {
+    return parseFloat(formattedMileage.replace(/,/g, '')) || 0;
   };
 
   const validateImages = (files: FileList, currentImages: (CarImage | TempImage)[]): string | null => {
@@ -95,20 +124,80 @@ const CarForm = () => {
     handleImagesUpload(e);
   };
 
-  const handleOptionAdd = () => {
-    if (newOption.trim()) {
-      setFormData({
-        ...formData,
-        options: [...formData.options, newOption.trim()]
-      });
-      setNewOption('');
+  // Fetch exterior and interior colors
+  const fetchColors = async () => {
+    setIsColorsLoading(true);
+    try {
+      const exteriorResponse = await fetch(`${API_BASE_URL}/api/exterior-colors/`);
+      const interiorResponse = await fetch(`${API_BASE_URL}/api/interior-colors/`);
+      
+      if (!exteriorResponse.ok || !interiorResponse.ok) {
+        throw new Error('Failed to fetch colors');
+      }
+      
+      const exteriorData = await exteriorResponse.json();
+      const interiorData = await interiorResponse.json();
+      
+      setExteriorColors(exteriorData);
+      setInteriorColors(interiorData);
+    } catch (error) {
+      console.error('Error fetching colors:', error);
+    } finally {
+      setIsColorsLoading(false);
     }
   };
 
-  const handleOptionRemove = (index: number) => {
+  const fetchOptions = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/options/list/`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch options');
+      }
+      const data = await response.json();
+      setAvailableOptions(data);
+      
+      // Categorize options
+      const categorized: Record<string, any[]> = {
+        COMFORT: [],
+        ENTERTAINMENT: [],
+        SAFETY: [],
+        EXTRAS: []
+      };
+      
+      data.forEach((option: any) => {
+        if (categorized[option.category]) {
+          categorized[option.category].push(option);
+        } else {
+          categorized.EXTRAS.push(option);
+        }
+      });
+      
+      setCategorizedOptions(categorized);
+      
+      // If editing an existing car, set the selected options
+      if (formData.option_ids && formData.option_ids.length > 0) {
+        setSelectedOptions(formData.option_ids);
+      }
+    } catch (error) {
+      console.error('Error fetching options:', error);
+    }
+  };
+
+  // Add this useEffect to fetch options and colors when component mounts
+  useEffect(() => {
+    fetchOptions();
+    fetchColors();
+  }, []);
+  
+  // Handle option selection changes
+  const handleOptionSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValues = Array.from(e.target.selectedOptions, option => parseInt(option.value));
+    setSelectedOptions(selectedValues);
+    
+    // Update formData with the selected option IDs
     setFormData({
       ...formData,
-      options: formData.options.filter((_, i) => i !== index)
+      option_ids: selectedValues
     });
   };
 
@@ -121,13 +210,6 @@ const CarForm = () => {
       const firstReg = new Date(formData.first_registration);
       if (firstReg > today) {
         return 'First registration date cannot be in the future';
-      }
-    }
-    
-    if (formData.general_inspection_date) {
-      const inspection = new Date(formData.general_inspection_date);
-      if (inspection < today) {
-        return 'General inspection date must be in the future';
       }
     }
     
@@ -146,13 +228,17 @@ const CarForm = () => {
     const errors: Record<string, string> = {};
     
     // Required fields
-    if (!formData.make) errors.make = 'Make is required';
-    if (!formData.model) errors.model = 'Model is required';
-    if (!formData.year) errors.year = 'Year is required';
-    if (!formData.color) errors.color = 'Color is required';
-    if (!formData.price) errors.price = 'Price is required';
+    if (!formData.make_id) errors.make = 'Make is required';
+    if (!formData.model_id) errors.model = 'Model is required';
+    if (!formData.exterior_color_id) errors.exterior_color = 'Exterior color is required';
+    if (!formData.price && !formData.discussedPrice) errors.price = 'Price is required';
     if (!formData.description) errors.description = 'Description is required';
     if (!formData.created_at) errors.created_at = 'Created date is required';
+    
+    // First registration is required only for used cars
+    if (formData.is_used && !formData.first_registration) {
+      errors.first_registration = 'First registration date is required for used vehicles';
+    }
     
     // Validate numeric fields
     if (formData.cylinders !== undefined && 
@@ -240,8 +326,8 @@ const CarForm = () => {
                 Make <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.make}
-                onChange={(e) => setFormData({ ...formData, make: e.target.value, model: '', variant: '' })}
+                value={formData.make_id}
+                onChange={(e) => setFormData({ ...formData, make_id: parseInt(e.target.value), model_id: 0, variant_id: undefined })}
                 className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
                 required
                 disabled={isMakesLoading}
@@ -261,11 +347,11 @@ const CarForm = () => {
                 Model <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.model}
-                onChange={(e) => setFormData({ ...formData, model: e.target.value, variant: '' })}
+                value={formData.model_id}
+                onChange={(e) => setFormData({ ...formData, model_id: parseInt(e.target.value), variant_id: undefined })}
                 className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
                 required
-                disabled={!formData.make || isModelsLoading}
+                disabled={!formData.make_id || isModelsLoading}
               >
                 <option value="">Select Model</option>
                 {models.map((model) => (
@@ -279,22 +365,22 @@ const CarForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Variant
               </label>
               <select
-                value={formData.variant || ''}
+                value={formData.variant_id || ''}
                 onChange={(e) => {
                   const value = e.target.value;
                   setFormData({ 
                     ...formData, 
-                    variant: value === '' ? '' : value // Keep as empty string if empty, otherwise use the value
+                    variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
                   });
                 }}
                 className="w-full p-2 border rounded-lg"
-                disabled={!formData.model || isVariantsLoading}
+                disabled={!formData.model_id || isVariantsLoading}
               >
                 <option value="">Select Variant</option>
                 {variants.map((variant) => (
@@ -306,58 +392,165 @@ const CarForm = () => {
               {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
             </div>
 
-            {/*rest of the form */}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Year <span className="text-red-500">*</span>
+                First Registration <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min="1900"
-                max={currentYear + 1}
-                value={formData.year}
-                onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.year ? 'border-red-500' : ''}`}
+                type="date"
+                value={formData.first_registration || ''}
+                onChange={(e) => setFormData({ ...formData, first_registration: e.target.value })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.first_registration ? 'border-red-500' : ''}`}
                 required
               />
-              {validationErrors.year && <p className="text-red-500 text-xs mt-1">{validationErrors.year}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Color <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.color ? 'border-red-500' : ''}`}
-                required
-              >
-                <option value="">Select Color</option>
-                {COLORS.map((color) => (
-                  <option key={color} value={color}>{color}</option>
-                ))}
-              </select>
-              {validationErrors.color && <p className="text-red-500 text-xs mt-1">{validationErrors.color}</p>}
+              {validationErrors.first_registration && <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration}</p>}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price (€) <span className="text-red-500">*</span>
-            </label>
+          {/* Colors Section */}
+          <div className="mt-4">
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Colors</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Exterior Color */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Exterior Color <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.exterior_color_id || ''}
+                  onChange={(e) => {
+                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedColor = exteriorColors.find(color => color.id === colorId);
+                    
+                    setFormData({ 
+                      ...formData, 
+                      exterior_color_id: colorId,
+                      exterior_color_name: selectedColor?.name,
+                      exterior_color_hex: selectedColor?.hex_code
+                    });
+                  }}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                  required
+                  disabled={isColorsLoading}
+                >
+                  <option value="">Select Exterior Color</option>
+                  {exteriorColors.map((color) => (
+                    <option key={color.id} value={color.id}>
+                      {color.name}
+                    </option>
+                  ))}
+                </select>
+                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
+                {formData.exterior_color_hex && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                      style={{ backgroundColor: formData.exterior_color_hex }}
+                    ></div>
+                    <span className="text-xs text-gray-500">{formData.exterior_color_hex}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Interior Color */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Interior Color
+                </label>
+                <select
+                  value={formData.interior_color_id || ''}
+                  onChange={(e) => {
+                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedColor = interiorColors.find(color => color.id === colorId);
+                    
+                    setFormData({ 
+                      ...formData, 
+                      interior_color_id: colorId,
+                      interior_color_name: selectedColor?.name,
+                      interior_color_hex: selectedColor?.hex_code
+                    });
+                  }}
+                  className="w-full p-2 border rounded-lg"
+                  disabled={isColorsLoading}
+                >
+                  <option value="">Select Interior Color</option>
+                  {interiorColors.map((color) => (
+                    <option key={color.id} value={color.id}>
+                      {color.name}
+                    </option>
+                  ))}
+                </select>
+                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                {formData.interior_color_hex && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                      style={{ backgroundColor: formData.interior_color_hex }}
+                    ></div>
+                    <span className="text-xs text-gray-500">{formData.interior_color_hex}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Upholstery */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upholstery
+                </label>
+                <select
+                  value={formData.interior_upholstery || ''}
+                  onChange={(e) => {
+                    setFormData({ 
+                      ...formData, 
+                      interior_upholstery: e.target.value || undefined
+                    });
+                  }}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select Upholstery</option>
+                  {UPHOLSTERY_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Price (€) <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.price === 0 && formData.discussedPrice ? '' : formatPrice(formData.price)}
+            onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
+            className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+            required
+            disabled={formData.discussedPrice}
+          />
+          <div className="flex items-center mt-2">
             <input
-              type="text"
-              value={formatPrice(formData.price)}
-              onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value) })}
-              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-              required
+              type="checkbox"
+              id="discussedPrice"
+              checked={formData.discussedPrice || false}
+              onChange={(e) => {
+                const isChecked = e.target.checked;
+                setFormData({ 
+                  ...formData, 
+                  discussedPrice: isChecked,
+                  price: isChecked ? 0 : formData.price
+                });
+              }}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
+            <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
+              Discussed price
+            </label>
           </div>
+          {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
         </div>
-
+        </div>
         {/* Image Upload */}
         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
@@ -454,12 +647,11 @@ const CarForm = () => {
                 Mileage (km)
               </label>
               <input
-                type="number"
-                min="0"
-                value={formData.mileage}
+                type="text"
+                value={formData.mileage === 0 ? '' : formatMileage(formData.mileage)}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  mileage: e.target.value === '' ? 0 : parseInt(e.target.value) 
+                  mileage: parseMileage(e.target.value) 
                 })}
                 className="w-full p-2 border rounded-lg"
               />
@@ -512,7 +704,7 @@ const CarForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Gearbox
@@ -526,20 +718,6 @@ const CarForm = () => {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Number of Gears
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="9"
-                value={formData.gears}
-                onChange={(e) => setFormData({ ...formData, gears: parseInt(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
             </div>
 
             <div>
@@ -597,31 +775,7 @@ const CarForm = () => {
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Registration
-              </label>
-              <input
-                type="date"
-                value={formData.first_registration}
-                onChange={(e) => setFormData({ ...formData, first_registration: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                General Inspection Date
-              </label>
-              <input
-                type="date"
-                value={formData.general_inspection_date}
-                onChange={(e) => setFormData({ ...formData, general_inspection_date: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Created At <span className="text-red-500">*</span>
@@ -635,31 +789,8 @@ const CarForm = () => {
               />
               {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
             </div>
-          </div>
-
-          {/* Checkboxes */}
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.is_used}
-                onChange={(e) => setFormData({ ...formData, is_used: e.target.checked })}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.full_service_history}
-                onChange={(e) => setFormData({ ...formData, full_service_history: e.target.checked })}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Full Service History</label>
-            </div>
-
-            <div className="flex items-center">
+            
+            <div className="flex items-center mt-6">
               <input
                 type="checkbox"
                 checked={formData.customs_paid}
@@ -669,46 +800,129 @@ const CarForm = () => {
               <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
             </div>
           </div>
-        </div>
 
-        {/* Options */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Additional Options
-          </label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={newOption}
-              onChange={(e) => setNewOption(e.target.value)}
-              className="flex-1 p-2 border rounded-lg"
-              placeholder="Enter new option"
-            />
-            <button
-              type="button"
-              onClick={handleOptionAdd}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Add
-            </button>
-          </div>
-          <div className="space-y-2">
-            {formData.options.map((option, index) => (
-              <div key={index} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                <span className="flex-1">{option}</span>
-                <button
-                  type="button"
-                  onClick={() => handleOptionRemove(index)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+          {/* Checkboxes */}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.is_used}
+                onChange={(e) => setFormData({ ...formData, is_used: e.target.checked })}
+                className="h-4 w-4 text-blue-600"
+              />
+              <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
+            </div>
           </div>
         </div>
+{/* Options */}
+<div>
+  <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Additional Options
+  </label>
+  
+  {/* Loading state */}
+  {availableOptions.length === 0 && (
+    <div className="text-sm text-gray-500 mb-2">Loading options...</div>
+  )}
+  
+  {/* Category tabs */}
+  <div className="mb-3 border-b border-gray-200">
+    <nav className="-mb-px flex space-x-4 overflow-x-auto">
+      {Object.entries(optionCategories).map(([categoryKey, categoryLabel]) => (
+        <button
+          key={categoryKey}
+          type="button"
+          onClick={() => setActiveCategory(categoryKey)}
+          className={`whitespace-nowrap py-2 px-3 text-sm font-medium ${
+            activeCategory === categoryKey 
+              ? 'border-b-2 border-blue-500 text-blue-600' 
+              : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          {categoryLabel}
+        </button>
+      ))}
+    </nav>
+  </div>
 
+  <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
+    <div className="grid grid-cols-2 gap-2">
+    {categorizedOptions[activeCategory]?.map((option) => (
+  <div key={option.id} className="flex items-center">
+    <input
+      type="checkbox"
+      id={`option-${option.id}`}
+      checked={selectedOptions.includes(option.id)}
+      onChange={(e) => {
+        const optionId = option.id;
+        let newSelectedOptions: number[];
+        
+        if (e.target.checked) {
+          // Add the option if checked
+          newSelectedOptions = [...selectedOptions, optionId];
+        } else {
+          // Remove the option if unchecked
+          newSelectedOptions = selectedOptions.filter(id => id !== optionId);
+        }
+        
+        setSelectedOptions(newSelectedOptions);
+        
+        // Update formData with the selected option IDs directly
+        setFormData({
+          ...formData,
+          option_ids: newSelectedOptions
+        });
+        
+        console.log("Updated options:", newSelectedOptions);
+      }}
+      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+    />
+    <label htmlFor={`option-${option.id}`} className="ml-2 text-sm text-gray-700">
+      {option.name}
+    </label>
+  </div>
+))}
+
+      {categorizedOptions[activeCategory]?.length === 0 && (
+        <div className="col-span-2 text-sm text-gray-500 py-2">
+          No options available in this category
+        </div>
+      )}
+    </div>
+  </div>
+  
+  {selectedOptions.length > 0 && (
+    <div className="mt-3">
+      <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Options ({selectedOptions.length}):</h4>
+      <div className="flex flex-wrap gap-2 mt-2">
+        {selectedOptions.map((optionId) => {
+          const option = availableOptions.find(opt => opt.id === optionId);
+          return option ? (
+            <div key={optionId} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center">
+              {option.name}
+              <button
+                type="button"
+                onClick={() => {
+                  const newSelected = selectedOptions.filter(id => id !== optionId);
+                  setSelectedOptions(newSelected);
+                  setFormData({
+                    ...formData,
+                    option_ids: newSelected
+                  });
+                }}
+                className="ml-1 text-gray-500 hover:text-gray-700"
+              >
+                <span className="sr-only">Remove</span>
+                ×
+              </button>
+            </div>
+          ) : null;
+        })}
+      </div>
+    </div>
+  )}
+</div>
         {/* Description */}
         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">Description</h3>
