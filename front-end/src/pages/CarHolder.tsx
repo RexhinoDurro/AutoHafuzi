@@ -1,55 +1,134 @@
-// src/components/CarListing.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import CarHolderFilter from '../components/CarHolderFilter';
+import { Car } from '../types/car';
 
-const CarListing: React.FC = () => {
+const CarHolder: React.FC = () => {
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCars = async (filters = {}) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const url = `http://localhost:8000/api/cars/?${queryParams}`;
+      console.log('Fetching cars with URL:', url);
+      console.log('Filters:', filters);
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch cars');
+
+      const data = await response.json();
+      setCars(data.results || []);
+    } catch (error) {
+      console.error('Error fetching cars:', error);
+      setError('Failed to load cars. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCars();
+  }, []);
+
   return (
-    <div className="bg-as24-off-white min-h-screen">
-      {/* Header */}
-      <header className="bg-as24-dark-blue text-white p-4">
-        <div className="container mx-auto">
-          <h1 className="text-2xl font-bold">AutoScout24</h1>
+    <div className="flex min-h-screen container mx-auto px-4 py-8">
+      {/* Filter section - fixed width on left side */}
+      <div className="w-80 mr-8">
+        <CarHolderFilter onFilterChange={(filters) => fetchCars(filters)} />
+      </div>
+
+      {/* Car listing section - takes remaining width */}
+      <div className="flex-grow">
+        <h1 className="text-3xl font-bold mb-6">Car Listings</h1>
+        
+        {loading && <p className="text-center text-gray-500">Loading cars...</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
+
+        <div className="space-y-6">
+          {cars.length > 0 ? (
+            cars.map((car) => (
+              <div 
+                key={car.id} 
+                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all"
+              >
+                <div className="flex h-64">
+                  {/* Car Image - Left Side */}
+                  <div className="w-1/3 relative">
+                    <img
+                      src={
+                        car.images && car.images.length > 0
+                          ? (car.images[0].image.startsWith('http') 
+                              ? car.images[0].image 
+                              : `http://localhost:8000${car.images[0].image}`)
+                          : 'placeholder-image-url'
+                      }
+                      alt={`${car.brand} ${car.model_name}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {/* Car Details - Right Side */}
+                  <div className="w-2/3 p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-2xl font-bold text-gray-800">
+                          {car.brand} {car.model_name}
+                          {car.variant_name && (
+                            <span className="text-gray-500 font-normal text-sm ml-2">
+                              {car.variant_name}
+                            </span>
+                          )}
+                        </h3>
+                        <span className="text-blue-600 font-semibold text-xl">
+                          ${Number(car.price).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex space-x-2">
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.year}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.mileage.toLocaleString()} km</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.fuel_type}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.gearbox}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.body_type}</span>
+                      </div>
+
+                      <p className="text-gray-600 mt-4 line-clamp-3">{car.description}</p>
+                    </div>
+
+                    <div className="mt-4 flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        </div>
+                        <span className="text-gray-600">{car.body_type} • {car.color}</span>
+                      </div>
+                      <button 
+                        className="text-blue-600 hover:underline font-medium"
+                        onClick={() => window.location.href = `/car/${car.id}`}
+                      >
+                        View Full Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            !loading && <p className="text-center text-gray-500">No cars found.</p>
+          )}
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto p-4">
-        {/* Search Filters */}
-        <section className="bg-white p-4 rounded shadow mb-4">
-          <h2 className="text-xl font-semibold mb-2">Search Filters</h2>
-          {/* Add filter controls here */}
-        </section>
-
-        {/* Car Listings */}
-        <section>
-          <h2 className="text-xl font-semibold mb-2">Available Cars</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Example Car Card */}
-            <div className="bg-white p-4 rounded shadow">
-              <img
-                src="https://via.placeholder.com/400x300"
-                alt="Car"
-                className="w-full h-48 object-cover mb-2 rounded"
-              />
-              <h3 className="text-lg font-bold">2025 Audi A4</h3>
-              <p className="text-as24-orange font-semibold">€19,500</p>
-              <p className="text-gray-600">65,000 km • Gasoline • Automatic</p>
-              <button className="mt-2 bg-as24-light-blue text-white py-1 px-4 rounded">
-                View Details
-              </button>
-            </div>
-            {/* Repeat car cards as needed */}
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-as24-dark-blue text-white p-4 mt-4">
-        <div className="container mx-auto text-center">
-          <p>&copy; 2025 AutoScout24. All rights reserved.</p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
 
-export default CarListing;
+export default CarHolder;

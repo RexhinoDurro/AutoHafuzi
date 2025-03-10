@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Car
+from .models import Car, CarMake, CarModel, CarVariant, ExteriorColor, InteriorColor, Option, CarImage
 
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
-    list_display = ('make', 'model', 'year', 'color', 'price')
+    list_display = ('make', 'model', 'year', 'exterior_color', 'interior_color', 'price')

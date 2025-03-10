@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CarCard from '../components/CarCard';
 import CarFilter from '../components/CarFilter';
 import { Car } from '../types/car';
@@ -7,6 +8,7 @@ const Home = () => {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchCars = async (filters = {}) => {
     setLoading(true);
@@ -28,8 +30,12 @@ const Home = () => {
       if (!response.ok) throw new Error('Failed to fetch cars');
 
       const data = await response.json();
-      // Fix: Extract the cars from the results array
       setCars(data.results || []);
+
+      // If filters are applied, redirect to /cars with filters
+      if (Object.keys(filters).length > 0) {
+        navigate(`/cars?${queryParams}`);
+      }
     } catch (error) {
       console.error('Error fetching cars:', error);
       setError('Failed to load cars. Please try again.');
@@ -57,12 +63,8 @@ const Home = () => {
           !loading && <p className="col-span-full text-center text-gray-500">No cars found.</p>
         )}
       </div>
-
-
-      
     </div>
   );
 };
-
 
 export default Home;

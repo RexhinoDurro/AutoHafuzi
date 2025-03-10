@@ -2,6 +2,44 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CarImageCarousel from '../components/ImageGallery';
 import { Car } from '../types/car';
+import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star } from 'lucide-react';
+
+// Interfaces for color data
+interface ExteriorColor {
+  id: number;
+  name: string;
+  hex_code: string;
+}
+
+interface InteriorColor {
+  id: number;
+  name: string;
+  hex_code: string;
+  upholstery: string;
+}
+
+// Interface for option data
+interface Option {
+  id: number;
+  name: string;
+  category: string;
+}
+
+// Updated OptionCategories interface to match backend categories
+interface OptionCategories {
+  'COMFORT': string[];
+  'ENTERTAINMENT': string[];
+  'SAFETY': string[];
+  'EXTRAS': string[];
+}
+
+// Category label mapping
+const categoryLabels: Record<string, string> = {
+  'COMFORT': 'Comfort & Convenience',
+  'ENTERTAINMENT': 'Entertainment & Media',
+  'SAFETY': 'Safety & Security',
+  'EXTRAS': 'Extras'
+};
 
 const CarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -9,7 +47,42 @@ const CarDetail: React.FC = () => {
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [options, setOptions] = useState<Option[]>([]);
+  const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
+  const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
 
+  // Fetch colors and options data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [optionsRes, exteriorColorsRes, interiorColorsRes] = await Promise.all([
+          fetch('http://localhost:8000/api/options/list/'),
+          fetch('http://localhost:8000/api/exterior-colors/'),
+          fetch('http://localhost:8000/api/interior-colors/')
+        ]);
+        
+        if (!optionsRes.ok || !exteriorColorsRes.ok || !interiorColorsRes.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        
+        const [optionsData, exteriorColorsData, interiorColorsData] = await Promise.all([
+          optionsRes.json(),
+          exteriorColorsRes.json(),
+          interiorColorsRes.json()
+        ]);
+        
+        setOptions(optionsData);
+        setExteriorColors(exteriorColorsData);
+        setInteriorColors(interiorColorsData);
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch car details
   useEffect(() => {
     const fetchCarDetails = async () => {
       try {
@@ -29,6 +102,34 @@ const CarDetail: React.FC = () => {
     fetchCarDetails();
   }, [id]);
 
+  // Group options by category for display
+  const categorizeOptions = (): OptionCategories => {
+    const categories: OptionCategories = {
+      'COMFORT': [],
+      'ENTERTAINMENT': [],
+      'SAFETY': [],
+      'EXTRAS': []
+    };
+    
+    if (!car || !car.options || !options.length) return categories;
+    
+    // Find the option objects that match the car's option IDs
+    const carOptionIds = Array.isArray(car.options) 
+      ? car.options 
+      : typeof car.options === 'string' 
+        ? JSON.parse(car.options)
+        : [];
+    
+    // Match options by ID and categorize them
+    options.forEach(option => {
+      if (carOptionIds.includes(option.id)) {
+        categories[option.category as keyof OptionCategories]?.push(option.name);
+      }
+    });
+    
+    return categories;
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -36,7 +137,10 @@ const CarDetail: React.FC = () => {
   if (error || !car) {
     return <div className="flex justify-center items-center h-screen text-red-600">{error}</div>;
   }
-
+  
+  // Get categorized options
+  const optionsByCategory = categorizeOptions();
+  
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <button
@@ -49,12 +153,42 @@ const CarDetail: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
           <div className="space-y-6">
-            {/* Replace ImageGallery with CarImageCarousel */}
             <CarImageCarousel images={car.images} />
+            
+            {/* Key Specifications Box */}
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="flex flex-col items-center text-center">
+                  <Clock className="text-blue-600 mb-2" size={24} />
+                  <p className="text-gray-600 text-sm">Mileage</p>
+                  <p className="font-bold">{car.mileage.toLocaleString()} km</p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <Settings className="text-blue-600 mb-2" size={24} />
+                  <p className="text-gray-600 text-sm">Gearbox</p>
+                  <p className="font-bold">{car.gearbox}</p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <Calendar className="text-blue-600 mb-2" size={24} />
+                  <p className="text-gray-600 text-sm">First registration</p>
+                  <p className="font-bold">{car.first_registration || 'N/A'}</p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <Fuel className="text-blue-600 mb-2" size={24} />
+                  <p className="text-gray-600 text-sm">Fuel type</p>
+                  <p className="font-bold">{car.fuel_type}</p>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <Zap className="text-blue-600 mb-2" size={24} />
+                  <p className="text-gray-600 text-sm">Power</p>
+                  <p className="font-bold">{car.power} kW ({Math.round(car.power * 1.36)} hp)</p>
+                </div>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-4">
-            <h1 className="text-3xl font-bold">{car.brand} {car.model_name}</h1>
+            <h1 className="text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
             <h2 className="text-2xl font-semibold text-blue-600">
               ${typeof car.price === 'number' 
                 ? car.price.toLocaleString() 
@@ -75,13 +209,59 @@ const CarDetail: React.FC = () => {
                   <p className="font-medium">{car.body_type}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Color</p>
-                  <p className="font-medium">{car.color}</p>
-                </div>
-                <div>
                   <p className="text-gray-600">Condition</p>
                   <p className="font-medium">{car.is_used ? 'Used' : 'New'}</p>
                 </div>
+                <div>
+                  <p className="text-gray-600">General Inspection Date</p>
+                  <p className="font-medium">{car.general_inspection_date || 'N/A'}</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Fixed Colors Section */}
+            <section className="space-y-4">
+              <h3 className="text-xl font-semibold">Colors</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Exterior Color */}
+                {car.exterior_color_name && (
+                  <div>
+                    <p className="text-gray-600">Exterior Color</p>
+                    <div className="flex items-center">
+                      {car.exterior_color_hex && (
+                        <div 
+                          className="w-4 h-4 mr-2 rounded-full border border-gray-300" 
+                          style={{ backgroundColor: car.exterior_color_hex }}
+                        ></div>
+                      )}
+                      <p className="font-medium">{car.exterior_color_name}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Interior Color */}
+                {car.interior_color_name && (
+                  <div>
+                    <p className="text-gray-600">Interior Color</p>
+                    <div className="flex items-center">
+                      {car.interior_color_hex && (
+                        <div 
+                          className="w-4 h-4 mr-2 rounded-full border border-gray-300" 
+                          style={{ backgroundColor: car.interior_color_hex }}
+                        ></div>
+                      )}
+                      <p className="font-medium">{car.interior_color_name}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Upholstery */}
+                {car.interior_upholstery && (
+                  <div>
+                    <p className="text-gray-600">Upholstery</p>
+                    <p className="font-medium">{car.interior_upholstery}</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -89,64 +269,118 @@ const CarDetail: React.FC = () => {
               <h3 className="text-xl font-semibold">Technical Specifications</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Engine Power</p>
-                  <p className="font-medium">{car.power} HP</p>
-                </div>
-                <div>
                   <p className="text-gray-600">Engine Size</p>
                   <p className="font-medium">{car.engine_size}L</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Transmission</p>
-                  <p className="font-medium">{car.gearbox}</p>
+                  <p className="text-gray-600">Gears</p>
+                  <p className="font-medium">{car.gears}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Drivetrain</p>
-                  <p className="font-medium">{car.drivetrain}</p>
+                  <p className="text-gray-600">Cylinders</p>
+                  <p className="font-medium">{car.cylinders}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Fuel Type</p>
-                  <p className="font-medium">{car.fuel_type}</p>
+                  <p className="text-gray-600">Weight</p>
+                  <p className="font-medium">{car.weight} kg</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Emission Class</p>
                   <p className="font-medium">{car.emission_class}</p>
                 </div>
+                <div>
+                  <p className="text-gray-600">Customs Paid</p>
+                  <p className="font-medium">{car.customs_paid ? 'Yes' : 'No'}</p>
+                </div>
               </div>
             </section>
 
             <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Vehicle History</h3>
+              <h3 className="text-xl font-semibold">Vehicle Details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Mileage</p>
-                  <p className="font-medium">{car.mileage.toLocaleString()} km</p>
+                  <p className="text-gray-600">Seats</p>
+                  <p className="font-medium">{car.seats}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">First Registration</p>
-                  <p className="font-medium">{car.first_registration || 'N/A'}</p>
+                  <p className="text-gray-600">Doors</p>
+                  <p className="font-medium">{car.doors}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Service History</p>
                   <p className="font-medium">{car.full_service_history ? 'Full' : 'Partial'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Inspection Date</p>
-                  <p className="font-medium">{car.general_inspection_date || 'N/A'}</p>
+                  <p className="text-gray-600">Drivetrain</p>
+                  <p className="font-medium">{car.drivetrain}</p>
                 </div>
               </div>
             </section>
 
-            {car.options && car.options.length > 0 && (
+            {/* Categorized Options - Updated to match backend structure */}
+            {options.length > 0 && car.options && (
               <section className="space-y-4">
-                <h3 className="text-xl font-semibold">Additional Features</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {car.options.map((option, index) => (
-                    <div key={index} className="bg-gray-50 p-2 rounded">
-                      {option}
+                <h3 className="text-xl font-semibold">Features</h3>
+                
+                {/* Comfort & Convenience */}
+                {optionsByCategory['COMFORT'] && optionsByCategory['COMFORT'].length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <Sofa className="text-blue-600 mr-2" size={20} />
+                      <h4 className="font-medium">{categoryLabels['COMFORT']}</h4>
                     </div>
-                  ))}
-                </div>
+                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                      {optionsByCategory['COMFORT'].map((option: string, index: number) => (
+                        <li key={index} className="text-gray-700">{option}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Entertainment & Media */}
+                {optionsByCategory['ENTERTAINMENT'] && optionsByCategory['ENTERTAINMENT'].length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <Music className="text-blue-600 mr-2" size={20} />
+                      <h4 className="font-medium">{categoryLabels['ENTERTAINMENT']}</h4>
+                    </div>
+                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                      {optionsByCategory['ENTERTAINMENT'].map((option: string, index: number) => (
+                        <li key={index} className="text-gray-700">{option}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Safety & Security */}
+                {optionsByCategory['SAFETY'] && optionsByCategory['SAFETY'].length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <Shield className="text-blue-600 mr-2" size={20} />
+                      <h4 className="font-medium">{categoryLabels['SAFETY']}</h4>
+                    </div>
+                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                      {optionsByCategory['SAFETY'].map((option: string, index: number) => (
+                        <li key={index} className="text-gray-700">{option}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Extras */}
+                {optionsByCategory['EXTRAS'] && optionsByCategory['EXTRAS'].length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center mb-2">
+                      <Star className="text-blue-600 mr-2" size={20} />
+                      <h4 className="font-medium">Extras</h4>
+                    </div>
+                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                      {optionsByCategory['EXTRAS'].map((option: string, index: number) => (
+                        <li key={index} className="text-gray-700">{option}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
             )}
           </div>

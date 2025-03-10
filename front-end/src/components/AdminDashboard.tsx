@@ -86,12 +86,26 @@ const AdminDashboard = () => {
     <div className="max-w-7xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div className="flex space-x-4">
         <button
-          onClick={() => navigate('/auth/add-car')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          onClick={() => navigate('/exterior-colors')}
+          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
         >
-          Add New Car
+          Manage Colors
         </button>
+          <button
+            onClick={() => navigate('/options')}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+          >
+            Manage Options
+          </button>
+          <button
+            onClick={() => navigate('/auth/add-car')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Add New Car
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-lg">

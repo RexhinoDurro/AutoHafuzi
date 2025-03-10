@@ -8,11 +8,30 @@ from django.core.exceptions import ValidationError
 from ..models import Car
 from ..serializers import CarSerializer
 import json
+from django.shortcuts import render
+from django.http import JsonResponse
 
 class CarPagination(PageNumberPagination):
     page_size = 12
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+def handle_m2m_options(request_data, serializer_data):
+    """
+    Extract and handle options data separately from the serializer
+    to avoid common DRF M2M issues
+    """
+    # Get options IDs from request data
+    option_ids = request_data.getlist('options', [])
+    
+    # Print for debugging
+    print(f"Received option_ids: {option_ids}")
+    
+    # Remove options field from serializer data to avoid validation issues
+    if 'options' in serializer_data:
+        serializer_data.pop('options')
+        
+    return [int(option_id) for option_id in option_ids if option_id.isdigit()]
 
 @api_view(["GET"])
 def get_cars(request):
@@ -91,18 +110,21 @@ def add_car(request):
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     data = request.data.copy()
-    print(f"Received data: {data}") 
+    print(f"Received data: {data}")
     
-    for key in ['is_used', 'full_service_history', 'customs_paid']:
+    # Process boolean fields
+    for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
         if key in data and isinstance(data[key], str):
             data[key] = data[key].lower() == 'true'
     
-    if 'options' in data and isinstance(data['options'], str):
-        try:
-            data['options'] = json.loads(data['options'])
-        except json.JSONDecodeError:
-            return Response({'error': 'Invalid options format'}, status=status.HTTP_400_BAD_REQUEST)
+    # Handle discussed price logic - if discussed_price is True, ensure price is 0
+    if data.get('discussed_price') is True:
+        data['price'] = 0
     
+    # Extract options to handle separately
+    option_ids = handle_m2m_options(request.data, data)
+    
+    # Process image if present
     image = request.FILES.get('image')
     if image:
         data['image'] = image
@@ -111,7 +133,26 @@ def add_car(request):
     if not serializer.is_valid():
         print(f"Serializer errors: {serializer.errors}")  # Debug log
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    serializer.save()
+    
+    car = serializer.save()
+    # Set the options manually after saving
+    if option_ids:
+        try:
+            from ..models import Option
+            options = Option.objects.filter(id__in=option_ids)
+            car.options.set(options)
+        except Exception as e:
+            print(f"Error setting options: {e}")
+    
+    # If an image was uploaded, create a CarImage for it
+    if image:
+        from ..models import CarImage
+        car_image = CarImage.objects.create(
+            car=car,
+            image=image,
+            is_primary=True  # First image is primary
+        )
+    
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['PUT'])
@@ -122,9 +163,32 @@ def update_car(request, car_id):
     
     try:
         car = Car.objects.get(id=car_id)
-        serializer = CarSerializer(car, data=request.data, partial=True)
+        data = request.data.copy()
+        
+        # Process boolean fields
+        for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
+            if key in data and isinstance(data[key], str):
+                data[key] = data[key].lower() == 'true'
+        
+        # Handle discussed price logic - if discussed_price is True, ensure price is 0
+        if data.get('discussed_price') is True:
+            data['price'] = 0
+            
+        # Extract options to handle separately
+        option_ids = handle_m2m_options(request.data, data)
+        
+        serializer = CarSerializer(car, data=data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            car = serializer.save()
+            # Set the options manually after saving
+            if option_ids:
+                try:
+                    from ..models import Option
+                    options = Option.objects.filter(id__in=option_ids)
+                    car.options.set(options)
+                except Exception as e:
+                    print(f"Error setting options: {e}")
+            
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Car.DoesNotExist:
@@ -142,3 +206,28 @@ def delete_car(request, car_id):
         return Response({'message': 'Car deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Car.DoesNotExist:
         return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
+
+def about_page(request):
+    """
+    Render the about page with company information
+    """
+    try:
+        # Company description
+        company_description = 'Driven by passion, committed to quality. We\'ve been helping customers find their perfect ride since 2010.'
+        
+        # If it's an API request, return JSON
+        if request.accepts('application/json'):
+            return JsonResponse({
+                'company_description': company_description
+            })
+        
+        # For regular page render
+        return render(request, 'about.html', {
+            'company_description': company_description
+        })
+    
+    except Exception as e:
+        # Handle any errors
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)

@@ -2,15 +2,20 @@ export interface Car {
   id: number;
   make_id: number;
   model_id: number;
-  variant_id?: number;    // Added variant ID
+  variant_id?: number;
   brand: string;
   model_name: string;
-  variant_name?: string;  // Added variant name
+  variant_name?: string;
   year: number;
-  color: string;
+  exterior_color_id?: number;
+  exterior_color_name?: string;
+  exterior_color_hex?: string;
+  interior_color_id?: number;
+  interior_color_name?: string;
+  interior_upholstery?: string;
+  interior_color_hex?: string;
   price: number;
   description: string;
-  image: string | null;
   created_at: string;
   images: CarImage[];
   body_type: string;
@@ -56,25 +61,50 @@ export interface Model {
   id: number;
   name: string;
   make: number;
-  variants?: Variant[];  // Added variants relationship
+  variants?: Variant[];
 }
 
-export interface Variant {  // Added Variant interface
+export interface Variant {
   id: number;
   name: string;
   model: number;
 }
 
+export interface ExteriorColor {
+  id: number;
+  name: string;
+  hex_code: string;
+}
+
+export interface InteriorColor {
+  id: number;
+  name: string;
+  upholstery: string;
+  hex_code: string;
+}
+
 export interface FormData {
   make: string;
   model: string;
-  variant?: string;       // Added variant
+  variant?: string;
+  make_id?: number;
+  model_id?: number;
+  variant_id?: number;
   brand?: string;   
   model_name?: string;
-  variant_name?: string;  // Added variant_name
+  variant_name?: string;
   year: number;
-  color: string;
+  exterior_color?: string;
+  exterior_color_id?: number;
+  exterior_color_name?: string;
+  exterior_color_hex?: string;
+  interior_color?: string;
+  interior_color_id?: number;
+  interior_color_name?: string;
+  interior_color_hex?: string;
+  interior_upholstery?: string;
   price: number;
+  discussedPrice?: boolean;
   description: string;
   image: File | null;
   created_at: string;
@@ -97,5 +127,6 @@ export interface FormData {
   emission_class: string;
   fuel_type: string;
   options: string[];
+  option_ids?: number[];
   images: CarImage[];
 }

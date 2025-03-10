@@ -27,6 +27,44 @@ class CarVariant(models.Model):
     def __str__(self):
         return f"{self.model.make.name} {self.model.name} {self.name}"
 
+class ExteriorColor(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    hex_code = models.CharField(max_length=7, default="#000000")  # Store color hex codes
+
+    def __str__(self):
+        return self.name
+
+class InteriorColor(models.Model):
+    name = models.CharField(max_length=100)
+    upholstery = models.CharField(max_length=100)  # e.g., Leather, Alcantara, Cloth
+    hex_code = models.CharField(max_length=7, default="#000000")  # Store color hex codes
+
+    class Meta:
+        unique_together = ['name', 'upholstery']
+
+    def __str__(self):
+        return f"{self.name} {self.upholstery}"
+
+class OptionCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    
+    def __str__(self):
+        return self.name
+
+class Option(models.Model):
+    CATEGORY_CHOICES = [
+        ('COMFORT', 'Comfort & Convenience'),
+        ('ENTERTAINMENT', 'Entertainment & Media'),
+        ('SAFETY', 'Safety & Security'),
+        ('EXTRAS', 'Extras'),
+    ]
+    
+    name = models.CharField(max_length=100, unique=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='EXTRAS')
+
+    def __str__(self):
+        return self.name
+
 class CarImage(models.Model):
     car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='car_images/', default='default.jpg')
@@ -45,8 +83,11 @@ class Car(models.Model):
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
     variant = models.ForeignKey(CarVariant, on_delete=models.CASCADE, null=True, blank=True)
     year = models.IntegerField()
-    color = models.CharField(max_length=50, default="Black")
+    # Replace single color field with exterior and interior color references
+    exterior_color = models.ForeignKey(ExteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
+    interior_color = models.ForeignKey(InteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discussed_price = models.BooleanField(default=False) 
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -69,7 +110,7 @@ class Car(models.Model):
     weight = models.IntegerField(default=1200)  # in kg
     emission_class = models.CharField(max_length=50, default="Euro 6")
     fuel_type = models.CharField(max_length=50, default="Petrol")
-    options = models.JSONField(default=list)
+    options = models.ManyToManyField(Option, blank=True)
     
     class Meta:
         ordering = ['-created_at']
@@ -88,5 +129,3 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.year})"
-    
-    
