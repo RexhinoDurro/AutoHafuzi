@@ -17,6 +17,26 @@ interface Variant {
   model: number;
 }
 
+interface ExteriorColor {
+  id: number;
+  name: string;
+  hex_code: string;
+}
+
+interface InteriorColor {
+  id: number;
+  name: string;
+  upholstery: string;
+  hex_code: string;
+}
+
+interface Option {
+  id: number;
+  name: string;
+  category: string;
+  category_display: string;
+}
+
 interface FilterProps {
   onFilterChange: (filters: FilterState) => void;
 }
@@ -25,28 +45,58 @@ interface FilterState {
   make?: string;
   model?: string;
   variant?: string;
-  year?: string;
+  first_registration_from?: string;
+  first_registration_to?: string;
   min_price?: string;
   max_price?: string;
-  bodyType?: string;
-  fuelType?: string;
-  gearbox?: string;
+  min_mileage?: string;
   max_mileage?: string;
-  color?: string;
+  bodyType?: string;
+  min_power?: string;
+  max_power?: string;
+  gearbox?: string;
+  doors?: string;
+  seats?: string;
+  condition?: string;
+  options?: string[];
+  exterior_color?: string;
+  interior_color?: string;
+  interior_upholstery?: string;
+  fuel_type?: string;
+  emission_class?: string;
+  created_since?: string;
 }
 
 const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const [makes, setMakes] = useState<Make[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
+  const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
+  const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
+  const [options, setOptions] = useState<Option[]>([]);
   const [filters, setFilters] = useState<FilterState>({});
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [groupedOptions, setGroupedOptions] = useState<Record<string, Option[]>>({});
+
+  // Get current year for registration date ranges
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
   // Default filter options
   const bodyTypes = ['Sedan', 'SUV', 'Coupe', 'Hatchback', 'Wagon', 'Convertible', 'Van', 'Truck'];
   const fuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'LPG', 'CNG'];
   const gearboxTypes = ['Manual', 'Automatic'];
-  const colors = ['Black', 'White', 'Silver', 'Gray', 'Blue', 'Red', 'Green', 'Brown', 'Yellow', 'Orange'];
+  const emissionClasses = ['Euro 6', 'Euro 5', 'Euro 4', 'Euro 3', 'Euro 2', 'Euro 1'];
+  const doorOptions = [2, 3, 4, 5];
+  const seatOptions = [2, 3, 4, 5, 6, 7, 8, 9];
+  const conditionOptions = ['New', 'Used'];
+  const createdSinceOptions = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: '1week', label: '1 Week' },
+    { value: '2weeks', label: '2 Weeks' },
+  ];
   
   const priceRanges = [
     { value: '', label: 'All Prices' },
@@ -59,6 +109,17 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     { value: '100000', label: '€100,000+' },
   ];
 
+  const powerRanges = [
+    { value: '', label: 'Any HP' },
+    { value: '100', label: '100 HP' },
+    { value: '150', label: '150 HP' },
+    { value: '200', label: '200 HP' },
+    { value: '250', label: '250 HP' },
+    { value: '300', label: '300 HP' },
+    { value: '400', label: '400 HP' },
+    { value: '500', label: '500 HP+' },
+  ];
+
   const mileageRanges = [
     { value: '', label: 'Any Mileage' },
     { value: '10000', label: '10,000 km' },
@@ -68,9 +129,28 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     { value: '200000', label: '200,000 km' },
   ];
 
-  // Get all makes when component mounts
+  // Process options data when it changes
+  useEffect(() => {
+    if (options && Array.isArray(options) && options.length > 0) {
+      const grouped = options.reduce((acc, option) => {
+        const category = option.category_display || 'Other';
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(option);
+        return acc;
+      }, {} as Record<string, Option[]>);
+      
+      setGroupedOptions(grouped);
+    }
+  }, [options]);
+
+  // Fetch data on component mount
   useEffect(() => {
     fetchMakes();
+    fetchExteriorColors();
+    fetchInteriorColors();
+    fetchOptions();
   }, []);
 
   // Get models when make is selected
@@ -97,6 +177,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const fetchMakes = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/makes/');
+      if (!response.ok) throw new Error('Failed to fetch makes');
       const data = await response.json();
       setMakes(data);
     } catch (error) {
@@ -107,6 +188,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const fetchModels = async (makeId: string) => {
     try {
       const response = await fetch(`http://localhost:8000/api/models/${makeId}/`);
+      if (!response.ok) throw new Error('Failed to fetch models');
       const data = await response.json();
       setModels(data);
     } catch (error) {
@@ -117,6 +199,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const fetchVariants = async (modelId: string) => {
     try {
       const response = await fetch(`http://localhost:8000/api/variants/${modelId}/`);
+      if (!response.ok) throw new Error('Failed to fetch variants');
       const data = await response.json();
       setVariants(data);
     } catch (error) {
@@ -124,202 +207,200 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     }
   };
 
+  const fetchExteriorColors = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/exterior-colors/');
+      if (!response.ok) throw new Error('Failed to fetch exterior colors');
+      const data = await response.json();
+      setExteriorColors(data);
+    } catch (error) {
+      console.error('Error fetching exterior colors:', error);
+    }
+  };
+
+  const fetchInteriorColors = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/interior-colors/');
+      if (!response.ok) throw new Error('Failed to fetch interior colors');
+      const data = await response.json();
+      setInteriorColors(data);
+    } catch (error) {
+      console.error('Error fetching interior colors:', error);
+    }
+  };
+
+  const fetchOptions = async () => {
+    try {
+      // Changed from /options/ to /options/list/ to match your API endpoint
+      const response = await fetch('http://localhost:8000/api/options/list/');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch options: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Check if data is an array before setting it
+      if (Array.isArray(data)) {
+        setOptions(data);
+      } else {
+        console.error('Options data is not an array:', data);
+        setOptions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching options:', error);
+      setOptions([]);
+    }
+  };
+
   const handleFilterChange = (name: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleOptionChange = (optionId: string) => {
+    setSelectedOptions(prev => {
+      if (prev.includes(optionId)) {
+        return prev.filter(id => id !== optionId);
+      } else {
+        return [...prev, optionId];
+      }
+    });
+  };
+
   const handleSubmit = () => {
+    // Add selected options to filters
+    const filtersWithOptions = {
+      ...filters,
+      options: selectedOptions.length > 0 ? selectedOptions : undefined
+    };
+    
     // Remove empty fields from filters
     const activeFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, value]) => value !== undefined && value !== '')
+      Object.entries(filtersWithOptions).filter(([_, value]) => {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value !== undefined && value !== '';
+      })
     );
     
-    onFilterChange(activeFilters);
+    // Update URL with query parameters
+    const searchParams = new URLSearchParams();
+    Object.entries(activeFilters).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => searchParams.append(`${key}[]`, v));
+      } else {
+        searchParams.set(key, value as string);
+      }
+    });
+    
+    const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+    
+    onFilterChange(activeFilters as FilterState);
   };
 
   const resetFilters = () => {
     setFilters({});
+    setSelectedOptions([]);
     onFilterChange({});
+    window.history.pushState({}, '', window.location.pathname);
   };
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Make Filter */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Make</label>
-          <select
-            value={filters.make || ''}
-            onChange={(e) => handleFilterChange('make', e.target.value)}
-            className="w-full p-2 border rounded-lg"
-          >
-            <option value="">All Makes</option>
-            {makes.map((make) => (
-              <option key={make.id} value={make.id}>
-                {make.name}
-              </option>
-            ))}
-          </select>
+      <h2 className="text-xl font-bold mb-4">Find Your Perfect Car</h2>
+      
+      {/* Basic Search Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {/* Make, Model, Variant */}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Make</label>
+            <select
+              value={filters.make || ''}
+              onChange={(e) => handleFilterChange('make', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="">All Makes</option>
+              {makes.map((make) => (
+                <option key={make.id} value={make.id}>
+                  {make.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Model</label>
+            <select
+              value={filters.model || ''}
+              onChange={(e) => handleFilterChange('model', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+              disabled={!filters.make}
+            >
+              <option value="">All Models</option>
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Variant</label>
+            <select
+              value={filters.variant || ''}
+              onChange={(e) => handleFilterChange('variant', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+              disabled={!filters.model}
+            >
+              <option value="">All Variants</option>
+              {variants.map((variant) => (
+                <option key={variant.id} value={variant.id}>
+                  {variant.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Model Filter */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Model</label>
-          <select
-            value={filters.model || ''}
-            onChange={(e) => handleFilterChange('model', e.target.value)}
-            className="w-full p-2 border rounded-lg"
-            disabled={!filters.make}
-          >
-            <option value="">All Models</option>
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
+        {/* First Registration From/To */}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">First Registration From</label>
+            <select
+              value={filters.first_registration_from || ''}
+              onChange={(e) => handleFilterChange('first_registration_from', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="">Any Year</option>
+              {years.map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">First Registration To</label>
+            <select
+              value={filters.first_registration_to || ''}
+              onChange={(e) => handleFilterChange('first_registration_to', e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="">Any Year</option>
+              {years.map((year) => (
+                <option key={year} value={year.toString()}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Variant Filter */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Variant</label>
-          <select
-            value={filters.variant || ''}
-            onChange={(e) => handleFilterChange('variant', e.target.value)}
-            className="w-full p-2 border rounded-lg"
-            disabled={!filters.model}
-          >
-            <option value="">All Variants</option>
-            {variants.map((variant) => (
-              <option key={variant.id} value={variant.id}>
-                {variant.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Year Filter */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Year</label>
-          <select
-            value={filters.year || ''}
-            onChange={(e) => handleFilterChange('year', e.target.value)}
-            className="w-full p-2 border rounded-lg"
-          >
-            <option value="">All Years</option>
-            {years.map((year) => (
-              <option key={year} value={year.toString()}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-blue-600 text-sm font-medium flex items-center"
-        >
-          {showAdvanced ? 'Hide Advanced Filters' : 'Show Advanced Filters'}
-          <svg
-            className={`ml-1 w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </button>
-      </div>
-
-      {/* Advanced Filters */}
-      {showAdvanced && (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Body Type</label>
-            <select
-              value={filters.bodyType || ''}
-              onChange={(e) => handleFilterChange('bodyType', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">Any Body Type</option>
-              {bodyTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Fuel Type</label>
-            <select
-              value={filters.fuelType || ''}
-              onChange={(e) => handleFilterChange('fuelType', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">Any Fuel Type</option>
-              {fuelTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Transmission</label>
-            <select
-              value={filters.gearbox || ''}
-              onChange={(e) => handleFilterChange('gearbox', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">Any Transmission</option>
-              {gearboxTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Color</label>
-            <select
-              value={filters.color || ''}
-              onChange={(e) => handleFilterChange('color', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">Any Color</option>
-              {colors.map((color) => (
-                <option key={color} value={color.toLowerCase()}>
-                  {color}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Mileage</label>
-            <select
-              value={filters.max_mileage || ''}
-              onChange={(e) => handleFilterChange('max_mileage', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              {mileageRanges.map((range) => (
-                <option key={range.value} value={range.value}>
-                  {range.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        {/* Price From/To */}
+        <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">Min Price (€)</label>
             <select
@@ -343,7 +424,8 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               onChange={(e) => handleFilterChange('max_price', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              {priceRanges.map((range) => (
+              <option value="">No Maximum</option>
+              {priceRanges.slice(1).map((range) => (
                 <option key={range.value} value={range.value}>
                   {range.label}
                 </option>
@@ -351,9 +433,344 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* Show/Hide Detailed Search Button */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setShowDetails(!showDetails)}
+          className="text-blue-600 text-sm font-medium flex items-center"
+        >
+          {showDetails ? 'Hide Detailed Search' : 'Show Detailed Search'}
+          <svg
+            className={`ml-1 w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+      </div>
+
+      {/* Detailed Search */}
+      {showDetails && (
+        <div className="space-y-6">
+          {/* Mileage, Body Type, Power */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Vehicle Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Mileage</label>
+                <select
+                  value={filters.min_mileage || ''}
+                  onChange={(e) => handleFilterChange('min_mileage', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">No Minimum</option>
+                  {mileageRanges.slice(1).map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Mileage</label>
+                <select
+                  value={filters.max_mileage || ''}
+                  onChange={(e) => handleFilterChange('max_mileage', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">No Maximum</option>
+                  {mileageRanges.slice(1).map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Body Type</label>
+                <select
+                  value={filters.bodyType || ''}
+                  onChange={(e) => handleFilterChange('bodyType', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Body Type</option>
+                  {bodyTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Power (HP)</label>
+                <select
+                  value={filters.min_power || ''}
+                  onChange={(e) => handleFilterChange('min_power', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">No Minimum</option>
+                  {powerRanges.slice(1).map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Power (HP)</label>
+                <select
+                  value={filters.max_power || ''}
+                  onChange={(e) => handleFilterChange('max_power', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">No Maximum</option>
+                  {powerRanges.slice(1).map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Transmission</label>
+                <select
+                  value={filters.gearbox || ''}
+                  onChange={(e) => handleFilterChange('gearbox', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Transmission</option>
+                  {gearboxTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Doors</label>
+                <select
+                  value={filters.doors || ''}
+                  onChange={(e) => handleFilterChange('doors', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Doors</option>
+                  {doorOptions.map((doors) => (
+                    <option key={doors} value={doors.toString()}>
+                      {doors}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Seats</label>
+                <select
+                  value={filters.seats || ''}
+                  onChange={(e) => handleFilterChange('seats', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Seats</option>
+                  {seatOptions.map((seats) => (
+                    <option key={seats} value={seats.toString()}>
+                      {seats}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Condition</label>
+                <select
+                  value={filters.condition || ''}
+                  onChange={(e) => handleFilterChange('condition', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Condition</option>
+                  {conditionOptions.map((condition) => (
+                    <option key={condition} value={condition.toLowerCase()}>
+                      {condition}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Options Section */}
+          {Object.keys(groupedOptions).length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-2">Options</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(groupedOptions).map(([category, categoryOptions]) => (
+                  <div key={category} className="border p-3 rounded-lg">
+                    <h4 className="font-medium mb-2">{category}</h4>
+                    <div className="space-y-1">
+                      {categoryOptions.map((option) => (
+                        <div key={option.id} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`option-${option.id}`}
+                            checked={selectedOptions.includes(option.id.toString())}
+                            onChange={() => handleOptionChange(option.id.toString())}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`option-${option.id}`} className="text-sm">
+                            {option.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Exterior Color Section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Exterior Color</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              {exteriorColors.map((color) => (
+                <div
+                  key={color.id}
+                  className={`flex flex-col items-center p-2 border rounded-lg cursor-pointer ${
+                    filters.exterior_color === color.id.toString() ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                  }`}
+                  onClick={() => handleFilterChange('exterior_color', color.id.toString())}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full mb-1"
+                    style={{ backgroundColor: color.hex_code }}
+                  ></div>
+                  <span className="text-xs text-center">{color.name}</span>
+                </div>
+              ))}
+              {filters.exterior_color && (
+                <div
+                  className="flex flex-col items-center p-2 border rounded-lg cursor-pointer border-gray-200"
+                  onClick={() => handleFilterChange('exterior_color', '')}
+                >
+                  <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center">
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </div>
+                  <span className="text-xs text-center">Clear</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interior Color and Upholstery Section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Interior</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Interior Color</label>
+                <select
+                  value={filters.interior_color || ''}
+                  onChange={(e) => handleFilterChange('interior_color', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Interior Color</option>
+                  {/* Group interior colors by name */}
+                  {Array.from(new Set(interiorColors.map(color => color.name))).map((colorName) => (
+                    <option key={colorName} value={colorName}>
+                      {colorName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Upholstery</label>
+                <select
+                  value={filters.interior_upholstery || ''}
+                  onChange={(e) => handleFilterChange('interior_upholstery', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Upholstery</option>
+                  {/* Group interior colors by upholstery */}
+                  {Array.from(new Set(interiorColors.map(color => color.upholstery))).map((upholstery) => (
+                    <option key={upholstery} value={upholstery}>
+                      {upholstery}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Fuel Section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Fuel</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Fuel Type</label>
+                <select
+                  value={filters.fuel_type || ''}
+                  onChange={(e) => handleFilterChange('fuel_type', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Fuel Type</option>
+                  {fuelTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Emission Class</label>
+                <select
+                  value={filters.emission_class || ''}
+                  onChange={(e) => handleFilterChange('emission_class', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Any Emission Class</option>
+                  {emissionClasses.map((cls) => (
+                    <option key={cls} value={cls}>
+                      {cls}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Offer Details Section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Offer Details</h3>
+            <div>
+              <label className="block text-sm font-medium mb-1">Online Since</label>
+              <select
+                value={filters.created_since || ''}
+                onChange={(e) => handleFilterChange('created_since', e.target.value)}
+                className="w-full p-2 border rounded-lg"
+              >
+                <option value="">Any Time</option>
+                {createdSinceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="mt-4 flex gap-2">
+      {/* Action Buttons */}
+      <div className="mt-6 flex gap-2">
         <button
           onClick={handleSubmit}
           className="flex-grow bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"

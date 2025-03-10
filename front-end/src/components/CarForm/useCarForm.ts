@@ -275,7 +275,8 @@ const prepareFormDataForSubmission = (data: CarFormData) => {
   
   // Price
   formDataObj.append('price', parseNumericValue(data.price, 0).toString());
-  
+  // Discussed Price
+  formDataObj.append('discussedPrice', data.discussedPrice ? 'true' : 'false');
   // Description
   formDataObj.append('description', data.description || '');
   

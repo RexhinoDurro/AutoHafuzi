@@ -113,9 +113,13 @@ def add_car(request):
     print(f"Received data: {data}")
     
     # Process boolean fields
-    for key in ['is_used', 'full_service_history', 'customs_paid']:
+    for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
         if key in data and isinstance(data[key], str):
             data[key] = data[key].lower() == 'true'
+    
+    # Handle discussed price logic - if discussed_price is True, ensure price is 0
+    if data.get('discussed_price') is True:
+        data['price'] = 0
     
     # Extract options to handle separately
     option_ids = handle_m2m_options(request.data, data)
@@ -131,7 +135,6 @@ def add_car(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     car = serializer.save()
-    
     # Set the options manually after saving
     if option_ids:
         try:
@@ -163,17 +166,20 @@ def update_car(request, car_id):
         data = request.data.copy()
         
         # Process boolean fields
-        for key in ['is_used', 'full_service_history', 'customs_paid']:
+        for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
             if key in data and isinstance(data[key], str):
                 data[key] = data[key].lower() == 'true'
         
+        # Handle discussed price logic - if discussed_price is True, ensure price is 0
+        if data.get('discussed_price') is True:
+            data['price'] = 0
+            
         # Extract options to handle separately
         option_ids = handle_m2m_options(request.data, data)
         
         serializer = CarSerializer(car, data=data, partial=True)
         if serializer.is_valid():
             car = serializer.save()
-            
             # Set the options manually after saving
             if option_ids:
                 try:

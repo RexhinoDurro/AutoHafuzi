@@ -87,6 +87,7 @@ class Car(models.Model):
     exterior_color = models.ForeignKey(ExteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     interior_color = models.ForeignKey(InteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discussed_price = models.BooleanField(default=False) 
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

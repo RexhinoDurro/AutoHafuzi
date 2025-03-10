@@ -54,6 +54,7 @@ class CarSerializer(serializers.ModelSerializer):
     model_name = serializers.CharField(source='model.name', read_only=True)
     variant_name = serializers.SerializerMethodField()
     make = serializers.PrimaryKeyRelatedField(queryset=CarMake.objects.all())
+    discussed_price = serializers.BooleanField(required=False, default=False)
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all())
     variant = serializers.PrimaryKeyRelatedField(queryset=CarVariant.objects.all(), required=False, allow_null=True)
     
@@ -104,7 +105,7 @@ class CarSerializer(serializers.ModelSerializer):
             'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant', 'year', 
             'exterior_color', 'exterior_color_name', 'exterior_color_hex',
             'interior_color', 'interior_color_name', 'interior_upholstery', 'interior_color_hex',
-            'price', 'description', 'created_at', 'images',
+            'price','discussed_price', 'description', 'created_at', 'images',
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
             'first_registration', 'general_inspection_date', 'full_service_history', 
             'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 

@@ -235,6 +235,10 @@ const CarForm = () => {
     if (!formData.description) errors.description = 'Description is required';
     if (!formData.created_at) errors.created_at = 'Created date is required';
     
+    if (!formData.discussedPrice && !formData.price) {
+      errors.price = 'Price is required when not using discussed price';
+    }
+  
     // First registration is required only for used cars
     if (formData.is_used && !formData.first_registration) {
       errors.first_registration = 'First registration date is required for used vehicles';
@@ -518,38 +522,39 @@ const CarForm = () => {
           </div>
 
           <div className="space-y-2 mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Price (€) <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={formData.price === 0 && formData.discussedPrice ? '' : formatPrice(formData.price)}
-            onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
-            className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-            required
-            disabled={formData.discussedPrice}
-          />
-          <div className="flex items-center mt-2">
-            <input
-              type="checkbox"
-              id="discussedPrice"
-              checked={formData.discussedPrice || false}
-              onChange={(e) => {
-                const isChecked = e.target.checked;
-                setFormData({ 
-                  ...formData, 
-                  discussedPrice: isChecked,
-                  price: isChecked ? 0 : formData.price
-                });
-              }}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
-              Discussed price
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
             </label>
+            <input
+              type="text"
+              value={formData.discussedPrice ? '' : formatPrice(formData.price)}
+              onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
+              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+              required={!formData.discussedPrice}
+              disabled={formData.discussedPrice}
+              placeholder={formData.discussedPrice ? 'Price will be discussed' : ''}
+            />
+            <div className="flex items-center mt-2">
+              <input
+                type="checkbox"
+                id="discussedPrice"
+                checked={formData.discussedPrice || false}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  setFormData({ 
+                    ...formData, 
+                    discussedPrice: isChecked,
+                    price: isChecked ? 0 : formData.price // Set price to 0 when discussedPrice is checked
+                  });
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
+                Discussed price
+              </label>
+            </div>
+            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
           </div>
-          {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
-        </div>
         </div>
         {/* Image Upload */}
         <div>
