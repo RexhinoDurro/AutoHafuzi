@@ -35,10 +35,10 @@ interface OptionCategories {
 
 // Category label mapping
 const categoryLabels: Record<string, string> = {
-  'COMFORT': 'Comfort & Convenience',
-  'ENTERTAINMENT': 'Entertainment & Media',
-  'SAFETY': 'Safety & Security',
-  'EXTRAS': 'Extras'
+  'COMFORT': 'Rehatia & Komoditeti',
+  'ENTERTAINMENT': 'Argëtimi & Media',
+  'SAFETY': 'Siguria & Mbrojtja',
+  'EXTRAS': 'Ekstra'
 };
 
 const CarDetail: React.FC = () => {
@@ -131,7 +131,7 @@ const CarDetail: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Duke u ngarkuar...</div>;
   }
 
   if (error || !car) {
@@ -147,7 +147,7 @@ const CarDetail: React.FC = () => {
         onClick={() => navigate('/')}
         className="mb-6 text-blue-600 hover:text-blue-800"
       >
-        ← Back to listings
+        ← Kthehu te listimi
       </button>
 
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -160,27 +160,27 @@ const CarDetail: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="flex flex-col items-center text-center">
                   <Clock className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Mileage</p>
+                  <p className="text-gray-600 text-sm">Kilometrazhi</p>
                   <p className="font-bold">{car.mileage.toLocaleString()} km</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
                   <Settings className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Gearbox</p>
+                  <p className="text-gray-600 text-sm">Transmisioni</p>
                   <p className="font-bold">{car.gearbox}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
                   <Calendar className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">First registration</p>
+                  <p className="text-gray-600 text-sm">Regjistrimi i parë</p>
                   <p className="font-bold">{car.first_registration || 'N/A'}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
                   <Fuel className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Fuel type</p>
+                  <p className="text-gray-600 text-sm">Lloji i karburantit</p>
                   <p className="font-bold">{car.fuel_type}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
                   <Zap className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Power</p>
+                  <p className="text-gray-600 text-sm">Fuqia</p>
                   <p className="font-bold">{car.power} kW ({Math.round(car.power * 1.36)} hp)</p>
                 </div>
               </div>
@@ -198,22 +198,22 @@ const CarDetail: React.FC = () => {
 
           <div className="space-y-8">
             <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Basic Information</h3>
+              <h3 className="text-xl font-semibold">Informacione Bazë</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Year</p>
+                  <p className="text-gray-600">Viti</p>
                   <p className="font-medium">{car.year}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Body Type</p>
+                  <p className="text-gray-600">Lloji i karocerisë</p>
                   <p className="font-medium">{car.body_type}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Condition</p>
-                  <p className="font-medium">{car.is_used ? 'Used' : 'New'}</p>
+                  <p className="text-gray-600">Gjendja</p>
+                  <p className="font-medium">{car.is_used ? 'I përdorur' : 'I ri'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">General Inspection Date</p>
+                  <p className="text-gray-600">Data e inspektimit të përgjithshëm</p>
                   <p className="font-medium">{car.general_inspection_date || 'N/A'}</p>
                 </div>
               </div>
@@ -221,12 +221,12 @@ const CarDetail: React.FC = () => {
 
             {/* Fixed Colors Section */}
             <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Colors</h3>
+              <h3 className="text-xl font-semibold">Ngjyrat</h3>
               <div className="grid grid-cols-2 gap-4">
                 {/* Exterior Color */}
                 {car.exterior_color_name && (
                   <div>
-                    <p className="text-gray-600">Exterior Color</p>
+                    <p className="text-gray-600">Ngjyra e jashtme</p>
                     <div className="flex items-center">
                       {car.exterior_color_hex && (
                         <div 
@@ -242,7 +242,7 @@ const CarDetail: React.FC = () => {
                 {/* Interior Color */}
                 {car.interior_color_name && (
                   <div>
-                    <p className="text-gray-600">Interior Color</p>
+                    <p className="text-gray-600">Ngjyra e brendshme</p>
                     <div className="flex items-center">
                       {car.interior_color_hex && (
                         <div 
@@ -258,7 +258,7 @@ const CarDetail: React.FC = () => {
                 {/* Upholstery */}
                 {car.interior_upholstery && (
                   <div>
-                    <p className="text-gray-600">Upholstery</p>
+                    <p className="text-gray-600">Tapiceria</p>
                     <p className="font-medium">{car.interior_upholstery}</p>
                   </div>
                 )}
@@ -266,52 +266,52 @@ const CarDetail: React.FC = () => {
             </section>
 
             <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Technical Specifications</h3>
+              <h3 className="text-xl font-semibold">Specifikimet Teknike</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Engine Size</p>
+                  <p className="text-gray-600">Madhësia e motorit</p>
                   <p className="font-medium">{car.engine_size}L</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Gears</p>
+                  <p className="text-gray-600">Ingranazhet</p>
                   <p className="font-medium">{car.gears}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Cylinders</p>
+                  <p className="text-gray-600">Cilindrat</p>
                   <p className="font-medium">{car.cylinders}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Weight</p>
+                  <p className="text-gray-600">Pesha</p>
                   <p className="font-medium">{car.weight} kg</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Emission Class</p>
+                  <p className="text-gray-600">Klasa e emetimit</p>
                   <p className="font-medium">{car.emission_class}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Customs Paid</p>
-                  <p className="font-medium">{car.customs_paid ? 'Yes' : 'No'}</p>
+                  <p className="text-gray-600">Doganat e paguara</p>
+                  <p className="font-medium">{car.customs_paid ? 'Po' : 'Jo'}</p>
                 </div>
               </div>
             </section>
 
             <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Vehicle Details</h3>
+              <h3 className="text-xl font-semibold">Detajet e Automjetit</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Seats</p>
+                  <p className="text-gray-600">Vendet</p>
                   <p className="font-medium">{car.seats}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Doors</p>
+                  <p className="text-gray-600">Dyert</p>
                   <p className="font-medium">{car.doors}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Service History</p>
-                  <p className="font-medium">{car.full_service_history ? 'Full' : 'Partial'}</p>
+                  <p className="text-gray-600">Historiku i servisit</p>
+                  <p className="font-medium">{car.full_service_history ? 'I plotë' : 'I pjesshëm'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Drivetrain</p>
+                  <p className="text-gray-600">Sistemi i transmetimit</p>
                   <p className="font-medium">{car.drivetrain}</p>
                 </div>
               </div>
@@ -320,7 +320,7 @@ const CarDetail: React.FC = () => {
             {/* Categorized Options - Updated to match backend structure */}
             {options.length > 0 && car.options && (
               <section className="space-y-4">
-                <h3 className="text-xl font-semibold">Features</h3>
+                <h3 className="text-xl font-semibold">Veçoritë</h3>
                 
                 {/* Comfort & Convenience */}
                 {optionsByCategory['COMFORT'] && optionsByCategory['COMFORT'].length > 0 && (
@@ -372,7 +372,7 @@ const CarDetail: React.FC = () => {
                   <div className="mb-4">
                     <div className="flex items-center mb-2">
                       <Star className="text-blue-600 mr-2" size={20} />
-                      <h4 className="font-medium">Extras</h4>
+                      <h4 className="font-medium">Ekstra</h4>
                     </div>
                     <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
                       {optionsByCategory['EXTRAS'].map((option: string, index: number) => (
@@ -387,7 +387,7 @@ const CarDetail: React.FC = () => {
         </div>
 
         <div className="p-6 border-t">
-          <h3 className="text-xl font-semibold mb-4">Description</h3>
+          <h3 className="text-xl font-semibold mb-4">Përshkrimi</h3>
           <p className="text-gray-700 whitespace-pre-line">{car.description}</p>
         </div>
       </div>

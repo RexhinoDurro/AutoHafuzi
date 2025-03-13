@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import RangeSlider from './RangeSlider';
 
 interface Make {
   id: number;
@@ -83,57 +84,44 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
 
+  // Range slider constants
+  const PRICE_MIN = 0;
+  const PRICE_MAX = 200000;
+  const PRICE_STEP = 1000;
+  
+  const MILEAGE_MIN = 0;
+  const MILEAGE_MAX = 300000;
+  const MILEAGE_STEP = 1000;
+  
+  const POWER_MIN = 0;
+  const POWER_MAX = 1000;
+  const POWER_STEP = 10;
+
+  // Format functions for range sliders
+  const formatPrice = (price: number) => `€${price.toLocaleString()}`;
+  const formatMileage = (mileage: number) => `${mileage.toLocaleString()} km`;
+  const formatPower = (power: number) => `${power} KF`;
+
   // Default filter options
   const bodyTypes = ['Sedan', 'SUV', 'Coupe', 'Hatchback', 'Wagon', 'Convertible', 'Van', 'Truck'];
-  const fuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'LPG', 'CNG'];
-  const gearboxTypes = ['Manual', 'Automatic'];
+  const fuelTypes = ['Benzinë', 'Naftë', 'Elektrik', 'Hibrid', 'LPG', 'CNG'];
+  const gearboxTypes = ['Manual', 'Automatik'];
   const emissionClasses = ['Euro 6', 'Euro 5', 'Euro 4', 'Euro 3', 'Euro 2', 'Euro 1'];
   const doorOptions = [2, 3, 4, 5];
   const seatOptions = [2, 3, 4, 5, 6, 7, 8, 9];
-  const conditionOptions = ['New', 'Used'];
+  const conditionOptions = ['E Re', 'E Përdorur'];
   const createdSinceOptions = [
-    { value: 'today', label: 'Today' },
-    { value: 'yesterday', label: 'Yesterday' },
-    { value: '1week', label: '1 Week' },
-    { value: '2weeks', label: '2 Weeks' },
-  ];
-  
-  const priceRanges = [
-    { value: '', label: 'All Prices' },
-    { value: '5000', label: '€5,000' },
-    { value: '10000', label: '€10,000' },
-    { value: '15000', label: '€15,000' },
-    { value: '20000', label: '€20,000' },
-    { value: '30000', label: '€30,000' },
-    { value: '50000', label: '€50,000' },
-    { value: '100000', label: '€100,000+' },
-  ];
-
-  const powerRanges = [
-    { value: '', label: 'Any HP' },
-    { value: '100', label: '100 HP' },
-    { value: '150', label: '150 HP' },
-    { value: '200', label: '200 HP' },
-    { value: '250', label: '250 HP' },
-    { value: '300', label: '300 HP' },
-    { value: '400', label: '400 HP' },
-    { value: '500', label: '500 HP+' },
-  ];
-
-  const mileageRanges = [
-    { value: '', label: 'Any Mileage' },
-    { value: '10000', label: '10,000 km' },
-    { value: '50000', label: '50,000 km' },
-    { value: '100000', label: '100,000 km' },
-    { value: '150000', label: '150,000 km' },
-    { value: '200000', label: '200,000 km' },
+    { value: 'today', label: 'Sot' },
+    { value: 'yesterday', label: 'Dje' },
+    { value: '1week', label: '1 Javë' },
+    { value: '2weeks', label: '2 Javë' },
   ];
 
   // Process options data when it changes
   useEffect(() => {
     if (options && Array.isArray(options) && options.length > 0) {
       const grouped = options.reduce((acc, option) => {
-        const category = option.category_display || 'Other';
+        const category = option.category_display || 'Tjetër';
         if (!acc[category]) {
           acc[category] = [];
         }
@@ -231,14 +219,12 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
   const fetchOptions = async () => {
     try {
-      // Changed from /options/ to /options/list/ to match your API endpoint
       const response = await fetch('http://localhost:8000/api/options/list/');
       if (!response.ok) {
         throw new Error(`Failed to fetch options: ${response.status}`);
       }
       const data = await response.json();
       
-      // Check if data is an array before setting it
       if (Array.isArray(data)) {
         setOptions(data);
       } else {
@@ -253,6 +239,30 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
   const handleFilterChange = (name: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePriceChange = (min: number, max: number) => {
+    setFilters(prev => ({
+      ...prev,
+      min_price: min === PRICE_MIN ? undefined : min.toString(),
+      max_price: max === PRICE_MAX ? undefined : max.toString()
+    }));
+  };
+
+  const handleMileageChange = (min: number, max: number) => {
+    setFilters(prev => ({
+      ...prev,
+      min_mileage: min === MILEAGE_MIN ? undefined : min.toString(),
+      max_mileage: max === MILEAGE_MAX ? undefined : max.toString()
+    }));
+  };
+
+  const handlePowerChange = (min: number, max: number) => {
+    setFilters(prev => ({
+      ...prev,
+      min_power: min === POWER_MIN ? undefined : min.toString(),
+      max_power: max === POWER_MAX ? undefined : max.toString()
+    }));
   };
 
   const handleOptionChange = (optionId: string) => {
@@ -307,20 +317,20 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-bold mb-4">Find Your Perfect Car</h2>
+      <h2 className="text-xl font-bold mb-4">Gjej Makinën Tënde të Përsosur</h2>
       
       {/* Basic Search Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Make, Model, Variant */}
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Make</label>
+            <label className="block text-sm font-medium mb-1">Marka</label>
             <select
               value={filters.make || ''}
               onChange={(e) => handleFilterChange('make', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">All Makes</option>
+              <option value="">Të gjitha markat</option>
               {makes.map((make) => (
                 <option key={make.id} value={make.id}>
                   {make.name}
@@ -330,14 +340,14 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Model</label>
+            <label className="block text-sm font-medium mb-1">Modeli</label>
             <select
               value={filters.model || ''}
               onChange={(e) => handleFilterChange('model', e.target.value)}
               className="w-full p-2 border rounded-lg"
               disabled={!filters.make}
             >
-              <option value="">All Models</option>
+              <option value="">Të gjitha modelet</option>
               {models.map((model) => (
                 <option key={model.id} value={model.id}>
                   {model.name}
@@ -347,14 +357,14 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Variant</label>
+            <label className="block text-sm font-medium mb-1">Varianti</label>
             <select
               value={filters.variant || ''}
               onChange={(e) => handleFilterChange('variant', e.target.value)}
               className="w-full p-2 border rounded-lg"
               disabled={!filters.model}
             >
-              <option value="">All Variants</option>
+              <option value="">Të gjitha variantet</option>
               {variants.map((variant) => (
                 <option key={variant.id} value={variant.id}>
                   {variant.name}
@@ -367,13 +377,13 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
         {/* First Registration From/To */}
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium mb-1">First Registration From</label>
+            <label className="block text-sm font-medium mb-1">Regjistrimi i parë nga</label>
             <select
               value={filters.first_registration_from || ''}
               onChange={(e) => handleFilterChange('first_registration_from', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">Any Year</option>
+              <option value="">Të gjitha vit</option>
               {years.map((year) => (
                 <option key={year} value={year.toString()}>
                   {year}
@@ -383,13 +393,13 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">First Registration To</label>
+            <label className="block text-sm font-medium mb-1">Regjistrimi i parë deri</label>
             <select
               value={filters.first_registration_to || ''}
               onChange={(e) => handleFilterChange('first_registration_to', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">Any Year</option>
+              <option value="">Të gjitha vit</option>
               {years.map((year) => (
                 <option key={year} value={year.toString()}>
                   {year}
@@ -399,39 +409,19 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </div>
         </div>
 
-        {/* Price From/To */}
+        {/* Price Range Slider */}
         <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Min Price (€)</label>
-            <select
-              value={filters.min_price || ''}
-              onChange={(e) => handleFilterChange('min_price', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">No Minimum</option>
-              {priceRanges.slice(1).map((range) => (
-                <option key={range.value} value={range.value}>
-                  {range.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Price (€)</label>
-            <select
-              value={filters.max_price || ''}
-              onChange={(e) => handleFilterChange('max_price', e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">No Maximum</option>
-              {priceRanges.slice(1).map((range) => (
-                <option key={range.value} value={range.value}>
-                  {range.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <RangeSlider 
+            minValue={PRICE_MIN}
+            maxValue={PRICE_MAX}
+            step={PRICE_STEP}
+            currentMin={filters.min_price ? parseInt(filters.min_price) : PRICE_MIN}
+            currentMax={filters.max_price ? parseInt(filters.max_price) : PRICE_MAX}
+            label="Çmimi (€)"
+            unit="€"
+            formatValue={formatPrice}
+            onChange={handlePriceChange}
+          />
         </div>
       </div>
 
@@ -442,7 +432,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           onClick={() => setShowDetails(!showDetails)}
           className="text-blue-600 text-sm font-medium flex items-center"
         >
-          {showDetails ? 'Hide Detailed Search' : 'Show Detailed Search'}
+          {showDetails ? 'Fshih kërkimin e detajuar' : 'Shfaq kërkimin e detajuar'}
           <svg
             className={`ml-1 w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
             fill="none"
@@ -460,46 +450,31 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
         <div className="space-y-6">
           {/* Mileage, Body Type, Power */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Vehicle Details</h3>
+            <h3 className="font-semibold mb-2">Detajet e Automjetit</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Mileage</label>
-                <select
-                  value={filters.min_mileage || ''}
-                  onChange={(e) => handleFilterChange('min_mileage', e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  <option value="">No Minimum</option>
-                  {mileageRanges.slice(1).map((range) => (
-                    <option key={range.value} value={range.value}>
-                      {range.label}
-                    </option>
-                  ))}
-                </select>
+              {/* Mileage Range Slider */}
+              <div className="md:col-span-2">
+                <RangeSlider 
+                  minValue={MILEAGE_MIN}
+                  maxValue={MILEAGE_MAX}
+                  step={MILEAGE_STEP}
+                  currentMin={filters.min_mileage ? parseInt(filters.min_mileage) : MILEAGE_MIN}
+                  currentMax={filters.max_mileage ? parseInt(filters.max_mileage) : MILEAGE_MAX}
+                  label="Kilometrazhi"
+                  unit="km"
+                  formatValue={formatMileage}
+                  onChange={handleMileageChange}
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">Max Mileage</label>
-                <select
-                  value={filters.max_mileage || ''}
-                  onChange={(e) => handleFilterChange('max_mileage', e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  <option value="">No Maximum</option>
-                  {mileageRanges.slice(1).map((range) => (
-                    <option key={range.value} value={range.value}>
-                      {range.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Body Type</label>
+                <label className="block text-sm font-medium mb-1">Lloji i karrocerisë</label>
                 <select
                   value={filters.bodyType || ''}
                   onChange={(e) => handleFilterChange('bodyType', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Body Type</option>
+                  <option value="">Të gjitha lloj karrocerie</option>
                   {bodyTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -507,44 +482,30 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Power (HP)</label>
-                <select
-                  value={filters.min_power || ''}
-                  onChange={(e) => handleFilterChange('min_power', e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  <option value="">No Minimum</option>
-                  {powerRanges.slice(1).map((range) => (
-                    <option key={range.value} value={range.value}>
-                      {range.label}
-                    </option>
-                  ))}
-                </select>
+              
+              {/* Power Range Slider */}
+              <div className="md:col-span-2">
+                <RangeSlider 
+                  minValue={POWER_MIN}
+                  maxValue={POWER_MAX}
+                  step={POWER_STEP}
+                  currentMin={filters.min_power ? parseInt(filters.min_power) : POWER_MIN}
+                  currentMax={filters.max_power ? parseInt(filters.max_power) : POWER_MAX}
+                  label="Fuqia"
+                  unit="KF"
+                  formatValue={formatPower}
+                  onChange={handlePowerChange}
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">Max Power (HP)</label>
-                <select
-                  value={filters.max_power || ''}
-                  onChange={(e) => handleFilterChange('max_power', e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  <option value="">No Maximum</option>
-                  {powerRanges.slice(1).map((range) => (
-                    <option key={range.value} value={range.value}>
-                      {range.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Transmission</label>
+                <label className="block text-sm font-medium mb-1">Transmisioni</label>
                 <select
                   value={filters.gearbox || ''}
                   onChange={(e) => handleFilterChange('gearbox', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Transmission</option>
+                  <option value="">Të gjitha transmision</option>
                   {gearboxTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -552,14 +513,15 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">Doors</label>
+                <label className="block text-sm font-medium mb-1">Dyert</label>
                 <select
                   value={filters.doors || ''}
                   onChange={(e) => handleFilterChange('doors', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Doors</option>
+                  <option value="">Të gjitha numër dyersh</option>
                   {doorOptions.map((doors) => (
                     <option key={doors} value={doors.toString()}>
                       {doors}
@@ -567,14 +529,15 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">Seats</label>
+                <label className="block text-sm font-medium mb-1">Ndenjëset</label>
                 <select
                   value={filters.seats || ''}
                   onChange={(e) => handleFilterChange('seats', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Seats</option>
+                  <option value="">Të gjitha numër ndenjësesh</option>
                   {seatOptions.map((seats) => (
                     <option key={seats} value={seats.toString()}>
                       {seats}
@@ -582,16 +545,17 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">Condition</label>
+                <label className="block text-sm font-medium mb-1">Gjendja</label>
                 <select
                   value={filters.condition || ''}
                   onChange={(e) => handleFilterChange('condition', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Condition</option>
-                  {conditionOptions.map((condition) => (
-                    <option key={condition} value={condition.toLowerCase()}>
+                  <option value="">Të gjitha gjendje</option>
+                  {conditionOptions.map((condition, index) => (
+                    <option key={condition} value={['new', 'used'][index]}>
                       {condition}
                     </option>
                   ))}
@@ -603,7 +567,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           {/* Options Section */}
           {Object.keys(groupedOptions).length > 0 && (
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-2">Options</h3>
+              <h3 className="font-semibold mb-2">Opsionet</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(groupedOptions).map(([category, categoryOptions]) => (
                   <div key={category} className="border p-3 rounded-lg">
@@ -632,7 +596,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
           {/* Exterior Color Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Exterior Color</h3>
+            <h3 className="font-semibold mb-2">Ngjyra e Jashtme</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {exteriorColors.map((color) => (
                 <div
@@ -665,7 +629,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                   </div>
-                  <span className="text-xs text-center">Clear</span>
+                  <span className="text-xs text-center">Pastro</span>
                 </div>
               )}
             </div>
@@ -673,16 +637,16 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
           {/* Interior Color and Upholstery Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Interior</h3>
+            <h3 className="font-semibold mb-2">Interiori</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Interior Color</label>
+                <label className="block text-sm font-medium mb-1">Ngjyra e interiorit</label>
                 <select
                   value={filters.interior_color || ''}
                   onChange={(e) => handleFilterChange('interior_color', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Interior Color</option>
+                  <option value="">Të gjitha ngjyrë interiori</option>
                   {/* Group interior colors by name */}
                   {Array.from(new Set(interiorColors.map(color => color.name))).map((colorName) => (
                     <option key={colorName} value={colorName}>
@@ -692,13 +656,13 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Upholstery</label>
+                <label className="block text-sm font-medium mb-1">Tapiceria</label>
                 <select
                   value={filters.interior_upholstery || ''}
                   onChange={(e) => handleFilterChange('interior_upholstery', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Upholstery</option>
+                  <option value="">Të gjitha tapiceri</option>
                   {/* Group interior colors by upholstery */}
                   {Array.from(new Set(interiorColors.map(color => color.upholstery))).map((upholstery) => (
                     <option key={upholstery} value={upholstery}>
@@ -712,16 +676,16 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
           {/* Fuel Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Fuel</h3>
+            <h3 className="font-semibold mb-2">Karburanti</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Fuel Type</label>
+                <label className="block text-sm font-medium mb-1">Lloji i karburantit</label>
                 <select
                   value={filters.fuel_type || ''}
                   onChange={(e) => handleFilterChange('fuel_type', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Fuel Type</option>
+                  <option value="">Të gjitha lloj karburanti</option>
                   {fuelTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -730,13 +694,13 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Emission Class</label>
+                <label className="block text-sm font-medium mb-1">Klasa e emetimeve</label>
                 <select
                   value={filters.emission_class || ''}
                   onChange={(e) => handleFilterChange('emission_class', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Any Emission Class</option>
+                  <option value="">Të gjitha klasë emetimi</option>
                   {emissionClasses.map((cls) => (
                     <option key={cls} value={cls}>
                       {cls}
@@ -749,15 +713,15 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
           {/* Offer Details Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Offer Details</h3>
+            <h3 className="font-semibold mb-2">Detajet e ofertës</h3>
             <div>
-              <label className="block text-sm font-medium mb-1">Online Since</label>
+              <label className="block text-sm font-medium mb-1">Online që prej</label>
               <select
                 value={filters.created_since || ''}
                 onChange={(e) => handleFilterChange('created_since', e.target.value)}
                 className="w-full p-2 border rounded-lg"
               >
-                <option value="">Any Time</option>
+                <option value="">Të gjitha kohë</option>
                 {createdSinceOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -775,13 +739,13 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           onClick={handleSubmit}
           className="flex-grow bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
         >
-          Apply Filters
+          Apliko filtrat
         </button>
         <button
           onClick={resetFilters}
           className="px-4 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-100"
         >
-          Reset
+          Rivendos
         </button>
       </div>
     </div>
