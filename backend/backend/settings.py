@@ -50,6 +50,23 @@ INSTALLED_APPS = [
 
 ]
 
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Store sessions in the database
+SESSION_COOKIE_NAME = 'carshop_sessionid'  # Custom name to avoid conflicts
+SESSION_COOKIE_SAMESITE = 'Lax'  # Allows cookies in same-site requests
+SESSION_COOKIE_SECURE = False    # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True   # Prevents JavaScript from accessing cookies
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days in seconds
+
+# Don't need anonymous session for CSRF
+SESSION_SAVE_EVERY_REQUEST = True  # Always refresh the session on each request
+
+# Important: Make sure CSRF settings are configured correctly
+CSRF_USE_SESSIONS = False  # Store CSRF in cookie not session
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_HTTPONLY = False  # JavaScript needs access to CSRF token
+
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -59,15 +76,42 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.middleware.SiteVisitMiddleware',
 ]
+
+
 
 ROOT_URLCONF = 'backend.urls'
 
-
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Allow React frontend
     "http://192.168.56.1:5173",
     "http://192.168.0.105:5173"
+]
+
+
+# Additional CORS settings for handling cookies
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-requested-for-analytics',
 ]
 
 TEMPLATES = [

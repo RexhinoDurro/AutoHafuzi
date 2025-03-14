@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import RangeSlider from './RangeSlider';
+import { getLastSearch, saveLastSearch } from '../utils/userActivityService';
 
 interface Make {
   id: number;
@@ -116,6 +117,42 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     { value: '1week', label: '1 Javë' },
     { value: '2weeks', label: '2 Javë' },
   ];
+
+  // Initialize from last search if available
+  useEffect(() => {
+    // Check if we have any URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.toString()) {
+      // If URL has parameters, don't apply last search
+      return;
+    }
+    
+    // Check for saved last search
+    const lastSearch = getLastSearch();
+    if (Object.keys(lastSearch).length > 0) {
+      const newFilters = { ...filters };
+      
+      Object.entries(lastSearch).forEach(([key, value]) => {
+        if (key === 'options' && Array.isArray(value)) {
+          setSelectedOptions(value.map(v => v.toString()));
+        } else if (value !== null && value !== undefined && value !== '') {
+          (newFilters as any)[key] = value.toString();
+          
+          // If make is selected, fetch associated models
+          if (key === 'make') {
+            fetchModels(value.toString());
+            
+            // If model is also selected, fetch variants
+            if (lastSearch.model) {
+              fetchVariants(lastSearch.model.toString());
+            }
+          }
+        }
+      });
+      
+      setFilters(newFilters);
+    }
+  }, []);
 
   // Process options data when it changes
   useEffect(() => {
@@ -291,6 +328,9 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
         return value !== undefined && value !== '';
       })
     );
+    
+    // Save the search parameters for recommendations
+    saveLastSearch(activeFilters as any);
     
     // Update URL with query parameters
     const searchParams = new URLSearchParams();

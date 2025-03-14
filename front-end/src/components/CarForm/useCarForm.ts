@@ -31,6 +31,12 @@ export const useCarForm = (id?: string) => {
   const [tempImages, setTempImages] = useState<TempImage[]>([]);
   const [nextTempId, setNextTempId] = useState(-1);
 
+  // Get current date for defaults
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentDay = currentDate.getDate();
+
   const [formData, setFormData] = useState<CarFormData>({
     make_id: undefined,
     model_id: undefined,
@@ -38,7 +44,10 @@ export const useCarForm = (id?: string) => {
     make: '',
     model: '',
     variant: '',
-    year: new Date().getFullYear(),
+    // Removed year field
+    first_registration_day: currentDay,
+    first_registration_month: currentMonth,
+    first_registration_year: currentYear,
     exterior_color: '',
     exterior_color_id: undefined,
     exterior_color_name: '',
@@ -58,7 +67,6 @@ export const useCarForm = (id?: string) => {
     seats: 5,
     doors: 4,
     mileage: 0,
-    first_registration: '',
     general_inspection_date: '',
     full_service_history: false,
     customs_paid: false,
@@ -177,6 +185,10 @@ export const useCarForm = (id?: string) => {
         interior_color_name: data.interior_color_name,
         interior_color_hex: data.interior_color_hex,
         interior_upholstery: data.interior_upholstery,
+        // Handle first registration fields
+        first_registration_day: data.first_registration_day || currentDay,
+        first_registration_month: data.first_registration_month || currentMonth,
+        first_registration_year: data.first_registration_year || currentYear,
       };
       
       setFormData(carData);
@@ -191,7 +203,7 @@ export const useCarForm = (id?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [id, token, fetchVariants]);
+  }, [id, token, fetchVariants, currentDay, currentMonth, currentYear]);
 
   const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -238,7 +250,7 @@ export const useCarForm = (id?: string) => {
     }
   };
 
-  // FIXED: Better form data preparation for submission to handle make and model properly
+// FIXED: Better form data preparation for submission to handle make and model properly
 const prepareFormDataForSubmission = (data: CarFormData) => {
   if (!data) {
     throw new Error('Form data is undefined');
@@ -261,8 +273,10 @@ const prepareFormDataForSubmission = (data: CarFormData) => {
     formDataObj.append('variant', data.variant_id.toString());
   }
   
-  // Year
-  formDataObj.append('year', parseNumericValue(data.year, new Date().getFullYear()).toString());
+  // First registration fields instead of year
+  formDataObj.append('first_registration_day', parseNumericValue(data.first_registration_day, currentDay).toString());
+  formDataObj.append('first_registration_month', parseNumericValue(data.first_registration_month, currentMonth).toString());
+  formDataObj.append('first_registration_year', parseNumericValue(data.first_registration_year, currentYear).toString());
   
   // Color handling
   if (data.exterior_color_id) {
@@ -291,10 +305,6 @@ const prepareFormDataForSubmission = (data: CarFormData) => {
   // Date handling
   if (data.created_at) {
     formDataObj.append('created_at', data.created_at);
-  }
-  
-  if (data.first_registration) {
-    formDataObj.append('first_registration', data.first_registration);
   }
   
   if (data.general_inspection_date) {
@@ -339,9 +349,11 @@ const prepareFormDataForSubmission = (data: CarFormData) => {
     make: data.make_id,
     model: data.model_id,
     variant: data.variant_id,
+    first_registration_day: data.first_registration_day,
+    first_registration_month: data.first_registration_month,
+    first_registration_year: data.first_registration_year,
     exterior_color: data.exterior_color_id,
     interior_color: data.interior_color_id,
-    first_registration: data.first_registration,
     options: data.option_ids || []
   });
   
@@ -446,6 +458,9 @@ const prepareFormDataForSubmission = (data: CarFormData) => {
             interior_color_name: updatedCar.interior_color_name,
             interior_color_hex: updatedCar.interior_color_hex,
             interior_upholstery: updatedCar.interior_upholstery,
+            first_registration_day: updatedCar.first_registration_day,
+            first_registration_month: updatedCar.first_registration_month,
+            first_registration_year: updatedCar.first_registration_year,
           });
         }
         

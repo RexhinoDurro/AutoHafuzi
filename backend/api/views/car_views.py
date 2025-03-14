@@ -3,11 +3,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.core.exceptions import ValidationError
-from ..models import Car
-from ..serializers import CarSerializer
+from django.utils import timezone
+from datetime import timedelta, datetime
+from ..models import Car, CarView, SiteVisit
+from ..serializers import CarSerializer, SiteVisitSerializer
 import json
+import uuid
 from django.shortcuts import render
 from django.http import JsonResponse
 
@@ -47,22 +50,47 @@ def get_cars(request):
                 Q(description__icontains=search_query)
             )
 
-        # Filtering
-        filters = {
-            'make_id': request.GET.get('make'),
-            'model_id': request.GET.get('model'),
-            'year': request.GET.get('year'),
-            'price__lte': request.GET.get('max_price'),
-            'price__gte': request.GET.get('min_price'),
-            'body_type': request.GET.get('bodyType'),
-            'fuel_type': request.GET.get('fuelType'),
-            'color': request.GET.get('color'),
-            'gearbox': request.GET.get('gearbox'),
-            'mileage__lte': request.GET.get('max_mileage')
-        }
+        # Build filters dictionary correctly
+        filters = {}
         
-        filters = {k: v for k, v in filters.items() if v is not None}
-        queryset = queryset.filter(**filters)
+        # Handle simple direct filters
+        if request.GET.get('make'):
+            filters['make_id'] = request.GET.get('make')
+        
+        if request.GET.get('model'):
+            filters['model_id'] = request.GET.get('model')
+            
+        # Handle year filter correctly for first_registration_year
+        if request.GET.get('year'):
+            filters['first_registration_year'] = request.GET.get('year')
+            
+        # Handle numeric range filters
+        if request.GET.get('max_price'):
+            filters['price__lte'] = request.GET.get('max_price')
+            
+        if request.GET.get('min_price'):
+            filters['price__gte'] = request.GET.get('min_price')
+            
+        if request.GET.get('max_mileage'):
+            filters['mileage__lte'] = request.GET.get('max_mileage')
+            
+        # Handle other simple filters
+        if request.GET.get('bodyType'):
+            filters['body_type'] = request.GET.get('bodyType')
+            
+        if request.GET.get('fuelType'):
+            filters['fuel_type'] = request.GET.get('fuelType')
+            
+        if request.GET.get('gearbox'):
+            filters['gearbox'] = request.GET.get('gearbox')
+            
+        # Handle color filter - this might need adjustment based on your color model structure
+        if request.GET.get('color'):
+            filters['exterior_color__name'] = request.GET.get('color')
+        
+        # Apply filters to queryset
+        if filters:
+            queryset = queryset.filter(**filters)
 
         # Sorting
         sort_by = request.GET.get('sort')
@@ -70,8 +98,8 @@ def get_cars(request):
             sort_options = {
                 'price_asc': 'price',
                 'price_desc': '-price',
-                'year_asc': 'year',
-                'year_desc': '-year',
+                'year_asc': 'first_registration_year',
+                'year_desc': '-first_registration_year',
                 'mileage_asc': 'mileage',
                 'mileage_desc': '-mileage',
                 'created_desc': '-created_at'
@@ -89,6 +117,9 @@ def get_cars(request):
     except ValidationError as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
+        import traceback
+        print(f"Error in get_cars: {str(e)}")
+        print(traceback.format_exc())
         return Response(
             {'error': 'An unexpected error occurred', 'detail': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -98,6 +129,40 @@ def get_cars(request):
 def get_car(request, car_id):
     try:
         car = Car.objects.get(id=car_id)
+        
+        # Track the view if the session_id is provided
+        if request.session.get('visitor_id'):
+            session_id = request.session['visitor_id']
+        else:
+            # Generate a new session ID if it doesn't exist
+            session_id = str(uuid.uuid4())
+            request.session['visitor_id'] = session_id
+            # Set session to not expire when browser closes
+            request.session.set_expiry(60*60*24*30)  # 30 days
+        
+        # Record the view - but only count it once per session
+        try:
+            # Get the client IP
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0]
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+                
+            # Create or get the car view for this session
+            car_view, created = CarView.objects.get_or_create(
+                car=car,
+                session_id=session_id,
+                defaults={'ip_address': ip}
+            )
+            
+            # If this is a new view, increment the car's view count
+            if created:
+                car.view_count += 1
+                car.save(update_fields=['view_count'])
+        except Exception as e:
+            print(f"Error recording car view: {e}")
+        
         serializer = CarSerializer(car)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Car.DoesNotExist:
@@ -113,13 +178,30 @@ def add_car(request):
     print(f"Received data: {data}")
     
     # Process boolean fields
-    for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
+    for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:
         if key in data and isinstance(data[key], str):
             data[key] = data[key].lower() == 'true'
     
     # Handle discussed price logic - if discussed_price is True, ensure price is 0
     if data.get('discussed_price') is True:
         data['price'] = 0
+    
+    # Process first_registration fields
+    if ('first_registration_day' in data and data['first_registration_day'] and
+        'first_registration_month' in data and data['first_registration_month'] and
+        'first_registration_year' in data and data['first_registration_year']):
+        
+        # Parse the individual fields to integers
+        day = int(data['first_registration_day'])
+        month = int(data['first_registration_month'])
+        year = int(data['first_registration_year'])
+        
+        # Create a date object and store it in the first_registration field
+        try:
+            first_registration_date = datetime(year, month, day).date()
+            data['first_registration'] = first_registration_date.isoformat()
+        except ValueError as e:
+            print(f"Error creating date from day={day}, month={month}, year={year}: {e}")
     
     # Extract options to handle separately
     option_ids = handle_m2m_options(request.data, data)
@@ -166,13 +248,30 @@ def update_car(request, car_id):
         data = request.data.copy()
         
         # Process boolean fields
-        for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:  # Added discussed_price
+        for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:
             if key in data and isinstance(data[key], str):
                 data[key] = data[key].lower() == 'true'
         
         # Handle discussed price logic - if discussed_price is True, ensure price is 0
         if data.get('discussed_price') is True:
             data['price'] = 0
+        
+        # Process first_registration fields
+        if ('first_registration_day' in data and data['first_registration_day'] and
+            'first_registration_month' in data and data['first_registration_month'] and
+            'first_registration_year' in data and data['first_registration_year']):
+            
+            # Parse the individual fields to integers
+            day = int(data['first_registration_day'])
+            month = int(data['first_registration_month'])
+            year = int(data['first_registration_year'])
+            
+            # Create a date object and store it in the first_registration field
+            try:
+                first_registration_date = datetime(year, month, day).date()
+                data['first_registration'] = first_registration_date.isoformat()
+            except ValueError as e:
+                print(f"Error creating date from day={day}, month={month}, year={year}: {e}")
             
         # Extract options to handle separately
         option_ids = handle_m2m_options(request.data, data)
@@ -231,3 +330,62 @@ def about_page(request):
         return JsonResponse({
             'error': str(e)
         }, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_site_analytics(request):
+    """Get site analytics for the admin dashboard"""
+    if not request.user.is_staff:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        # Get date range for filtering
+        days = int(request.query_params.get('days', 30))
+        date_from = timezone.now() - timedelta(days=days)
+        
+        # Get total unique visitors
+        unique_visitors = SiteVisit.objects.filter(
+            visited_at__gte=date_from
+        ).values('session_id').distinct().count()
+        
+        # Get total page views
+        total_page_views = SiteVisit.objects.filter(
+            visited_at__gte=date_from
+        ).count()
+        
+        # Get car views
+        car_views = CarView.objects.filter(
+            viewed_at__gte=date_from
+        ).count()
+        
+        # Get most viewed cars
+        most_viewed_cars = Car.objects.order_by('-view_count')[:10]
+        most_viewed_cars_data = [{
+            'id': car.id,
+            'name': f"{car.make.name} {car.model.name} ({car.first_registration_year or 'N/A'})",
+            'views': car.view_count
+        } for car in most_viewed_cars]
+        
+        # Get daily visits for the chart
+        daily_visits = SiteVisit.objects.filter(
+            visited_at__gte=date_from
+        ).extra({
+            'day': "DATE(visited_at)"
+        }).values('day').annotate(count=Count('id')).order_by('day')
+        
+        # Format for chart
+        daily_visits_data = [{
+            'date': visit['day'],
+            'views': visit['count']
+        } for visit in daily_visits]
+        
+        return Response({
+            'unique_visitors': unique_visitors,
+            'total_page_views': total_page_views,
+            'car_views': car_views,
+            'most_viewed_cars': most_viewed_cars_data,
+            'daily_visits': daily_visits_data
+        })
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

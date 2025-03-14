@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CarFront, Phone, CarIcon, Home, Users, Menu, X } from 'lucide-react';
-import logo from '../assets/logo.png'
+import { CarFront, Phone, CarIcon, Home, Users, Menu, X, Heart } from 'lucide-react';
+import logo from '../assets/logo.png';
+import { useFavorites } from '../context/FavouritesContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { favorites } = useFavorites();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -44,6 +46,19 @@ const Navbar = () => {
               <Link to="/contact" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Phone className="h-5 w-5" />
                 <span className="font-medium">Contact</span>
+              </Link>
+
+              {/* Favorites Link */}
+              <Link to="/favorites" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <div className="relative">
+                  <Heart className="h-5 w-5" />
+                  {favorites.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {favorites.length}
+                    </span>
+                  )}
+                </div>
+                <span className="font-medium">Favorites</span>
               </Link>
             </div>
 
@@ -109,11 +124,31 @@ const Navbar = () => {
             <Phone className="h-5 w-5" />
             <span>Contact</span>
           </Link>
+          <Link 
+            to="/favorites" 
+            onClick={toggleMenu} 
+            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
+          >
+            <div className="relative">
+              <Heart className="h-5 w-5" />
+              {favorites.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
+            </div>
+            <span>Favorites</span>
+          </Link>
         </div>
       </div>
 
       {/* Overlay to dim background when menu is open */}
-
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={toggleMenu}
+        />
+      )}
     </>
   );
 };

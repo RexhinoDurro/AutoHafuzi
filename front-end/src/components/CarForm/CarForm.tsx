@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
@@ -60,8 +60,6 @@ const CarForm = () => {
     SAFETY: 'Safety & Security',
     EXTRAS: 'Extras'
   };
-
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
 
   // Load variants when model changes
   useEffect(() => {
@@ -205,10 +203,15 @@ const CarForm = () => {
     // Create date objects, ensuring we use UTC to avoid timezone issues
     const today = new Date();
     
-    // Only validate if the dates exist
-    if (formData.first_registration) {
-      const firstReg = new Date(formData.first_registration);
-      if (firstReg > today) {
+    // Check if first registration date is valid
+    if (formData.first_registration_year && formData.first_registration_month && formData.first_registration_day) {
+      const firstRegDate = new Date(
+        formData.first_registration_year, 
+        formData.first_registration_month - 1, 
+        formData.first_registration_day
+      );
+      
+      if (firstRegDate > today) {
         return 'First registration date cannot be in the future';
       }
     }
@@ -235,13 +238,21 @@ const CarForm = () => {
     if (!formData.description) errors.description = 'Description is required';
     if (!formData.created_at) errors.created_at = 'Created date is required';
     
-    if (!formData.discussedPrice && !formData.price) {
-      errors.price = 'Price is required when not using discussed price';
+    // Registration fields validation
+    if (formData.is_used) {
+      if (!formData.first_registration_day) {
+        errors.first_registration_day = 'Day is required for used vehicles';
+      }
+      if (!formData.first_registration_month) {
+        errors.first_registration_month = 'Month is required for used vehicles';
+      }
+      if (!formData.first_registration_year) {
+        errors.first_registration_year = 'Year is required for used vehicles';
+      }
     }
   
-    // First registration is required only for used cars
-    if (formData.is_used && !formData.first_registration) {
-      errors.first_registration = 'First registration date is required for used vehicles';
+    if (!formData.discussedPrice && !formData.price) {
+      errors.price = 'Price is required when not using discussed price';
     }
     
     // Validate numeric fields
@@ -287,6 +298,34 @@ const CarForm = () => {
       </div>
     );
   }
+
+  // Generate month options
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const monthNumber = i + 1;
+    return {
+      value: monthNumber,
+      label: new Date(2000, i, 1).toLocaleString('default', { month: 'long' })
+    };
+  });
+
+  // Generate day options (1-31)
+  const dayOptions = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1;
+    return {
+      value: day,
+      label: String(day).padStart(2, '0')
+    };
+  });
+
+  // Generate year options (from 1900 to current year)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 1899 }, (_, i) => {
+    const year = 1900 + i;
+    return {
+      value: year,
+      label: String(year)
+    };
+  }).reverse(); // Most recent years first
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -395,19 +434,82 @@ const CarForm = () => {
               </select>
               {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Registration <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.first_registration || ''}
-                onChange={(e) => setFormData({ ...formData, first_registration: e.target.value })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.first_registration ? 'border-red-500' : ''}`}
-                required
-              />
-              {validationErrors.first_registration && <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration}</p>}
+          {/* First Registration Date Fields */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              First Registration <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Day field */}
+              <div>
+                <select
+                  value={formData.first_registration_day || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
+                >
+                  <option value="">Day</option>
+                  {dayOptions.map(option => (
+                    <option key={`day-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.first_registration_day && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
+                }
+              </div>
+              
+              {/* Month field */}
+              <div>
+                <select
+                  value={formData.first_registration_month || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
+                >
+                  <option value="">Month</option>
+                  {monthOptions.map(option => (
+                    <option key={`month-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.first_registration_month && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
+                }
+              </div>
+              
+              {/* Year field */}
+              <div>
+                <select
+                  value={formData.first_registration_year || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
+                >
+                  <option value="">Year</option>
+                  {yearOptions.map(option => (
+                    <option key={`year-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.first_registration_year && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
+                }
+              </div>
             </div>
           </div>
 
@@ -706,7 +808,7 @@ const CarForm = () => {
                 onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
                 className="w-full p-2 border rounded-lg"
               />
-            </div>
+              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

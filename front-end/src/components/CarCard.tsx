@@ -16,17 +16,28 @@ const CarCard = ({ car }: CarCardProps) => {
       }
       return car.images[0].image;
     }
-    return car.image;
+    return "";
   };
 
   const displayImage = getDisplayImage();
 
+  // Format registration date from individual fields
+  const getFormattedRegistration = () => {
+    if (car.first_registration_year && car.first_registration_month) {
+      return `${car.first_registration_month}/${car.first_registration_year}`;
+    }
+    return "N/A";
+  };
+
+  const fuelInfo = car.fuel_type || "N/A";
+  const registrationInfo = getFormattedRegistration();
+
   return (
     <Link 
       to={`/car/${car.id}`}
-      className="block bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105 cursor-pointer"
+      className="block bg-white shadow-lg overflow-hidden transition-transform hover:scale-105 cursor-pointer w-11/12 mx-auto flex flex-col h-80"
     >
-      <div className="relative h-48">
+      <div className="relative h-44 flex-[0.6]">
         {displayImage ? (
           <img
             src={displayImage.startsWith('http') ? displayImage : `http://localhost:8000${displayImage}`}
@@ -39,28 +50,24 @@ const CarCard = ({ car }: CarCardProps) => {
           </div>
         )}
       </div>
-      <div className="p-4">
+      <div className="p-2 flex-[0.4] flex flex-col justify-between">
         <h3 className="text-base font-bold text-gray-700">
           {car.brand} {car.model_name} 
           {car.variant_name && (
             <span className="text-gray-500 font-normal text-sm ml-1">{car.variant_name}</span>
           )}
         </h3>
-        <div className="">
+        <div className="flex items-center mb-1">
           <span className="text-lg font-semibold text-blue-600">
             ${Number(car.price).toLocaleString()}
           </span>
         </div>
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-600">{car.year}</span>
-          <span className="text-gray-600">{car.mileage.toLocaleString()} km</span>
+        <div className="mt-1 mb-1">
+          <span className="text-xs bg-gray-100 px-2 py-1 truncate block max-w-full" title={`${fuelInfo}, ${registrationInfo}, ${car.mileage.toLocaleString()} km`}>
+            {fuelInfo} | {registrationInfo} | {car.mileage.toLocaleString()} km
+          </span>
         </div>
-        <p className="text-gray-600 text-sm line-clamp-2">{car.description}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.fuel_type}</span>
-          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.gearbox}</span>
-          <span className="text-xs bg-gray-100 px-2 py-1 rounded">{car.body_type}</span>
-        </div>
+        <p className="text-gray-600 text-sm truncate" title={car.description}>{car.description}</p>
         <div className="mt-2">
           <p className="text-xs text-gray-500">Created: {new Date(car.created_at).toLocaleDateString()}</p>
         </div>

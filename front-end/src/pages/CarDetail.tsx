@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CarImageCarousel from '../components/ImageGallery';
 import { Car } from '../types/car';
-import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star } from 'lucide-react';
+import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye } from 'lucide-react';
+import FavoriteButton from '../components/FavouriteButton';
+import { trackCarView } from '../utils/userActivityService';
+import RecommendedCars from '../components/RecommendedCars';
 
 // Interfaces for color data
 interface ExteriorColor {
@@ -44,12 +47,46 @@ const categoryLabels: Record<string, string> = {
 const CarDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<Option[]>([]);
   const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
+  const [referrer, setReferrer] = useState<string>('/');
+
+  useEffect(() => {
+    // Check if we have a referrer in sessionStorage, otherwise default to current referrer
+    const storedReferrer = sessionStorage.getItem('carDetailReferrer');
+    
+    if (storedReferrer) {
+      setReferrer(storedReferrer);
+    } else {
+      // Store the referrer path when component mounts
+      const referrerPath = document.referrer;
+      
+      // Try to determine if we came from CarHolder or Home based on the URL
+      if (location.state && location.state.from) {
+        setReferrer(location.state.from);
+        sessionStorage.setItem('carDetailReferrer', location.state.from);
+      } else if (referrerPath.includes('/cars')) {
+        setReferrer('/cars');
+        sessionStorage.setItem('carDetailReferrer', '/cars');
+      } else {
+        // Default to home if we can't determine
+        setReferrer('/');
+        sessionStorage.setItem('carDetailReferrer', '/');
+      }
+    }
+  }, [location]);
+
+  // Handle the back button click
+  const handleBackClick = () => {
+    navigate(referrer);
+    // Clear the stored referrer after navigation
+    sessionStorage.removeItem('carDetailReferrer');
+  };
 
   // Fetch colors and options data
   useEffect(() => {
@@ -86,19 +123,36 @@ const CarDetail: React.FC = () => {
   useEffect(() => {
     const fetchCarDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/cars/${id}/`);
+        // Ensure we're sending cookies with the request
+        // Add a custom header to mark this request for analytics tracking
+        const response = await fetch(`http://localhost:8000/api/cars/${id}/`, {
+          method: 'GET',
+          credentials: 'include', 
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-Requested-For-Analytics': 'true' // Add this header to mark for tracking
+          }
+        });
+        
         if (!response.ok) {
           throw new Error('Car not found');
         }
         const data = await response.json();
         setCar(data);
+        
+        // Track this car view for recommendations
+        if (data.id && data.brand && data.model_name) {
+          trackCarView(data.id, data.brand, data.model_name);
+        }
+        
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch car details');
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchCarDetails();
   }, [id]);
 
@@ -144,7 +198,7 @@ const CarDetail: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <button
-        onClick={() => navigate('/')}
+        onClick={handleBackClick}
         className="mb-6 text-blue-600 hover:text-blue-800"
       >
         ← Kthehu te listimi
@@ -189,35 +243,50 @@ const CarDetail: React.FC = () => {
           
           <div className="space-y-4">
             <h1 className="text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
-            <h2 className="text-2xl font-semibold text-blue-600">
-              ${typeof car.price === 'number' 
-                ? car.price.toLocaleString() 
-                : Number(car.price).toLocaleString()}
-            </h2>
+            
+            {/* Price with favorite button and view counter */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-blue-600">
+                ${typeof car.price === 'number' 
+                  ? car.price.toLocaleString() 
+                  : Number(car.price).toLocaleString()}
+              </h2>
+              <div className="flex items-center space-x-4">
+                {/* View Counter */}
+                <div className="flex items-center text-gray-500" title="Number of views">
+                  <Eye size={20} className="mr-1" />
+                  <span>{car.view_count}</span>
+                </div>
+                
+                {/* Favorite Button */}
+                <FavoriteButton 
+                  carId={car.id} 
+                  size={28} 
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-8">
-            <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Informacione Bazë</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">Viti</p>
-                  <p className="font-medium">{car.year}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Lloji i karocerisë</p>
-                  <p className="font-medium">{car.body_type}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Gjendja</p>
-                  <p className="font-medium">{car.is_used ? 'I përdorur' : 'I ri'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Data e inspektimit të përgjithshëm</p>
-                  <p className="font-medium">{car.general_inspection_date || 'N/A'}</p>
-                </div>
+          <section className="space-y-4">
+            <h3 className="text-xl font-semibold">Informacione Bazë</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-gray-600">Viti i Regjistrimit</p>
+                <p className="font-medium">{car.first_registration_year || 'N/A'}</p>
               </div>
-            </section>
+              <div>
+                <p className="text-gray-600">Lloji i karocerisë</p>
+                <p className="font-medium">{car.body_type}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Gjendja</p>
+                <p className="font-medium">{car.is_used ? 'I përdorur' : 'I ri'}</p>
+              </div>
+              {/* General inspection date is removed as requested */}
+            </div>
+          </section>
 
             {/* Fixed Colors Section */}
             <section className="space-y-4">
@@ -265,6 +334,7 @@ const CarDetail: React.FC = () => {
               </div>
             </section>
 
+            {/* Remaining sections remain unchanged */}
             <section className="space-y-4">
               <h3 className="text-xl font-semibold">Specifikimet Teknike</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -391,6 +461,13 @@ const CarDetail: React.FC = () => {
           <p className="text-gray-700 whitespace-pre-line">{car.description}</p>
         </div>
       </div>
+
+      {/* Add recommendations section at the bottom */}
+      {car && (
+        <div className="mt-12">
+          <RecommendedCars excludeCarIds={[Number(id)]} />
+        </div>
+      )}
     </div>
   );
 };

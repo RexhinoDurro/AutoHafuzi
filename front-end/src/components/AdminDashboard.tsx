@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car } from '../types/car';
 import { getStoredAuth } from '../utils/auth';
+import AnalyticsDashboard from './AnalyticsDashboard';
+import { Eye } from 'lucide-react';
+import Sidebar from './Sidebar';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const navigate = useNavigate();
   const [cars, setCars] = useState<Car[]>([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { token } = getStoredAuth();
 
   useEffect(() => {
@@ -25,7 +30,6 @@ const AdminDashboard = () => {
         },
       });
       const data = await response.json();
-      console.log('Fetched Cars:', data);
 
       // Handle both paginated and direct array responses
       if ('results' in data && Array.isArray(data.results)) {
@@ -82,33 +86,53 @@ const AdminDashboard = () => {
     return undefined;
   };
 
-  return (
-    <div className="max-w-7xl mx-auto p-6">
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  // Main content wrapper
+  const contentWrapper = (content: React.ReactNode) => (
+    <div className="flex h-screen bg-gray-100">
+      <Sidebar collapsed={sidebarCollapsed} toggleCollapse={toggleSidebar} />
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          sidebarCollapsed ? 'ml-16' : 'ml-64'
+        } overflow-auto`}
+      >
+        <div className="p-6">{content}</div>
+      </div>
+    </div>
+  );
+
+  // If we have children, render them instead of the default dashboard
+  if (children) {
+    return contentWrapper(
+      <div>
+        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        {children}
+      </div>
+    );
+  }
+
+  return contentWrapper(
+    <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <div className="flex space-x-4">
-        <button
-          onClick={() => navigate('/exterior-colors')}
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-        >
-          Manage Colors
-        </button>
+        <div className="flex space-x-2">
           <button
-            onClick={() => navigate('/options')}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700"
           >
-            Manage Options
-          </button>
-          <button
-            onClick={() => navigate('/auth/add-car')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Add New Car
+            {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-lg">
+
+      {/* Analytics Dashboard Section */}
+      {showAnalytics && <AnalyticsDashboard />}
+
+      <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
+        <table className="min-w-full">
           <thead className="bg-gray-100">
             <tr>
               <th className="px-6 py-3 text-left">Image</th>
@@ -116,6 +140,7 @@ const AdminDashboard = () => {
               <th className="px-6 py-3 text-left">Model</th>
               <th className="px-6 py-3 text-left">Year</th>
               <th className="px-6 py-3 text-left">Price</th>
+              <th className="px-6 py-3 text-left">Views</th>
               <th className="px-6 py-3 text-left">Created At</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
@@ -138,8 +163,14 @@ const AdminDashboard = () => {
                 </td>
                 <td className="px-6 py-4">{car.brand}</td>
                 <td className="px-6 py-4">{car.model_name}</td>
-                <td className="px-6 py-4">{car.year}</td>
+                <td className="px-6 py-4">{car.first_registration_year}</td>
                 <td className="px-6 py-4">€{car.price.toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center">
+                    <Eye className="text-gray-400 mr-2" size={16} />
+                    {car.view_count}
+                  </div>
+                </td>
                 <td className="px-6 py-4">{formatDate(car.created_at)}</td>
                 <td className="px-6 py-4">
                   <button

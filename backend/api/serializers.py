@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor
+from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, SiteVisit, ContactMessage
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,6 +57,12 @@ class CarSerializer(serializers.ModelSerializer):
     discussed_price = serializers.BooleanField(required=False, default=False)
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all())
     variant = serializers.PrimaryKeyRelatedField(queryset=CarVariant.objects.all(), required=False, allow_null=True)
+    view_count = serializers.IntegerField(read_only=True)
+    
+    # Add explicit fields for first registration values
+    first_registration_day = serializers.IntegerField(required=False, allow_null=True)
+    first_registration_month = serializers.IntegerField(required=False, allow_null=True)
+    first_registration_year = serializers.IntegerField(required=False, allow_null=True)
     
     # Add exterior and interior color serialization
     exterior_color = serializers.PrimaryKeyRelatedField(
@@ -102,14 +108,15 @@ class CarSerializer(serializers.ModelSerializer):
     class Meta:
         model = Car
         fields = [
-            'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant', 'year', 
+            'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant',
+            'first_registration_day', 'first_registration_month', 'first_registration_year',
             'exterior_color', 'exterior_color_name', 'exterior_color_hex',
             'interior_color', 'interior_color_name', 'interior_upholstery', 'interior_color_hex',
-            'price','discussed_price', 'description', 'created_at', 'images',
+            'price', 'discussed_price', 'description', 'created_at', 'images',
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
-            'first_registration', 'general_inspection_date', 'full_service_history', 
+            'first_registration', 'full_service_history', 
             'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 
-            'weight', 'emission_class', 'fuel_type', 'options'
+            'weight', 'emission_class', 'fuel_type', 'options', 'view_count'
         ]
 
     def validate(self, data):
@@ -127,3 +134,17 @@ class CarSerializer(serializers.ModelSerializer):
                 )
         
         return data
+
+class SiteVisitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteVisit
+        fields = ['id', 'session_id', 'path', 'visited_at', 'ip_address', 'user_agent', 'referrer']
+        
+class ContactMessageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Contact Message model
+    """
+    class Meta:
+        model = ContactMessage
+        fields = ['id', 'name', 'email', 'phone', 'subject', 'message', 'is_read', 'created_at']
+        read_only_fields = ['id', 'is_read', 'created_at']

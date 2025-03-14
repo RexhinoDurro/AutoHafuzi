@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getLastSearch, saveLastSearch } from '../utils/userActivityService';
 
 interface Make {
   id: number;
@@ -155,12 +156,13 @@ const CarHolderFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     }
   }, [options]);
 
-  // Initialize filters from URL params
+  // Initialize filters from URL params or last search
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const initialFilters: FilterState = {};
     const initialSelectedOptions: string[] = [];
 
+    // First check URL parameters
     searchParams.forEach((value, key) => {
       if (key.endsWith('[]')) {
         const baseKey = key.slice(0, -2);
@@ -172,12 +174,38 @@ const CarHolderFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
       }
     });
 
+    // If no URL parameters, check for saved last search
+    if (Object.keys(initialFilters).length === 0) {
+      const lastSearch = getLastSearch();
+      Object.entries(lastSearch).forEach(([key, value]) => {
+        if (key === 'options' && Array.isArray(value)) {
+          initialSelectedOptions.push(...value.map(v => v.toString()));
+        } else if (value !== null && value !== undefined && value !== '') {
+          (initialFilters as any)[key] = value.toString();
+        }
+      });
+    }
+
     if (initialSelectedOptions.length > 0) {
       initialFilters.options = initialSelectedOptions;
     }
 
     setFilters(initialFilters);
     setSelectedOptions(initialSelectedOptions);
+    
+    // If we have filters from either source, update active filters display
+    if (Object.keys(initialFilters).length > 0) {
+      const makeId = initialFilters.make;
+      if (makeId) {
+        fetchModels(makeId.toString());
+        
+        const modelId = initialFilters.model;
+        if (modelId) {
+          fetchVariants(modelId.toString());
+        }
+      }
+    }
+
     fetchData();
   }, []);
 
@@ -192,19 +220,6 @@ const CarHolderFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     fetchExteriorColors();
     fetchInteriorColors();
     fetchOptions();
-    
-    // If make is in URL, fetch models
-    const urlParams = new URLSearchParams(window.location.search);
-    const makeId = urlParams.get('make');
-    if (makeId) {
-      fetchModels(makeId);
-      
-      // If model is in URL, fetch variants
-      const modelId = urlParams.get('model');
-      if (modelId) {
-        fetchVariants(modelId);
-      }
-    }
   };
 
   // Get models when make is selected
@@ -477,6 +492,9 @@ const CarHolderFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
         return value !== undefined && value !== '';
       })
     );
+    
+    // Save the search parameters for recommendations
+    saveLastSearch(activeFilters as any);
     
     // Update URL
     updateUrl();

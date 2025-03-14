@@ -1,5 +1,6 @@
 # models.py
 from django.db import models
+from django.contrib.auth.models import User
 
 class CarMake(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -82,7 +83,9 @@ class Car(models.Model):
     make = models.ForeignKey(CarMake, on_delete=models.CASCADE)
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
     variant = models.ForeignKey(CarVariant, on_delete=models.CASCADE, null=True, blank=True)
-    year = models.IntegerField()
+    first_registration_day = models.IntegerField(null=True, blank=True)
+    first_registration_month = models.IntegerField(null=True, blank=True)
+    first_registration_year = models.IntegerField(null=True, blank=True)
     # Replace single color field with exterior and interior color references
     exterior_color = models.ForeignKey(ExteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     interior_color = models.ForeignKey(InteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
@@ -90,6 +93,7 @@ class Car(models.Model):
     discussed_price = models.BooleanField(default=False) 
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    view_count = models.IntegerField(default=0)  # Track total views
 
     # Car specifications
     body_type = models.CharField(max_length=50, default="Sedan")
@@ -99,7 +103,6 @@ class Car(models.Model):
     doors = models.IntegerField(default=4)
     mileage = models.IntegerField(default=0)
     first_registration = models.DateField(null=True, blank=True)
-    general_inspection_date = models.DateField(null=True, blank=True)
     full_service_history = models.BooleanField(default=False)
     customs_paid = models.BooleanField(default=False)
     power = models.IntegerField(default=100)  # in HP
@@ -129,3 +132,50 @@ class Car(models.Model):
 
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.year})"
+
+class CarView(models.Model):
+    """Track unique views for cars by storing visitor sessions"""
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='views')
+    session_id = models.CharField(max_length=40)  # Store the session ID
+    ip_address = models.GenericIPAddressField(null=True, blank=True)  # Optional: store IP for analytics
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['car', 'session_id']  # Ensure each session only counts once per car
+        ordering = ['-viewed_at']
+    
+    def __str__(self):
+        return f"View of {self.car} by session {self.session_id[:8]}..."
+
+class SiteVisit(models.Model):
+    """Track website traffic/visits"""
+    session_id = models.CharField(max_length=40)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    referrer = models.URLField(blank=True, null=True)
+    path = models.CharField(max_length=255)
+    visited_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-visited_at']
+        
+    def __str__(self):
+        return f"Visit to {self.path} at {self.visited_at}"
+    
+class ContactMessage(models.Model):
+    """
+    Model for storing contact form submissions
+    """
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.subject} - {self.name}"

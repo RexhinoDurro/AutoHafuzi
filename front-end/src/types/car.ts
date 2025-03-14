@@ -1,20 +1,20 @@
 export interface Car {
   id: number;
-  make_id: number;
-  model_id: number;
-  variant_id?: number;
+  make: number;
+  model: number;
+  variant?: number;
   brand: string;
   model_name: string;
   variant_name?: string;
-  year: number;
-  exterior_color_id?: number;
+  exterior_color?: number;
   exterior_color_name?: string;
   exterior_color_hex?: string;
-  interior_color_id?: number;
+  interior_color?: number;
   interior_color_name?: string;
   interior_upholstery?: string;
   interior_color_hex?: string;
   price: number;
+  discussed_price?: boolean;
   description: string;
   created_at: string;
   images: CarImage[];
@@ -24,8 +24,10 @@ export interface Car {
   seats: number;
   doors: number;
   mileage: number;
-  first_registration: string | null;
-  general_inspection_date: string | null;
+  first_registration_day?: number;
+  first_registration_month?: number;
+  first_registration_year?: number;
+  first_registration?: string;
   full_service_history: boolean;
   customs_paid: boolean;
   power: number;
@@ -36,7 +38,8 @@ export interface Car {
   weight: number;
   emission_class: string;
   fuel_type: string;
-  options: string[];
+  options: string[] | number[];
+  view_count: number; 
 }
 
 export interface CarImage {
@@ -44,6 +47,7 @@ export interface CarImage {
   image: string;
   is_primary?: boolean;
   order?: number;
+  url?: string;
 }
 
 export interface TempImage {
@@ -83,6 +87,24 @@ export interface InteriorColor {
   hex_code: string;
 }
 
+export interface Option {
+  id: number;
+  name: string;
+  category: string;
+  category_display?: string;
+}
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface FormData {
   make: string;
   model: string;
@@ -93,7 +115,6 @@ export interface FormData {
   brand?: string;   
   model_name?: string;
   variant_name?: string;
-  year: number;
   exterior_color?: string;
   exterior_color_id?: number;
   exterior_color_name?: string;
@@ -114,7 +135,9 @@ export interface FormData {
   seats: number;
   doors: number;
   mileage: number;
-  first_registration: string;
+  first_registration_day?: number;
+  first_registration_month?: number;
+  first_registration_year?: number;
   general_inspection_date: string;
   full_service_history: boolean;
   customs_paid: boolean;
