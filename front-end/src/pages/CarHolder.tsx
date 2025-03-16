@@ -3,7 +3,6 @@ import CarHolderFilter from '../components/CarHolderFilter';
 import { Car } from '../types/car';
 import { saveLastSearch } from '../utils/userActivityService';
 import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
-import CarImageCarousel from '../components/ImageGallery';
 import { Filter, X, Calendar, Gauge, Fuel, Settings, Car as CarIcon } from 'lucide-react';
 import FavoriteButton from '../components/FavouriteButton';
 

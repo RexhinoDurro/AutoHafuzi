@@ -9,25 +9,6 @@ import RecommendedCars from '../components/RecommendedCars';
 import { API_ENDPOINTS } from '../config/api';
 import { useMediaQuery } from '../utils/useMediaQuery';
 
-// Interfaces for color data
-interface ExteriorColor {
-  id: number;
-  name: string;
-  hex_code: string;
-}
-
-interface InteriorColor {
-  id: number;
-  name: string;
-  hex_code: string;
-}
-
-// Interface for upholstery data
-interface Upholstery {
-  id: number;
-  name: string;
-}
-
 // Interface for option data
 interface Option {
   id: number;
@@ -59,9 +40,6 @@ const CarDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<Option[]>([]);
-  const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
-  const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
-  const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [referrer, setReferrer] = useState<string>('/');
   
   // Add a state to track if we've done the initial fetch
@@ -103,34 +81,20 @@ const CarDetail: React.FC = () => {
     sessionStorage.removeItem('carDetailReferrer');
   };
 
-  // Fetch colors, upholstery, and options data
+  // Fetch options data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [optionsRes, exteriorColorsRes, interiorColorsRes, upholsteryRes] = await Promise.all([
-          fetch(API_ENDPOINTS.OPTIONS.LIST),
-          fetch(API_ENDPOINTS.EXTERIOR_COLORS),
-          fetch(API_ENDPOINTS.INTERIOR_COLORS),
-          fetch(API_ENDPOINTS.UPHOLSTERY)
-        ]);
+        const optionsRes = await fetch(API_ENDPOINTS.OPTIONS.LIST);
         
-        if (!optionsRes.ok || !exteriorColorsRes.ok || !interiorColorsRes.ok || !upholsteryRes.ok) {
-          throw new Error('Failed to fetch data');
+        if (!optionsRes.ok) {
+          throw new Error('Failed to fetch options data');
         }
         
-        const [optionsData, exteriorColorsData, interiorColorsData, upholsteryData] = await Promise.all([
-          optionsRes.json(),
-          exteriorColorsRes.json(),
-          interiorColorsRes.json(),
-          upholsteryRes.json()
-        ]);
-        
+        const optionsData = await optionsRes.json();
         setOptions(optionsData);
-        setExteriorColors(exteriorColorsData);
-        setInteriorColors(interiorColorsData);
-        setUpholsteryTypes(upholsteryData);
       } catch (err) {
-        console.error("Failed to fetch data:", err);
+        console.error("Failed to fetch options data:", err);
       }
     };
 
@@ -242,13 +206,6 @@ const CarDetail: React.FC = () => {
     });
     
     return categories;
-  };
-
-  // Helper function to find upholstery name by ID
-  const getUpholsteryName = (upholsteryId: number | undefined): string | undefined => {
-    if (!upholsteryId) return undefined;
-    const upholstery = upholsteryTypes.find(u => u.id === upholsteryId);
-    return upholstery?.name;
   };
 
   if (loading) {
@@ -395,7 +352,7 @@ const CarDetail: React.FC = () => {
                   </div>
                 )}
                 
-                {/* Upholstery - Updated to use upholstery_name */}
+                {/* Upholstery - Using upholstery_name directly */}
                 {car.upholstery_name && (
                   <div>
                     <p className="text-gray-600 text-sm md:text-base">Tapiceria</p>

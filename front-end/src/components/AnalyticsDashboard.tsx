@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getStoredAuth } from '../utils/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Eye, Users, Car as CarIcon, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Eye, Users, Car as CarIcon} from 'lucide-react';
 
 // Define types for analytics data
 interface MostViewedCar {

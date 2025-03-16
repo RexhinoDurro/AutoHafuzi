@@ -10,8 +10,6 @@ const Home = () => {
   // State definitions
   const [lastSearchCars, setLastSearchCars] = useState<Car[]>([]);
   const [interestCars, setInterestCars] = useState<Car[]>([]);
-  const [latestCars, setLatestCars] = useState<Car[]>([]);
-  const [randomCars, setRandomCars] = useState<Car[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSearchQuery, setLastSearchQuery] = useState<URLSearchParams | null>(null);
@@ -45,9 +43,7 @@ const Home = () => {
       const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${latestCarsQuery}`);
       if (response.ok) {
         const data = await response.json();
-        const latestCarsData = data.results || [];
-        setLatestCars(latestCarsData);
-        return latestCarsData;
+        return data.results || [];
       } else {
         console.warn('Latest cars API request failed');
         return [];
@@ -70,9 +66,7 @@ const Home = () => {
         const data = await response.json();
         // Shuffle the results to get random cars
         const shuffled = [...(data.results || [])].sort(() => 0.5 - Math.random());
-        const randomCarsData = shuffled.slice(0, 4);
-        setRandomCars(randomCarsData);
-        return randomCarsData;
+        return shuffled.slice(0, 4);
       } else {
         console.warn('Random cars API request failed');
         return [];

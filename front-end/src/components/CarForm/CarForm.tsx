@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
-import { API_BASE_URL, API_ENDPOINTS } from '../../config/api';
-import { CarImage, TempImage, ExteriorColor, InteriorColor, Upholstery } from '../../types/car';
+import { API_BASE_URL } from '../../config/api';
+import { CarImage, TempImage, ExteriorColor, InteriorColor } from '../../types/car';
 import {
   BODY_TYPES,
   DRIVETRAINS,
@@ -209,25 +209,6 @@ const CarForm = () => {
   }, []);
   
   // Handle option selection changes
-  const handleOptionSelection = (optionId: number, isChecked: boolean) => {
-    let newSelectedOptions: number[];
-    
-    if (isChecked) {
-      // Add the option if checked
-      newSelectedOptions = [...selectedOptions, optionId];
-    } else {
-      // Remove the option if unchecked
-      newSelectedOptions = selectedOptions.filter(id => id !== optionId);
-    }
-    
-    setSelectedOptions(newSelectedOptions);
-    
-    // Update formData with the selected option IDs
-    setFormData({
-      ...formData,
-      option_ids: newSelectedOptions
-    });
-  };
 
   const validateDates = () => {
     // Create date objects, ensuring we use UTC to avoid timezone issues

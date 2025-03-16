@@ -62,36 +62,6 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
     };
   }, [isDragging, dragStartX, initialMin, initialMax, activeHandle]);
 
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMin = parseInt(e.target.value);
-    setMin(newMin);
-    
-    // Ensure min doesn't exceed max
-    if (newMin <= max) {
-      onChange(newMin, max);
-      setMinInput(formatValue(newMin));
-    } else {
-      setMin(max);
-      onChange(max, max);
-      setMinInput(formatValue(max));
-    }
-  };
-
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newMax = parseInt(e.target.value);
-    setMax(newMax);
-    
-    // Ensure max isn't less than min
-    if (newMax >= min) {
-      onChange(min, newMax);
-      setMaxInput(formatValue(newMax));
-    } else {
-      setMax(min);
-      onChange(min, min);
-      setMaxInput(formatValue(min));
-    }
-  };
-
   const handleMinInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMinInput(e.target.value);
   };
@@ -231,7 +201,7 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
       const range = maxValue - minValue;
       const deltaValue = Math.round(deltaRatio * range / step) * step;
       
-      updateSliderBasedOnDrag(deltaValue, rect.width);
+      updateSliderBasedOnDrag(deltaValue);
     }
   };
 
@@ -244,14 +214,14 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
       const range = maxValue - minValue;
       const deltaValue = Math.round(deltaRatio * range / step) * step;
       
-      updateSliderBasedOnDrag(deltaValue, rect.width);
+      updateSliderBasedOnDrag(deltaValue);
       
       // Prevent default to avoid scrolling while dragging
       e.preventDefault();
     }
   };
 
-  const updateSliderBasedOnDrag = (deltaValue: number, trackWidth: number) => {
+  const updateSliderBasedOnDrag = (deltaValue: number) => {
     if (activeHandle === 'min') {
       // Move min handle
       const newMin = Math.max(minValue, Math.min(initialMin + deltaValue, max));

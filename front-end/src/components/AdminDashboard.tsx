@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, ReactNode } from 'react';
 import { getStoredAuth } from '../utils/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Eye, Users, Car as CarIcon, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Eye, Users, Car as CarIcon } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api'; // Import API endpoints
 
 // Define types for analytics data
@@ -24,7 +24,12 @@ interface AnalyticsData {
   daily_visits: DailyVisit[];
 }
 
-const AnalyticsDashboard: React.FC = () => {
+// Update the component interface to accept children
+interface AdminDashboardProps {
+  children?: ReactNode;
+}
+
+const AnalyticsDashboard: React.FC<AdminDashboardProps> = ({ children }) => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +65,15 @@ const AnalyticsDashboard: React.FC = () => {
       fetchAnalytics();
     }
   }, [token, timeRange]);
+
+  // If children are provided, render them instead of the analytics dashboard
+  if (children) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {children}
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="flex justify-center items-center p-8">Loading analytics data...</div>;

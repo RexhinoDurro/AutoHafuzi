@@ -1,4 +1,3 @@
-import React from "react";
 import { Car } from "../types/car";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
@@ -37,7 +36,7 @@ const CarCard = ({ car }: CarCardProps) => {
   return (
     <Link 
       to={`/car/${car.id}`}
-      className="block bg-white shadow overflow-hidden transition-transform hover:scale-105 cursor-pointer w-full mx-auto flex flex-col h-64 m-1 rounded-sm sm:h-80 sm:m-0.5 sm:shadow-lg sm:rounded-sm"
+      className="bg-white shadow overflow-hidden transition-transform hover:scale-105 cursor-pointer w-full mx-auto flex flex-col h-64 m-1 rounded-sm sm:h-80 sm:m-0.5 sm:shadow-lg sm:rounded-sm"
     >
       <div className="relative h-36 flex-[0.6] sm:h-44">
         {/* Favorite button positioned at top right */}

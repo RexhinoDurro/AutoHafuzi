@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import RangeSlider from './RangeSlider';
 import { getLastSearch, saveLastSearch } from '../utils/userActivityService';
-import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS } from '../config/api';
 
 interface Make {
   id: number;
