@@ -5,6 +5,7 @@ import { getStoredAuth } from '../utils/auth';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { Eye } from 'lucide-react';
 import Sidebar from './Sidebar';
+import { API_BASE_URL } from '../config/api';
 
 const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
 
   const fetchCars = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/cars/', {
+      const response = await fetch(`${API_BASE_URL}/api/cars/`, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -50,7 +51,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
     if (!window.confirm('Are you sure you want to delete this car?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/cars/delete/${id}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/cars/delete/${id}/`, {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,
@@ -151,7 +152,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                 <td className="px-6 py-4">
                   {getDisplayImage(car) ? (
                     <img
-                      src={getDisplayImage(car)?.startsWith('http') ? getDisplayImage(car) : `http://localhost:8000${getDisplayImage(car)}`}
+                      src={getDisplayImage(car)?.startsWith('http') ? getDisplayImage(car) : `${API_BASE_URL}${getDisplayImage(car)}`}
                       alt={`${car.brand} ${car.model_name}`}
                       className="w-20 h-20 object-cover rounded"
                     />

@@ -31,7 +31,10 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
   const [dragStartX, setDragStartX] = useState<number>(0);
   const [initialMin, setInitialMin] = useState<number>(min);
   const [initialMax, setInitialMax] = useState<number>(max);
+  const [activeHandle, setActiveHandle] = useState<'min' | 'max' | 'range' | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const minHandleRef = useRef<HTMLDivElement>(null);
+  const maxHandleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Update local state when props change (e.g., when filters are reset)
@@ -42,18 +45,22 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
   }, [currentMin, currentMax, minValue, maxValue, formatValue]);
 
   useEffect(() => {
-    // Add global mouse event listeners when dragging
+    // Add global mouse/touch event listeners when dragging
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleTouchEnd);
     }
 
     // Clean up event listeners
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isDragging, dragStartX, initialMin, initialMax]);
+  }, [isDragging, dragStartX, initialMin, initialMax, activeHandle]);
 
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newMin = parseInt(e.target.value);
@@ -139,39 +146,81 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
     onChange(min, clampedValue);
   };
 
-  // Handle clicking on the slider track to jump to position
-  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (sliderRef.current) {
-      const rect = sliderRef.current.getBoundingClientRect();
-      const clickPosition = (e.clientX - rect.left) / rect.width;
-      const range = maxValue - minValue;
-      const valueAtClick = minValue + Math.round(clickPosition * range / step) * step;
-      
-      // Determine if we should move the min or max handle (or both)
-      const distanceToMin = Math.abs(valueAtClick - min);
-      const distanceToMax = Math.abs(valueAtClick - max);
-
-      if (distanceToMin <= distanceToMax) {
-        // Move min handle
-        setMin(valueAtClick);
-        setMinInput(formatValue(valueAtClick));
-        onChange(valueAtClick, max);
-      } else {
-        // Move max handle
-        setMax(valueAtClick);
-        setMaxInput(formatValue(valueAtClick));
-        onChange(min, valueAtClick);
-      }
-    }
-  };
-
-  // Handle clicking and dragging on the blue selected range
-  const handleRangeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation(); // Prevent track click from firing
+  // Handle starting drag on track, min handle, max handle, or range
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, target: 'min' | 'max' | 'range' | 'track') => {
+    e.stopPropagation();
     setIsDragging(true);
     setDragStartX(e.clientX);
     setInitialMin(min);
     setInitialMax(max);
+    
+    if (target === 'track') {
+      // When clicking on track, determine whether to move min handle, max handle, or both
+      if (sliderRef.current) {
+        const rect = sliderRef.current.getBoundingClientRect();
+        const clickPosition = (e.clientX - rect.left) / rect.width;
+        const range = maxValue - minValue;
+        const valueAtClick = minValue + Math.round(clickPosition * range / step) * step;
+        
+        const distanceToMin = Math.abs(valueAtClick - min);
+        const distanceToMax = Math.abs(valueAtClick - max);
+
+        if (distanceToMin <= distanceToMax) {
+          setActiveHandle('min');
+          // Move min handle
+          setMin(valueAtClick);
+          setMinInput(formatValue(valueAtClick));
+          onChange(valueAtClick, max);
+        } else {
+          setActiveHandle('max');
+          // Move max handle
+          setMax(valueAtClick);
+          setMaxInput(formatValue(valueAtClick));
+          onChange(min, valueAtClick);
+        }
+      }
+    } else {
+      setActiveHandle(target);
+    }
+  };
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, target: 'min' | 'max' | 'range' | 'track') => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStartX(touch.clientX);
+    setInitialMin(min);
+    setInitialMax(max);
+    
+    if (target === 'track') {
+      // When touching on track, determine whether to move min handle, max handle, or both
+      if (sliderRef.current) {
+        const rect = sliderRef.current.getBoundingClientRect();
+        const touchPosition = (touch.clientX - rect.left) / rect.width;
+        const range = maxValue - minValue;
+        const valueAtTouch = minValue + Math.round(touchPosition * range / step) * step;
+        
+        const distanceToMin = Math.abs(valueAtTouch - min);
+        const distanceToMax = Math.abs(valueAtTouch - max);
+
+        if (distanceToMin <= distanceToMax) {
+          setActiveHandle('min');
+          // Move min handle
+          setMin(valueAtTouch);
+          setMinInput(formatValue(valueAtTouch));
+          onChange(valueAtTouch, max);
+        } else {
+          setActiveHandle('max');
+          // Move max handle
+          setMax(valueAtTouch);
+          setMaxInput(formatValue(valueAtTouch));
+          onChange(min, valueAtTouch);
+        }
+      }
+    } else {
+      setActiveHandle(target);
+    }
   };
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -182,6 +231,40 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
       const range = maxValue - minValue;
       const deltaValue = Math.round(deltaRatio * range / step) * step;
       
+      updateSliderBasedOnDrag(deltaValue, rect.width);
+    }
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (isDragging && sliderRef.current) {
+      const touch = e.touches[0];
+      const rect = sliderRef.current.getBoundingClientRect();
+      const deltaX = touch.clientX - dragStartX;
+      const deltaRatio = deltaX / rect.width;
+      const range = maxValue - minValue;
+      const deltaValue = Math.round(deltaRatio * range / step) * step;
+      
+      updateSliderBasedOnDrag(deltaValue, rect.width);
+      
+      // Prevent default to avoid scrolling while dragging
+      e.preventDefault();
+    }
+  };
+
+  const updateSliderBasedOnDrag = (deltaValue: number, trackWidth: number) => {
+    if (activeHandle === 'min') {
+      // Move min handle
+      const newMin = Math.max(minValue, Math.min(initialMin + deltaValue, max));
+      setMin(newMin);
+      setMinInput(formatValue(newMin));
+      onChange(newMin, max);
+    } else if (activeHandle === 'max') {
+      // Move max handle
+      const newMax = Math.min(maxValue, Math.max(initialMax + deltaValue, min));
+      setMax(newMax);
+      setMaxInput(formatValue(newMax));
+      onChange(min, newMax);
+    } else if (activeHandle === 'range') {
       // Move both handles while maintaining their distance
       let newMin = initialMin + deltaValue;
       let newMax = initialMax + deltaValue;
@@ -209,7 +292,17 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setActiveHandle(null);
   };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setActiveHandle(null);
+  };
+
+  // Calculate positions for rendering
+  const minPosition = ((min - minValue) / (maxValue - minValue)) * 100;
+  const maxPosition = ((max - minValue) / (maxValue - minValue)) * 100;
 
   return (
     <div className="space-y-3">
@@ -237,50 +330,42 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
       </div>
       
       <div 
-        className="relative h-1 bg-gray-200 rounded-full cursor-pointer" 
+        className="relative h-6 py-2.5 cursor-pointer" 
         ref={sliderRef}
-        onClick={handleTrackClick}
+        onMouseDown={(e) => handleMouseDown(e, 'track')}
+        onTouchStart={(e) => handleTouchStart(e, 'track')}
       >
+        {/* Track background */}
+        <div className="absolute top-2.5 left-0 right-0 h-1 bg-gray-200 rounded-full"></div>
+        
+        {/* Selected range */}
         <div 
-          className="absolute h-1 bg-blue-500 rounded-full cursor-move"
+          className="absolute top-2.5 h-1 bg-blue-500 rounded-full cursor-move"
           style={{ 
-            left: `${((min - minValue) / (maxValue - minValue)) * 100}%`, 
-            right: `${100 - ((max - minValue) / (maxValue - minValue)) * 100}%`
+            left: `${minPosition}%`, 
+            right: `${100 - maxPosition}%`
           }}
-          onMouseDown={handleRangeMouseDown}
+          onMouseDown={(e) => handleMouseDown(e, 'range')}
+          onTouchStart={(e) => handleTouchStart(e, 'range')}
         ></div>
         
-        <input
-          type="range"
-          min={minValue}
-          max={maxValue}
-          step={step}
-          value={min}
-          onChange={handleMinChange}
-          className="absolute w-full h-1 appearance-none bg-transparent pointer-events-none"
-          style={{ 
-            zIndex: 2,
-            '--track-color': 'transparent',
-            '--thumb-color': '#3B82F6',
-            '--thumb-size': '14px',
-          } as React.CSSProperties}
-        />
+        {/* Min handle */}
+        <div
+          ref={minHandleRef}
+          className="absolute top-1 w-4 h-4 bg-blue-500 rounded-full cursor-pointer transform -translate-x-1/2"
+          style={{ left: `${minPosition}%` }}
+          onMouseDown={(e) => handleMouseDown(e, 'min')}
+          onTouchStart={(e) => handleTouchStart(e, 'min')}
+        ></div>
         
-        <input
-          type="range"
-          min={minValue}
-          max={maxValue}
-          step={step}
-          value={max}
-          onChange={handleMaxChange}
-          className="absolute w-full h-1 appearance-none bg-transparent pointer-events-none"
-          style={{ 
-            zIndex: 2,
-            '--track-color': 'transparent',
-            '--thumb-color': '#3B82F6',
-            '--thumb-size': '14px',
-          } as React.CSSProperties}
-        />
+        {/* Max handle */}
+        <div
+          ref={maxHandleRef}
+          className="absolute top-1 w-4 h-4 bg-blue-500 rounded-full cursor-pointer transform -translate-x-1/2"
+          style={{ left: `${maxPosition}%` }}
+          onMouseDown={(e) => handleMouseDown(e, 'max')}
+          onTouchStart={(e) => handleTouchStart(e, 'max')}
+        ></div>
       </div>
       
       <div className="flex justify-between text-xs text-gray-500">

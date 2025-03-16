@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getStoredAuth, clearStoredAuth } from '../utils/auth';
+import useUpholstery from '../components/useUpholstery';
 
 // Define types
 interface ExteriorColor {
@@ -13,13 +14,7 @@ interface ExteriorColor {
 interface InteriorColor {
   id: number;
   name: string;
-  upholstery: string;
   hex_code: string;
-}
-
-interface UpholsteryType {
-  name: string;
-  count: number;
 }
 
 const ColorManagementPage: React.FC = () => {
@@ -36,12 +31,19 @@ const ColorManagementPage: React.FC = () => {
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
   const [newInteriorColor, setNewInteriorColor] = useState({
     name: '',
-    upholstery: '',
     hex_code: '#000000'
   });
 
-  // State for upholstery types
-  const [upholsteryTypes, setUpholsteryTypes] = useState<UpholsteryType[]>([]);
+  // Use the upholstery hook for upholstery management
+  const {
+    upholsteryTypes,
+    isLoading: upholsteryLoading,
+    error: upholsteryError,
+    addUpholsteryType,
+    deleteUpholsteryType
+  } = useUpholstery();
+
+  // State for new upholstery
   const [newUpholstery, setNewUpholstery] = useState('');
 
   // State for loading and error messages
@@ -72,23 +74,6 @@ const ColorManagementPage: React.FC = () => {
       }, 1500);
     }
   }, [navigate]);
-
-  // Extract unique upholstery types from interior colors
-  useEffect(() => {
-    const upholsteryMap = new Map<string, number>();
-    
-    interiorColors.forEach(color => {
-      const count = upholsteryMap.get(color.upholstery) || 0;
-      upholsteryMap.set(color.upholstery, count + 1);
-    });
-    
-    const types = Array.from(upholsteryMap.entries()).map(([name, count]) => ({
-      name,
-      count
-    }));
-    
-    setUpholsteryTypes(types);
-  }, [interiorColors]);
 
   const fetchColors = async () => {
     setLoading(true);
@@ -222,8 +207,8 @@ const ColorManagementPage: React.FC = () => {
   // Interior color handlers
   const handleAddInteriorColor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newInteriorColor.name.trim() || !newInteriorColor.upholstery.trim()) {
-      setError('Interior color name and upholstery are required');
+    if (!newInteriorColor.name.trim()) {
+      setError('Interior color name is required');
       return;
     }
 
@@ -246,7 +231,7 @@ const ColorManagementPage: React.FC = () => {
       );
       
       setInteriorColors([...interiorColors, response.data]);
-      setNewInteriorColor({ name: '', upholstery: '', hex_code: '#000000' });
+      setNewInteriorColor({ name: '', hex_code: '#000000' });
       setMessage('Interior color added successfully');
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
@@ -290,7 +275,7 @@ const ColorManagementPage: React.FC = () => {
     }
   };
 
-  // Add a new upholstery type by adding a color with that upholstery
+  // Upholstery management handlers
   const handleAddUpholstery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUpholstery.trim()) {
@@ -298,51 +283,30 @@ const ColorManagementPage: React.FC = () => {
       return;
     }
 
-    // Set the upholstery in the new interior color form
-    setNewInteriorColor({
-      ...newInteriorColor,
-      upholstery: newUpholstery
-    });
-    setNewUpholstery('');
-    setMessage('Upholstery type added to form. Complete the color details to add.');
-    setTimeout(() => setMessage(''), 3000);
+    try {
+      await addUpholsteryType(newUpholstery);
+      setNewUpholstery('');
+      setMessage('Upholstery type added successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Error adding upholstery:', err);
+      setError('Failed to add upholstery type');
+    }
   };
 
-  // Delete all colors with specific upholstery type
-  const handleDeleteUpholstery = async (upholsteryName: string) => {
-    if (!window.confirm(`Are you sure you want to delete all colors with ${upholsteryName} upholstery?`)) {
-      return;
-    }
-
-    if (!token) {
-      setError('Not authenticated. Please log in again.');
-      navigate('/auth/login', { state: { returnUrl: '/color-management' } });
+  // Delete an individual upholstery type
+  const handleDeleteUpholstery = async (id: number, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete the "${name}" upholstery type?`)) {
       return;
     }
 
     try {
-      const colorsToDelete = interiorColors.filter(color => color.upholstery === upholsteryName);
-      
-      // Delete each color with this upholstery
-      for (const color of colorsToDelete) {
-        await axios.delete(`http://localhost:8000/api/interior-colors/delete/${color.id}/`, {
-          headers: {
-            'Authorization': `Token ${token}`
-          }
-        });
-      }
-      
-      // Update the state
-      setInteriorColors(interiorColors.filter(color => color.upholstery !== upholsteryName));
-      setMessage(`All ${upholsteryName} upholstery colors deleted successfully`);
+      await deleteUpholsteryType(id);
+      setMessage(`Upholstery type "${name}" deleted successfully`);
       setTimeout(() => setMessage(''), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error deleting upholstery:', err);
-      if (err.response?.status === 401) {
-        handleAuthError();
-      } else {
-        setError(err.response?.data?.error || 'Failed to delete upholstery type');
-      }
+      setError('Failed to delete upholstery type');
     }
   };
 
@@ -359,7 +323,7 @@ const ColorManagementPage: React.FC = () => {
     );
   }
 
-  if (loading) {
+  if (loading || upholsteryLoading) {
     return <div className="p-6">Loading...</div>;
   }
 
@@ -368,9 +332,9 @@ const ColorManagementPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-6">Color Management</h1>
       
       {/* Messages */}
-      {error && (
+      {(error || upholsteryError) && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+          {error || upholsteryError}
           <button className="float-right font-bold" onClick={() => setError('')}>×</button>
         </div>
       )}
@@ -382,7 +346,7 @@ const ColorManagementPage: React.FC = () => {
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Exterior Colors Section */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Exterior Colors</h2>
@@ -436,7 +400,6 @@ const ColorManagementPage: React.FC = () => {
                 <tr>
                   <th className="py-2 px-4 border-b text-left">Color</th>
                   <th className="py-2 px-4 border-b text-left">Name</th>
-                  <th className="py-2 px-4 border-b text-left">Hex Code</th>
                   <th className="py-2 px-4 border-b text-left">Actions</th>
                 </tr>
               </thead>
@@ -450,7 +413,6 @@ const ColorManagementPage: React.FC = () => {
                       ></div>
                     </td>
                     <td className="py-2 px-4 border-b">{color.name}</td>
-                    <td className="py-2 px-4 border-b">{color.hex_code}</td>
                     <td className="py-2 px-4 border-b">
                       <button
                         onClick={() => handleDeleteExteriorColor(color.id)}
@@ -463,7 +425,7 @@ const ColorManagementPage: React.FC = () => {
                 ))}
                 {exteriorColors.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-4 text-center text-gray-500">
+                    <td colSpan={3} className="py-4 text-center text-gray-500">
                       No exterior colors found
                     </td>
                   </tr>
@@ -477,51 +439,6 @@ const ColorManagementPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">Interior Colors</h2>
           
-          {/* Upholstery Type Management */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-2">Upholstery Types</h3>
-            
-            {/* Add Upholstery Form */}
-            <form onSubmit={handleAddUpholstery} className="mb-4">
-              <div className="flex">
-                <input
-                  type="text"
-                  value={newUpholstery}
-                  onChange={(e) => setNewUpholstery(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md"
-                  placeholder="e.g. Alcantara"
-                />
-                <button
-                  type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-r-md transition"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-            
-            {/* Upholstery Types List */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {upholsteryTypes.map((type) => (
-                <div 
-                  key={type.name} 
-                  className="flex items-center bg-gray-100 px-3 py-1 rounded-full"
-                >
-                  <span className="mr-2">{type.name} ({type.count})</span>
-                  <button
-                    onClick={() => handleDeleteUpholstery(type.name)}
-                    className="text-red-500 hover:text-red-700 text-sm"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              {upholsteryTypes.length === 0 && (
-                <div className="text-gray-500">No upholstery types found</div>
-              )}
-            </div>
-          </div>
-          
           {/* Add Interior Color Form */}
           <form onSubmit={handleAddInteriorColor} className="mb-6">
             <div className="grid grid-cols-1 gap-4">
@@ -534,23 +451,6 @@ const ColorManagementPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g. Black"
                 />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upholstery</label>
-                <input
-                  type="text"
-                  value={newInteriorColor.upholstery}
-                  onChange={(e) => setNewInteriorColor({...newInteriorColor, upholstery: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g. Leather"
-                  list="upholsteryList"
-                />
-                <datalist id="upholsteryList">
-                  {upholsteryTypes.map(type => (
-                    <option key={type.name} value={type.name} />
-                  ))}
-                </datalist>
               </div>
               
               <div>
@@ -588,7 +488,6 @@ const ColorManagementPage: React.FC = () => {
                 <tr>
                   <th className="py-2 px-4 border-b text-left">Color</th>
                   <th className="py-2 px-4 border-b text-left">Name</th>
-                  <th className="py-2 px-4 border-b text-left">Upholstery</th>
                   <th className="py-2 px-4 border-b text-left">Actions</th>
                 </tr>
               </thead>
@@ -602,7 +501,6 @@ const ColorManagementPage: React.FC = () => {
                       ></div>
                     </td>
                     <td className="py-2 px-4 border-b">{color.name}</td>
-                    <td className="py-2 px-4 border-b">{color.upholstery}</td>
                     <td className="py-2 px-4 border-b">
                       <button
                         onClick={() => handleDeleteInteriorColor(color.id)}
@@ -615,8 +513,66 @@ const ColorManagementPage: React.FC = () => {
                 ))}
                 {interiorColors.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-4 text-center text-gray-500">
+                    <td colSpan={3} className="py-4 text-center text-gray-500">
                       No interior colors found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        {/* Upholstery Management Section */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Upholstery Types</h2>
+          
+          {/* Add Upholstery Form */}
+          <form onSubmit={handleAddUpholstery} className="mb-6">
+            <div className="flex">
+              <input
+                type="text"
+                value={newUpholstery}
+                onChange={(e) => setNewUpholstery(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md"
+                placeholder="e.g. Leather"
+              />
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-r-md transition"
+              >
+                Add Upholstery
+              </button>
+            </div>
+          </form>
+          
+          {/* Upholstery List */}
+          <div className="overflow-auto max-h-96">
+            <table className="min-w-full bg-white">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b text-left">Name</th>
+                  <th className="py-2 px-4 border-b text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {upholsteryTypes.map((type) => (
+                  <tr key={type.id}>
+                    <td className="py-2 px-4 border-b">{type.name}</td>
+                    <td className="py-2 px-4 border-b text-right">
+                      <button
+                        onClick={() => handleDeleteUpholstery(type.id, type.name)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {upholsteryTypes.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="py-4 text-center text-gray-500">
+                      No upholstery types found
                     </td>
                   </tr>
                 )}

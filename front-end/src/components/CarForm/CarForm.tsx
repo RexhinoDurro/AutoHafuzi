@@ -3,14 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
 import { API_BASE_URL, API_ENDPOINTS } from '../../config/api';
-import { CarImage, TempImage, ExteriorColor, InteriorColor } from '../../types/car';
+import { CarImage, TempImage, ExteriorColor, InteriorColor, Upholstery } from '../../types/car';
 import {
   BODY_TYPES,
   DRIVETRAINS,
   GEARBOX_TYPES,
   FUEL_TYPES,
   EMISSION_CLASSES,
-  UPHOLSTERY_TYPES
 } from './constants';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -25,10 +24,12 @@ const CarForm = () => {
     isMakesLoading,
     isModelsLoading,
     isVariantsLoading,
+    isUpholsteryLoading,
     error,
     makes,
     models,
     variants,
+    upholsteryTypes,
     formData,
     setFormData,
     handleSubmit,
@@ -49,7 +50,7 @@ const CarForm = () => {
     SAFETY: [],
     EXTRAS: []
   });
-  // New state for colors
+  // State for colors
   const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
   const [isColorsLoading, setIsColorsLoading] = useState<boolean>(false);
@@ -60,6 +61,26 @@ const CarForm = () => {
     SAFETY: 'Safety & Security',
     EXTRAS: 'Extras'
   };
+
+  // Add this useEffect at the top level to prevent continuous refreshes
+  useEffect(() => {
+    // This runs only once when the component mounts
+    console.log('CarForm mounted');
+    
+    // This will help prevent unintended navigation away from the form
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const message = "You have unsaved changes. Are you sure you want to leave?";
+      e.returnValue = message;
+      return message;
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      console.log('CarForm unmounted');
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Load variants when model changes
   useEffect(() => {
@@ -181,21 +202,30 @@ const CarForm = () => {
     }
   };
 
-  // Add this useEffect to fetch options and colors when component mounts
+  // Fetch data when component mounts
   useEffect(() => {
     fetchOptions();
     fetchColors();
   }, []);
   
   // Handle option selection changes
-  const handleOptionSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValues = Array.from(e.target.selectedOptions, option => parseInt(option.value));
-    setSelectedOptions(selectedValues);
+  const handleOptionSelection = (optionId: number, isChecked: boolean) => {
+    let newSelectedOptions: number[];
+    
+    if (isChecked) {
+      // Add the option if checked
+      newSelectedOptions = [...selectedOptions, optionId];
+    } else {
+      // Remove the option if unchecked
+      newSelectedOptions = selectedOptions.filter(id => id !== optionId);
+    }
+    
+    setSelectedOptions(newSelectedOptions);
     
     // Update formData with the selected option IDs
     setFormData({
       ...formData,
-      option_ids: selectedValues
+      option_ids: newSelectedOptions
     });
   };
 
@@ -284,8 +314,7 @@ const CarForm = () => {
       return;
     }
 
-    await handleSubmit(e);
-    const success = true; // Assuming handleSubmit always succeeds, adjust as needed
+    const success = await handleSubmit(e);
     if (success) {
       navigate('/auth/dashboard');
     }
@@ -329,361 +358,368 @@ const CarForm = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
-      <button
-        onClick={() => navigate('/auth/dashboard')}
-        className="text-gray-600 hover:text-gray-800"
-      >
-        Back to Dashboard
-      </button>
-    </div>
-
-    {error && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <strong className="font-bold">Error! </strong>
-        <span className="block sm:inline">{error}</span>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
+        <button
+          onClick={() => navigate('/auth/dashboard')}
+          className="text-gray-600 hover:text-gray-800"
+        >
+          Back to Dashboard
+        </button>
       </div>
-    )}
 
-    {/* Form validation errors */}
-    {Object.keys(validationErrors).length > 0 && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <strong className="font-bold">Please fix the following errors: </strong>
-        <ul className="mt-2 list-disc list-inside">
-          {Object.values(validationErrors).map((error, index) => (
-            <li key={index}>{error}</li>
-          ))}
-        </ul>
-      </div>
-    )}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <strong className="font-bold">Error! </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
-        {/* Basic Information Section */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Make <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.make_id}
-                onChange={(e) => setFormData({ ...formData, make_id: parseInt(e.target.value), model_id: 0, variant_id: undefined })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
-                required
-                disabled={isMakesLoading}
-              >
-                <option value="">Select Make</option>
-                {makes.map((make) => (
-                  <option key={make.id} value={make.id}>
-                    {make.name}
-                  </option>
-                ))}
-              </select>
-              {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Model <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.model_id}
-                onChange={(e) => setFormData({ ...formData, model_id: parseInt(e.target.value), variant_id: undefined })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
-                required
-                disabled={!formData.make_id || isModelsLoading}
-              >
-                <option value="">Select Model</option>
-                {models.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-              {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
-              {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
-            </div>
-          </div>
+      {/* Form validation errors */}
+      {Object.keys(validationErrors).length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <strong className="font-bold">Please fix the following errors: </strong>
+          <ul className="mt-2 list-disc list-inside">
+            {Object.values(validationErrors).map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Variant
-              </label>
-              <select
-                value={formData.variant_id || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
-                  });
-                }}
-                className="w-full p-2 border rounded-lg"
-                disabled={!formData.model_id || isVariantsLoading}
-              >
-                <option value="">Select Variant</option>
-                {variants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    {variant.name}
-                  </option>
-                ))}
-              </select>
-              {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
-            </div>
-          </div>
-
-          {/* First Registration Date Fields */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              First Registration <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-4">
-              {/* Day field */}
-              <div>
-                <select
-                  value={formData.first_registration_day || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
-                  })}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
-                  required={formData.is_used}
-                >
-                  <option value="">Day</option>
-                  {dayOptions.map(option => (
-                    <option key={`day-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_day && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
-                }
-              </div>
-              
-              {/* Month field */}
-              <div>
-                <select
-                  value={formData.first_registration_month || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
-                  })}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
-                  required={formData.is_used}
-                >
-                  <option value="">Month</option>
-                  {monthOptions.map(option => (
-                    <option key={`month-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_month && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
-                }
-              </div>
-              
-              {/* Year field */}
-              <div>
-                <select
-                  value={formData.first_registration_year || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
-                  })}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
-                  required={formData.is_used}
-                >
-                  <option value="">Year</option>
-                  {yearOptions.map(option => (
-                    <option key={`year-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_year && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
-                }
-              </div>
-            </div>
-          </div>
-
-          {/* Colors Section */}
-          <div className="mt-4">
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Colors</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {/* Exterior Color */}
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6 space-y-6">
+          {/* Basic Information Section */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Exterior Color <span className="text-red-500">*</span>
+                  Make <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={formData.exterior_color_id || ''}
-                  onChange={(e) => {
-                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                    const selectedColor = exteriorColors.find(color => color.id === colorId);
-                    
-                    setFormData({ 
-                      ...formData, 
-                      exterior_color_id: colorId,
-                      exterior_color_name: selectedColor?.name,
-                      exterior_color_hex: selectedColor?.hex_code
-                    });
-                  }}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                  value={formData.make_id || ''}
+                  onChange={(e) => setFormData({ ...formData, make_id: parseInt(e.target.value), model_id: 0, variant_id: undefined })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
                   required
-                  disabled={isColorsLoading}
+                  disabled={isMakesLoading}
                 >
-                  <option value="">Select Exterior Color</option>
-                  {exteriorColors.map((color) => (
-                    <option key={color.id} value={color.id}>
-                      {color.name}
+                  <option value="">Select Make</option>
+                  {makes.map((make) => (
+                    <option key={make.id} value={make.id}>
+                      {make.name}
                     </option>
                   ))}
                 </select>
-                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
-                {formData.exterior_color_hex && (
-                  <div className="mt-2 flex items-center">
-                    <div 
-                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                      style={{ backgroundColor: formData.exterior_color_hex }}
-                    ></div>
-                    <span className="text-xs text-gray-500">{formData.exterior_color_hex}</span>
-                  </div>
-                )}
+                {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
               </div>
               
-              {/* Interior Color */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Interior Color
+                  Model <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={formData.interior_color_id || ''}
-                  onChange={(e) => {
-                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                    const selectedColor = interiorColors.find(color => color.id === colorId);
-                    
-                    setFormData({ 
-                      ...formData, 
-                      interior_color_id: colorId,
-                      interior_color_name: selectedColor?.name,
-                      interior_color_hex: selectedColor?.hex_code
-                    });
-                  }}
-                  className="w-full p-2 border rounded-lg"
-                  disabled={isColorsLoading}
+                  value={formData.model_id || ''}
+                  onChange={(e) => setFormData({ ...formData, model_id: parseInt(e.target.value), variant_id: undefined })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
+                  required
+                  disabled={!formData.make_id || isModelsLoading}
                 >
-                  <option value="">Select Interior Color</option>
-                  {interiorColors.map((color) => (
-                    <option key={color.id} value={color.id}>
-                      {color.name}
+                  <option value="">Select Model</option>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
                     </option>
                   ))}
                 </select>
-                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                {formData.interior_color_hex && (
-                  <div className="mt-2 flex items-center">
-                    <div 
-                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                      style={{ backgroundColor: formData.interior_color_hex }}
-                    ></div>
-                    <span className="text-xs text-gray-500">{formData.interior_color_hex}</span>
-                  </div>
-                )}
+                {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
+                {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
               </div>
-              
-              {/* Upholstery */}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upholstery
+                  Variant
                 </label>
                 <select
-                  value={formData.interior_upholstery || ''}
+                  value={formData.variant_id || ''}
                   onChange={(e) => {
+                    const value = e.target.value;
                     setFormData({ 
                       ...formData, 
-                      interior_upholstery: e.target.value || undefined
+                      variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
                     });
                   }}
                   className="w-full p-2 border rounded-lg"
+                  disabled={!formData.model_id || isVariantsLoading}
                 >
-                  <option value="">Select Upholstery</option>
-                  {UPHOLSTERY_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                  <option value="">Select Variant</option>
+                  {variants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.name}
+                    </option>
                   ))}
                 </select>
+                {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
               </div>
+            </div>
+
+            {/* First Registration Date Fields */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                First Registration <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Day field */}
+                <div>
+                  <select
+                    value={formData.first_registration_day || ''}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
+                    })}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
+                    required={formData.is_used}
+                  >
+                    <option value="">Day</option>
+                    {dayOptions.map(option => (
+                      <option key={`day-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_day && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
+                  }
+                </div>
+                
+                {/* Month field */}
+                <div>
+                  <select
+                    value={formData.first_registration_month || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
+                    })}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
+                    required={formData.is_used}
+                  >
+                    <option value="">Month</option>
+                    {monthOptions.map(option => (
+                      <option key={`month-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_month && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
+                  }
+                </div>
+                
+                {/* Year field */}
+                <div>
+                  <select
+                    value={formData.first_registration_year || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
+                    })}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
+                    required={formData.is_used}
+                  >
+                    <option value="">Year</option>
+                    {yearOptions.map(option => (
+                      <option key={`year-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_year && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Colors Section */}
+            <div className="mt-4">
+              <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Exterior Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exterior Color <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.exterior_color_id || ''}
+                    onChange={(e) => {
+                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedColor = exteriorColors.find(color => color.id === colorId);
+                      
+                      setFormData({ 
+                        ...formData, 
+                        exterior_color_id: colorId,
+                        exterior_color_name: selectedColor?.name,
+                        exterior_color_hex: selectedColor?.hex_code
+                      });
+                    }}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                    required
+                    disabled={isColorsLoading}
+                  >
+                    <option value="">Select Exterior Color</option>
+                    {exteriorColors.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
+                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                  {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
+                  {formData.exterior_color_hex && (
+                    <div className="mt-2 flex items-center">
+                      <div 
+                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                        style={{ backgroundColor: formData.exterior_color_hex }}
+                      ></div>
+                      <span className="text-xs text-gray-500">{formData.exterior_color_hex}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Interior Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Interior Color
+                  </label>
+                  <select
+                    value={formData.interior_color_id || ''}
+                    onChange={(e) => {
+                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedColor = interiorColors.find(color => color.id === colorId);
+                      
+                      setFormData({ 
+                        ...formData, 
+                        interior_color_id: colorId,
+                        interior_color_name: selectedColor?.name,
+                        interior_color_hex: selectedColor?.hex_code
+                      });
+                    }}
+                    className="w-full p-2 border rounded-lg"
+                    disabled={isColorsLoading}
+                  >
+                    <option value="">Select Interior Color</option>
+                    {interiorColors.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
+                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                  {formData.interior_color_hex && (
+                    <div className="mt-2 flex items-center">
+                      <div 
+                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                        style={{ backgroundColor: formData.interior_color_hex }}
+                      ></div>
+                      <span className="text-xs text-gray-500">{formData.interior_color_hex}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Upholstery - Properly implemented with the separate upholstery model */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Upholstery
+                  </label>
+                  <select
+                    value={formData.upholstery_id || ''}
+                    onChange={(e) => {
+                      const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
+                      
+                      setFormData({ 
+                        ...formData, 
+                        upholstery_id: upholsteryId,
+                        upholstery_name: selectedUpholstery?.name || ''
+                      });
+                    }}
+                    className="w-full p-2 border rounded-lg"
+                    disabled={isUpholsteryLoading}
+                  >
+                    <option value="">Select Upholstery</option>
+                    {upholsteryTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                  </select>
+                  {isUpholsteryLoading && <span className="text-sm text-gray-500">Loading upholstery types...</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="text"
+                value={formData.discussedPrice ? '' : formatPrice(formData.price)}
+                onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+                required={!formData.discussedPrice}
+                disabled={formData.discussedPrice}
+                placeholder={formData.discussedPrice ? 'Price will be discussed' : ''}
+              />
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="discussedPrice"
+                  checked={formData.discussedPrice || false}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setFormData({ 
+                      ...formData, 
+                      discussedPrice: isChecked,
+                      price: isChecked ? 0 : formData.price // Set price to 0 when discussedPrice is checked
+                    });
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
+                  Discussed price
+                </label>
+              </div>
+              {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
             </div>
           </div>
 
-          <div className="space-y-2 mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
+          {/* Image Upload */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
             </label>
             <input
-              type="text"
-              value={formData.discussedPrice ? '' : formatPrice(formData.price)}
-              onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
-              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-              required={!formData.discussedPrice}
-              disabled={formData.discussedPrice}
-              placeholder={formData.discussedPrice ? 'Price will be discussed' : ''}
+              type="file"
+              accept={ALLOWED_FILE_TYPES.join(',')}
+              multiple
+              onChange={handleImageUpload}
+              className="w-full border border-gray-300 p-2 rounded"
             />
-            <div className="flex items-center mt-2">
-              <input
-                type="checkbox"
-                id="discussedPrice"
-                checked={formData.discussedPrice || false}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setFormData({ 
-                    ...formData, 
-                    discussedPrice: isChecked,
-                    price: isChecked ? 0 : formData.price // Set price to 0 when discussedPrice is checked
-                  });
-                }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            <p className="mt-1 text-sm text-gray-500">
+              Max file size: 5MB. Supported formats: JPEG, PNG, WebP
+            </p>
+            {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+            {(formData.images?.length > 0 || tempImages.length > 0) && (
+              <ImageGallery
+                images={[...(formData.images || []), ...tempImages]}
+                onDeleteImage={handleImageDelete}
+                isEditing={true}
+                baseUrl={API_BASE_URL}
               />
-              <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
-                Discussed price
-              </label>
-            </div>
-            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
+            )}
           </div>
-        </div>
-        {/* Image Upload */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
-          </label>
-          <input
-            type="file"
-            accept={ALLOWED_FILE_TYPES.join(',')}
-            multiple
-            onChange={handleImageUpload}
-            className="w-full border border-gray-300 p-2 rounded"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Max file size: 5MB. Supported formats: JPEG, PNG, WebP
-          </p>
-          {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
-          {(formData.images?.length > 0 || tempImages.length > 0) && (
-            <ImageGallery
-              images={[...(formData.images || []), ...tempImages]}
-              onDeleteImage={handleImageDelete}
-              isEditing={true}
-              baseUrl={API_BASE_URL}
-            />
-          )}
-        </div>
 
         {/* Vehicle Details */}
         <div>

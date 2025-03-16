@@ -5,9 +5,10 @@ from .views import (
     get_models, add_model, update_model, delete_model,
     get_variants, add_variant, update_variant, delete_variant,
     add_car_images, delete_car_image, about_page, add_option, get_options, delete_option,
-    get_categories, get_exterior_colors, add_exterior_color, update_exterior_color, delete_exterior_color,
+    get_categories, get_exterior_colors, add_exterior_color, update_exterior_color, delete_exterior_color, get_upholstery_types, add_upholstery, update_upholstery, delete_upholstery,
     get_interior_colors, add_interior_color, update_interior_color, delete_interior_color,
     get_site_analytics, contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message
+    
 )
 
 urlpatterns = [
@@ -23,16 +24,16 @@ urlpatterns = [
     path('makes/<int:make_id>/', update_make, name='update_make'),
     path('makes/delete/<int:make_id>/', delete_make, name='delete_make'),
     
-    # Model endpoints
-    path('models/<int:make_id>/', get_models, name='get_models'),
+    # Model endpoints - UPDATED to have clear distinctions between operations
+    path('models/by-make/<int:make_id>/', get_models, name='get_models_by_make'),
     path('models/add/', add_model, name='add_model'),
-    path('models/<int:model_id>/', update_model, name='update_model'),
+    path('models/update/<int:model_id>/', update_model, name='update_model'),
     path('models/delete/<int:model_id>/', delete_model, name='delete_model'),
     
-    # Variant endpoints
-    path('variants/<int:model_id>/', get_variants, name='get_variants'),
+    # Variant endpoints - UPDATED to have clear distinctions between operations
+    path('variants/by-model/<int:model_id>/', get_variants, name='get_variants_by_model'),
     path('variants/add/', add_variant, name='add_variant'),
-    path('variants/<int:variant_id>/', update_variant, name='update_variant'),
+    path('variants/update/<int:variant_id>/', update_variant, name='update_variant'),
     path('variants/delete/<int:variant_id>/', delete_variant, name='delete_variant'),
     
     path('cars/<int:car_id>/images/', add_car_images, name='add_car_images'),
@@ -53,6 +54,11 @@ urlpatterns = [
     path('interior-colors/add/', add_interior_color, name='add_interior_color'),
     path('interior-colors/<int:color_id>/', update_interior_color, name='update_interior_color'),
     path('interior-colors/delete/<int:color_id>/', delete_interior_color, name='delete_interior_color'),
+    path('upholstery/', get_upholstery_types, name='get_upholstery_types'),
+    path('upholstery/add/', add_upholstery, name='add_upholstery'),
+    path('upholstery/<int:upholstery_id>/', update_upholstery, name='update_upholstery'),
+    path('upholstery/delete/<int:upholstery_id>/', delete_upholstery, name='delete_upholstery'),
+    
     
     
     path('contact/', contact_page, name='contact_page'),

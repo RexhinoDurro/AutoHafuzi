@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, SiteVisit, ContactMessage
+from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, Upholstery, SiteVisit, ContactMessage
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,8 +25,13 @@ class ExteriorColorSerializer(serializers.ModelSerializer):
 class InteriorColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = InteriorColor
-        fields = ['id', 'name', 'upholstery', 'hex_code']
+        fields = ['id', 'name',  'hex_code']
 
+class UpholsterySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Upholstery
+        fields = ['id', 'name']
+        
 class CarImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     
@@ -73,13 +78,19 @@ class CarSerializer(serializers.ModelSerializer):
     exterior_color_name = serializers.CharField(source='exterior_color.name', read_only=True)
     exterior_color_hex = serializers.CharField(source='exterior_color.hex_code', read_only=True)
     
+    upholstery = serializers.PrimaryKeyRelatedField(
+        queryset=Upholstery.objects.all(), 
+        required=False, 
+        allow_null=True
+    )
+    upholstery_name = serializers.CharField(source='upholstery.name', read_only=True)
+    
     interior_color = serializers.PrimaryKeyRelatedField(
         queryset=InteriorColor.objects.all(), 
         required=False, 
         allow_null=True
     )
     interior_color_name = serializers.CharField(source='interior_color.name', read_only=True)
-    interior_upholstery = serializers.CharField(source='interior_color.upholstery', read_only=True)
     interior_color_hex = serializers.CharField(source='interior_color.hex_code', read_only=True)
     
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
@@ -111,7 +122,7 @@ class CarSerializer(serializers.ModelSerializer):
             'id', 'brand', 'model_name', 'variant_name', 'make', 'model', 'variant',
             'first_registration_day', 'first_registration_month', 'first_registration_year',
             'exterior_color', 'exterior_color_name', 'exterior_color_hex',
-            'interior_color', 'interior_color_name', 'interior_upholstery', 'interior_color_hex',
+            'interior_color', 'interior_color_name', 'upholstery', 'upholstery_name', 'interior_color_hex',
             'price', 'discussed_price', 'description', 'created_at', 'images',
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
             'first_registration', 'full_service_history', 

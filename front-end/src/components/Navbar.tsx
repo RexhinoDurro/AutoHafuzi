@@ -142,10 +142,11 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Overlay to dim background when menu is open */}
+      {/* If you want to keep the ability to click outside to close menu, 
+          but without a visible overlay, use a transparent overlay */}
       {isMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 z-40 md:hidden"
           onClick={toggleMenu}
         />
       )}

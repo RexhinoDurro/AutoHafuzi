@@ -129,40 +129,57 @@ def get_cars(request):
 def get_car(request, car_id):
     try:
         car = Car.objects.get(id=car_id)
+        session_id = request.session.get('visitor_id')
         
-        # Track the view if the session_id is provided
-        if request.session.get('visitor_id'):
-            session_id = request.session['visitor_id']
-        else:
-            # Generate a new session ID if it doesn't exist
+        # If no session ID yet, create one
+        if not session_id:
             session_id = str(uuid.uuid4())
             request.session['visitor_id'] = session_id
-            # Set session to not expire when browser closes
             request.session.set_expiry(60*60*24*30)  # 30 days
         
-        # Record the view - but only count it once per session
-        try:
-            # Get the client IP
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0]
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-                
-            # Create or get the car view for this session
-            car_view, created = CarView.objects.get_or_create(
-                car=car,
-                session_id=session_id,
-                defaults={'ip_address': ip}
-            )
-            
-            # If this is a new view, increment the car's view count
-            if created:
-                car.view_count += 1
-                car.save(update_fields=['view_count'])
-        except Exception as e:
-            print(f"Error recording car view: {e}")
+        # IMPORTANT: Check for view tracking header
+        # This logic needs to run BEFORE any view tracking
+        should_track_view = True
+        if 'HTTP_X_VIEW_TRACKING' in request.META:
+            if request.META['HTTP_X_VIEW_TRACKING'].lower() == 'false':
+                should_track_view = False
+                print(f"Skipping view count for car {car_id} due to X-View-Tracking: false header")
         
+        # Only track views if the header allows it
+        if should_track_view:
+            try:
+                # Get client IP
+                x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR', '')
+                
+                # Check if this car has been viewed by this session recently (within 30 minutes)
+                thirty_minutes_ago = timezone.now() - timedelta(minutes=30)
+                recent_view = CarView.objects.filter(
+                    car=car,
+                    session_id=session_id,
+                    viewed_at__gte=thirty_minutes_ago
+                ).exists()
+                
+                if not recent_view:
+                    # Create a new view record
+                    CarView.objects.create(
+                        car=car,
+                        session_id=session_id,
+                        ip_address=ip
+                    )
+                    
+                    # Increment the view counter exactly once
+                    car.view_count += 1
+                    car.save(update_fields=['view_count'])
+                    print(f"View count incremented for car {car_id} - now {car.view_count}")
+                else:
+                    print(f"Skipped view increment - car {car_id} viewed recently by session {session_id}")
+            except Exception as e:
+                print(f"Error recording car view: {e}")
+                import traceback
+                print(traceback.format_exc())
+        
+        # Always return the car data
         serializer = CarSerializer(car)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Car.DoesNotExist:

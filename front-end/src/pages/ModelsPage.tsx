@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getStoredAuth } from '../utils/auth';
 import { Make, Model } from '../types/car';
 import { Plus, Edit, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 interface ExtendedModel extends Model {
   variants_count?: number;
@@ -31,7 +32,7 @@ const ModelsPage: React.FC = () => {
 
   const fetchMakeDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/makes/`, {
+      const response = await fetch(API_ENDPOINTS.MAKES, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -58,7 +59,7 @@ const ModelsPage: React.FC = () => {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/models/${makeId}/`, {
+      const response = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || ''), {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -74,7 +75,7 @@ const ModelsPage: React.FC = () => {
       const modelsWithVariantCounts = await Promise.all(
         data.map(async (model: Model) => {
           try {
-            const variantsResponse = await fetch(`http://localhost:8000/api/variants/${model.id}/`, {
+            const variantsResponse = await fetch(API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(model.id.toString()), {
               headers: {
                 Authorization: `Token ${token}`,
               },
@@ -116,7 +117,7 @@ const ModelsPage: React.FC = () => {
       
       console.log('Sending model data:', payload);
       
-      const response = await fetch('http://localhost:8000/api/models/add/', {
+      const response = await fetch(API_ENDPOINTS.MODELS.ADD, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,11 +154,8 @@ const ModelsPage: React.FC = () => {
       
       console.log('Sending update model data:', payload);
       
-      // There's overlap between the model_id parameter in the routes
-      // URL for get_models uses make_id, and URL for update_model uses model_id
-      // Since they both have the same pattern 'models/<int:...>/',
-      // we need to use /models/update/id/ to ensure we're hitting the correct endpoint
-      const response = await fetch(`http://localhost:8000/api/models/update/${editingModelId}/`, {
+      // Use the fixed endpoint for updating models
+      const response = await fetch(API_ENDPOINTS.MODELS.UPDATE(editingModelId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +194,7 @@ const ModelsPage: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/models/delete/${id}/`, {
+      const response = await fetch(API_ENDPOINTS.MODELS.DELETE(id), {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,

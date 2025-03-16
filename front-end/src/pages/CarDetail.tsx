@@ -6,6 +6,8 @@ import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye } 
 import FavoriteButton from '../components/FavouriteButton';
 import { trackCarView } from '../utils/userActivityService';
 import RecommendedCars from '../components/RecommendedCars';
+import { API_ENDPOINTS } from '../config/api';
+import { useMediaQuery } from '../utils/useMediaQuery';
 
 // Interfaces for color data
 interface ExteriorColor {
@@ -18,7 +20,12 @@ interface InteriorColor {
   id: number;
   name: string;
   hex_code: string;
-  upholstery: string;
+}
+
+// Interface for upholstery data
+interface Upholstery {
+  id: number;
+  name: string;
 }
 
 // Interface for option data
@@ -54,7 +61,15 @@ const CarDetail: React.FC = () => {
   const [options, setOptions] = useState<Option[]>([]);
   const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
+  const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [referrer, setReferrer] = useState<string>('/');
+  
+  // Add a state to track if we've done the initial fetch
+  // This prevents multiple API calls on component rerenders
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
+  
+  // Add a media query hook to detect mobile screens
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     // Check if we have a referrer in sessionStorage, otherwise default to current referrer
@@ -88,29 +103,32 @@ const CarDetail: React.FC = () => {
     sessionStorage.removeItem('carDetailReferrer');
   };
 
-  // Fetch colors and options data
+  // Fetch colors, upholstery, and options data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [optionsRes, exteriorColorsRes, interiorColorsRes] = await Promise.all([
-          fetch('http://localhost:8000/api/options/list/'),
-          fetch('http://localhost:8000/api/exterior-colors/'),
-          fetch('http://localhost:8000/api/interior-colors/')
+        const [optionsRes, exteriorColorsRes, interiorColorsRes, upholsteryRes] = await Promise.all([
+          fetch(API_ENDPOINTS.OPTIONS.LIST),
+          fetch(API_ENDPOINTS.EXTERIOR_COLORS),
+          fetch(API_ENDPOINTS.INTERIOR_COLORS),
+          fetch(API_ENDPOINTS.UPHOLSTERY)
         ]);
         
-        if (!optionsRes.ok || !exteriorColorsRes.ok || !interiorColorsRes.ok) {
+        if (!optionsRes.ok || !exteriorColorsRes.ok || !interiorColorsRes.ok || !upholsteryRes.ok) {
           throw new Error('Failed to fetch data');
         }
         
-        const [optionsData, exteriorColorsData, interiorColorsData] = await Promise.all([
+        const [optionsData, exteriorColorsData, interiorColorsData, upholsteryData] = await Promise.all([
           optionsRes.json(),
           exteriorColorsRes.json(),
-          interiorColorsRes.json()
+          interiorColorsRes.json(),
+          upholsteryRes.json()
         ]);
         
         setOptions(optionsData);
         setExteriorColors(exteriorColorsData);
         setInteriorColors(interiorColorsData);
+        setUpholsteryTypes(upholsteryData);
       } catch (err) {
         console.error("Failed to fetch data:", err);
       }
@@ -121,27 +139,68 @@ const CarDetail: React.FC = () => {
 
   // Fetch car details
   useEffect(() => {
+    // Skip if we've already done the initial fetch or if id is missing
+    if (initialFetchDone || !id) return;
+    
     const fetchCarDetails = async () => {
+      setLoading(true);
       try {
-        // Ensure we're sending cookies with the request
-        // Add a custom header to mark this request for analytics tracking
-        const response = await fetch(`http://localhost:8000/api/cars/${id}/`, {
+        // Check for direct "do not track" flag from navigation state
+        const doNotTrackViewFromState = location.state && location.state.doNotTrackView === true;
+        
+        // Multiple checks for whether we should track this view
+        const comingFromFavorites = referrer === '/favorites' || 
+                                  (location.state && location.state.from === '/favorites');
+        
+        const comingFromDashboard = referrer.includes('/auth/dashboard') || 
+                                   referrer.includes('/admin') ||
+                                   (location.state && location.state.from && 
+                                    (location.state.from.includes('/auth/dashboard') || 
+                                     location.state.from.includes('/admin')));
+        
+        // Check if this is a page refresh
+        const isRefresh = window.performance && 
+          window.performance.navigation && 
+          window.performance.navigation.type === 1;
+        
+        // Don't count views if any of these conditions are true
+        const shouldTrackView = !comingFromFavorites && 
+                               !comingFromDashboard && 
+                               !isRefresh && 
+                               !doNotTrackViewFromState;
+        
+        console.log('View tracking decision:', {
+          comingFromFavorites,
+          comingFromDashboard,
+          isRefresh,
+          doNotTrackViewFromState,
+          shouldTrackView,
+          referrer,
+          stateFrom: location.state?.from
+        });
+        
+        // Create headers with view tracking flag
+        const headers: Record<string, string> = {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-View-Tracking': shouldTrackView ? 'true' : 'false'
+        };
+        
+        // Make the API request
+        const response = await fetch(API_ENDPOINTS.CARS.GET(id), {
           method: 'GET',
-          credentials: 'include', 
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Requested-For-Analytics': 'true' // Add this header to mark for tracking
-          }
+          credentials: 'include',
+          headers: headers
         });
         
         if (!response.ok) {
           throw new Error('Car not found');
         }
+        
         const data = await response.json();
         setCar(data);
         
-        // Track this car view for recommendations
+        // Track this car view for recommendations, even if we don't update the view counter
         if (data.id && data.brand && data.model_name) {
           trackCarView(data.id, data.brand, data.model_name);
         }
@@ -150,11 +209,12 @@ const CarDetail: React.FC = () => {
         setError(err instanceof Error ? err.message : 'Failed to fetch car details');
       } finally {
         setLoading(false);
+        setInitialFetchDone(true); // Mark initial fetch as done
       }
     };
   
     fetchCarDetails();
-  }, [id]);
+  }, [id, referrer, initialFetchDone, location.state]);
 
   // Group options by category for display
   const categorizeOptions = (): OptionCategories => {
@@ -184,6 +244,13 @@ const CarDetail: React.FC = () => {
     return categories;
   };
 
+  // Helper function to find upholstery name by ID
+  const getUpholsteryName = (upholsteryId: number | undefined): string | undefined => {
+    if (!upholsteryId) return undefined;
+    const upholstery = upholsteryTypes.find(u => u.id === upholsteryId);
+    return upholstery?.name;
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Duke u ngarkuar...</div>;
   }
@@ -205,97 +272,101 @@ const CarDetail: React.FC = () => {
       </button>
 
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
-          <div className="space-y-6">
-            <CarImageCarousel images={car.images} />
+        {/* Updated grid for better mobile responsiveness */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6">
+          <div className="space-y-4 md:space-y-6">
+            {/* Pass the isMobile flag to the carousel */}
+            <CarImageCarousel images={car.images} isMobile={isMobile} />
             
-            {/* Key Specifications Box */}
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {/* Key Specifications Box - made more mobile-friendly */}
+            <div className="bg-gray-100 p-3 md:p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                 <div className="flex flex-col items-center text-center">
-                  <Clock className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Kilometrazhi</p>
-                  <p className="font-bold">{car.mileage.toLocaleString()} km</p>
+                  <Clock className="text-blue-600 mb-1 md:mb-2" size={20} />
+                  <p className="text-gray-600 text-xs md:text-sm">Kilometrazhi</p>
+                  <p className="font-bold text-sm md:text-base">{car.mileage.toLocaleString()} km</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <Settings className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Transmisioni</p>
-                  <p className="font-bold">{car.gearbox}</p>
+                  <Settings className="text-blue-600 mb-1 md:mb-2" size={20} />
+                  <p className="text-gray-600 text-xs md:text-sm">Transmisioni</p>
+                  <p className="font-bold text-sm md:text-base">{car.gearbox}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <Calendar className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Regjistrimi i parë</p>
-                  <p className="font-bold">{car.first_registration || 'N/A'}</p>
+                  <Calendar className="text-blue-600 mb-1 md:mb-2" size={20} />
+                  <p className="text-gray-600 text-xs md:text-sm">Regjistrimi i parë</p>
+                  <p className="font-bold text-sm md:text-base">{car.first_registration || 'N/A'}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <Fuel className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Lloji i karburantit</p>
-                  <p className="font-bold">{car.fuel_type}</p>
+                  <Fuel className="text-blue-600 mb-1 md:mb-2" size={20} />
+                  <p className="text-gray-600 text-xs md:text-sm">Lloji i karburantit</p>
+                  <p className="font-bold text-sm md:text-base">{car.fuel_type}</p>
                 </div>
                 <div className="flex flex-col items-center text-center">
-                  <Zap className="text-blue-600 mb-2" size={24} />
-                  <p className="text-gray-600 text-sm">Fuqia</p>
-                  <p className="font-bold">{car.power} kW ({Math.round(car.power * 1.36)} hp)</p>
+                  <Zap className="text-blue-600 mb-1 md:mb-2" size={20} />
+                  <p className="text-gray-600 text-xs md:text-sm">Fuqia</p>
+                  <p className="font-bold text-sm md:text-base">{car.power} kW ({Math.round(car.power * 1.36)} hp)</p>
                 </div>
               </div>
             </div>
           </div>
           
           <div className="space-y-4">
-            <h1 className="text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
             
             {/* Price with favorite button and view counter */}
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-blue-600">
-                ${typeof car.price === 'number' 
-                  ? car.price.toLocaleString() 
-                  : Number(car.price).toLocaleString()}
+              <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
+              {car.discussed_price ? 
+                  "I diskutueshem" : 
+                  `$${typeof car.price === 'number' 
+                    ? car.price.toLocaleString() 
+                    : Number(car.price).toLocaleString()}`
+                }
               </h2>
               <div className="flex items-center space-x-4">
                 {/* View Counter */}
                 <div className="flex items-center text-gray-500" title="Number of views">
-                  <Eye size={20} className="mr-1" />
+                  <Eye size={18} className="mr-1" />
                   <span>{car.view_count}</span>
                 </div>
                 
                 {/* Favorite Button */}
                 <FavoriteButton 
                   carId={car.id} 
-                  size={28} 
+                  size={24} 
                   className="p-2 hover:bg-gray-100 rounded-full"
                 />
               </div>
             </div>
           </div>
 
-          <div className="space-y-8">
-          <section className="space-y-4">
-            <h3 className="text-xl font-semibold">Informacione Bazë</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-600">Viti i Regjistrimit</p>
-                <p className="font-medium">{car.first_registration_year || 'N/A'}</p>
+          <div className="space-y-6 md:space-y-8">
+            <section className="space-y-3 md:space-y-4">
+              <h3 className="text-lg md:text-xl font-semibold">Informacione Bazë</h3>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div>
+                  <p className="text-gray-600 text-sm md:text-base">Viti i Regjistrimit</p>
+                  <p className="font-medium text-sm md:text-base">{car.first_registration_year || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm md:text-base">Lloji i karocerisë</p>
+                  <p className="font-medium text-sm md:text-base">{car.body_type}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm md:text-base">Gjendja</p>
+                  <p className="font-medium text-sm md:text-base">{car.is_used ? 'I përdorur' : 'I ri'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-gray-600">Lloji i karocerisë</p>
-                <p className="font-medium">{car.body_type}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Gjendja</p>
-                <p className="font-medium">{car.is_used ? 'I përdorur' : 'I ri'}</p>
-              </div>
-              {/* General inspection date is removed as requested */}
-            </div>
-          </section>
+            </section>
 
             {/* Fixed Colors Section */}
-            <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Ngjyrat</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <section className="space-y-3 md:space-y-4">
+              <h3 className="text-lg md:text-xl font-semibold">Ngjyrat</h3>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 {/* Exterior Color */}
                 {car.exterior_color_name && (
                   <div>
-                    <p className="text-gray-600">Ngjyra e jashtme</p>
+                    <p className="text-gray-600 text-sm md:text-base">Ngjyra e jashtme</p>
                     <div className="flex items-center">
                       {car.exterior_color_hex && (
                         <div 
@@ -303,7 +374,7 @@ const CarDetail: React.FC = () => {
                           style={{ backgroundColor: car.exterior_color_hex }}
                         ></div>
                       )}
-                      <p className="font-medium">{car.exterior_color_name}</p>
+                      <p className="font-medium text-sm md:text-base">{car.exterior_color_name}</p>
                     </div>
                   </div>
                 )}
@@ -311,7 +382,7 @@ const CarDetail: React.FC = () => {
                 {/* Interior Color */}
                 {car.interior_color_name && (
                   <div>
-                    <p className="text-gray-600">Ngjyra e brendshme</p>
+                    <p className="text-gray-600 text-sm md:text-base">Ngjyra e brendshme</p>
                     <div className="flex items-center">
                       {car.interior_color_hex && (
                         <div 
@@ -319,89 +390,90 @@ const CarDetail: React.FC = () => {
                           style={{ backgroundColor: car.interior_color_hex }}
                         ></div>
                       )}
-                      <p className="font-medium">{car.interior_color_name}</p>
+                      <p className="font-medium text-sm md:text-base">{car.interior_color_name}</p>
                     </div>
                   </div>
                 )}
                 
-                {/* Upholstery */}
-                {car.interior_upholstery && (
+                {/* Upholstery - Updated to use upholstery_name */}
+                {car.upholstery_name && (
                   <div>
-                    <p className="text-gray-600">Tapiceria</p>
-                    <p className="font-medium">{car.interior_upholstery}</p>
+                    <p className="text-gray-600 text-sm md:text-base">Tapiceria</p>
+                    <p className="font-medium text-sm md:text-base">{car.upholstery_name}</p>
                   </div>
                 )}
               </div>
             </section>
 
-            {/* Remaining sections remain unchanged */}
-            <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Specifikimet Teknike</h3>
-              <div className="grid grid-cols-2 gap-4">
+            {/* Technical Specifications */}
+            <section className="space-y-3 md:space-y-4">
+              <h3 className="text-lg md:text-xl font-semibold">Specifikimet Teknike</h3>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div>
-                  <p className="text-gray-600">Madhësia e motorit</p>
-                  <p className="font-medium">{car.engine_size}L</p>
+                  <p className="text-gray-600 text-sm md:text-base">Madhësia e motorit</p>
+                  <p className="font-medium text-sm md:text-base">{car.engine_size}L</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Ingranazhet</p>
-                  <p className="font-medium">{car.gears}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Ingranazhet</p>
+                  <p className="font-medium text-sm md:text-base">{car.gears}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Cilindrat</p>
-                  <p className="font-medium">{car.cylinders}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Cilindrat</p>
+                  <p className="font-medium text-sm md:text-base">{car.cylinders}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Pesha</p>
-                  <p className="font-medium">{car.weight} kg</p>
+                  <p className="text-gray-600 text-sm md:text-base">Pesha</p>
+                  <p className="font-medium text-sm md:text-base">{car.weight} kg</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Klasa e emetimit</p>
-                  <p className="font-medium">{car.emission_class}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Klasa e emetimit</p>
+                  <p className="font-medium text-sm md:text-base">{car.emission_class}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Doganat e paguara</p>
-                  <p className="font-medium">{car.customs_paid ? 'Po' : 'Jo'}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Doganat e paguara</p>
+                  <p className="font-medium text-sm md:text-base">{car.customs_paid ? 'Po' : 'Jo'}</p>
                 </div>
               </div>
             </section>
 
-            <section className="space-y-4">
-              <h3 className="text-xl font-semibold">Detajet e Automjetit</h3>
-              <div className="grid grid-cols-2 gap-4">
+            {/* Vehicle Details */}
+            <section className="space-y-3 md:space-y-4">
+              <h3 className="text-lg md:text-xl font-semibold">Detajet e Automjetit</h3>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div>
-                  <p className="text-gray-600">Vendet</p>
-                  <p className="font-medium">{car.seats}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Vendet</p>
+                  <p className="font-medium text-sm md:text-base">{car.seats}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Dyert</p>
-                  <p className="font-medium">{car.doors}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Dyert</p>
+                  <p className="font-medium text-sm md:text-base">{car.doors}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Historiku i servisit</p>
-                  <p className="font-medium">{car.full_service_history ? 'I plotë' : 'I pjesshëm'}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Historiku i servisit</p>
+                  <p className="font-medium text-sm md:text-base">{car.full_service_history ? 'I plotë' : 'I pjesshëm'}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Sistemi i transmetimit</p>
-                  <p className="font-medium">{car.drivetrain}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Sistemi i transmetimit</p>
+                  <p className="font-medium text-sm md:text-base">{car.drivetrain}</p>
                 </div>
               </div>
             </section>
 
             {/* Categorized Options - Updated to match backend structure */}
             {options.length > 0 && car.options && (
-              <section className="space-y-4">
-                <h3 className="text-xl font-semibold">Veçoritë</h3>
+              <section className="space-y-3 md:space-y-4">
+                <h3 className="text-lg md:text-xl font-semibold">Veçoritë</h3>
                 
                 {/* Comfort & Convenience */}
                 {optionsByCategory['COMFORT'] && optionsByCategory['COMFORT'].length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-3 md:mb-4">
                     <div className="flex items-center mb-2">
-                      <Sofa className="text-blue-600 mr-2" size={20} />
-                      <h4 className="font-medium">{categoryLabels['COMFORT']}</h4>
+                      <Sofa className="text-blue-600 mr-2" size={18} />
+                      <h4 className="font-medium text-sm md:text-base">{categoryLabels['COMFORT']}</h4>
                     </div>
-                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                    <ul className="list-disc pl-6 md:pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
                       {optionsByCategory['COMFORT'].map((option: string, index: number) => (
-                        <li key={index} className="text-gray-700">{option}</li>
+                        <li key={index} className="text-gray-700 text-sm md:text-base">{option}</li>
                       ))}
                     </ul>
                   </div>
@@ -409,14 +481,14 @@ const CarDetail: React.FC = () => {
                 
                 {/* Entertainment & Media */}
                 {optionsByCategory['ENTERTAINMENT'] && optionsByCategory['ENTERTAINMENT'].length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-3 md:mb-4">
                     <div className="flex items-center mb-2">
-                      <Music className="text-blue-600 mr-2" size={20} />
-                      <h4 className="font-medium">{categoryLabels['ENTERTAINMENT']}</h4>
+                      <Music className="text-blue-600 mr-2" size={18} />
+                      <h4 className="font-medium text-sm md:text-base">{categoryLabels['ENTERTAINMENT']}</h4>
                     </div>
-                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                    <ul className="list-disc pl-6 md:pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
                       {optionsByCategory['ENTERTAINMENT'].map((option: string, index: number) => (
-                        <li key={index} className="text-gray-700">{option}</li>
+                        <li key={index} className="text-gray-700 text-sm md:text-base">{option}</li>
                       ))}
                     </ul>
                   </div>
@@ -424,14 +496,14 @@ const CarDetail: React.FC = () => {
                 
                 {/* Safety & Security */}
                 {optionsByCategory['SAFETY'] && optionsByCategory['SAFETY'].length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-3 md:mb-4">
                     <div className="flex items-center mb-2">
-                      <Shield className="text-blue-600 mr-2" size={20} />
-                      <h4 className="font-medium">{categoryLabels['SAFETY']}</h4>
+                      <Shield className="text-blue-600 mr-2" size={18} />
+                      <h4 className="font-medium text-sm md:text-base">{categoryLabels['SAFETY']}</h4>
                     </div>
-                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                    <ul className="list-disc pl-6 md:pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
                       {optionsByCategory['SAFETY'].map((option: string, index: number) => (
-                        <li key={index} className="text-gray-700">{option}</li>
+                        <li key={index} className="text-gray-700 text-sm md:text-base">{option}</li>
                       ))}
                     </ul>
                   </div>
@@ -439,14 +511,14 @@ const CarDetail: React.FC = () => {
                 
                 {/* Extras */}
                 {optionsByCategory['EXTRAS'] && optionsByCategory['EXTRAS'].length > 0 && (
-                  <div className="mb-4">
+                  <div className="mb-3 md:mb-4">
                     <div className="flex items-center mb-2">
-                      <Star className="text-blue-600 mr-2" size={20} />
-                      <h4 className="font-medium">Ekstra</h4>
+                      <Star className="text-blue-600 mr-2" size={18} />
+                      <h4 className="font-medium text-sm md:text-base">Ekstra</h4>
                     </div>
-                    <ul className="list-disc pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
+                    <ul className="list-disc pl-6 md:pl-8 grid grid-cols-1 md:grid-cols-2 gap-1">
                       {optionsByCategory['EXTRAS'].map((option: string, index: number) => (
-                        <li key={index} className="text-gray-700">{option}</li>
+                        <li key={index} className="text-gray-700 text-sm md:text-base">{option}</li>
                       ))}
                     </ul>
                   </div>
@@ -456,15 +528,15 @@ const CarDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-6 border-t">
-          <h3 className="text-xl font-semibold mb-4">Përshkrimi</h3>
-          <p className="text-gray-700 whitespace-pre-line">{car.description}</p>
+        <div className="p-4 md:p-6 border-t">
+          <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Përshkrimi</h3>
+          <p className="text-gray-700 text-sm md:text-base whitespace-pre-line">{car.description}</p>
         </div>
       </div>
 
       {/* Add recommendations section at the bottom */}
       {car && (
-        <div className="mt-12">
+        <div className="mt-6 md:mt-12">
           <RecommendedCars excludeCarIds={[Number(id)]} />
         </div>
       )}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getStoredAuth } from '../utils/auth';
 import { Model, Make, Variant } from '../types/car';
 import { Plus, Edit, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 const VariantsPage: React.FC = () => {
   const { makeId, modelId } = useParams<{ makeId: string; modelId: string }>();
@@ -29,7 +30,7 @@ const VariantsPage: React.FC = () => {
   const fetchMakeAndModelDetails = async () => {
     try {
       // Fetch make details
-      const makeResponse = await fetch(`http://localhost:8000/api/makes/`, {
+      const makeResponse = await fetch(API_ENDPOINTS.MAKES, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -50,7 +51,7 @@ const VariantsPage: React.FC = () => {
       }
 
       // Fetch model details
-      const modelResponse = await fetch(`http://localhost:8000/api/models/${makeId}/`, {
+      const modelResponse = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || ''), {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -77,7 +78,7 @@ const VariantsPage: React.FC = () => {
   const fetchVariants = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/variants/${modelId}/`, {
+      const response = await fetch(API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(modelId || ''), {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -102,7 +103,7 @@ const VariantsPage: React.FC = () => {
     if (!newVariantName.trim()) return;
     
     try {
-      const response = await fetch('http://localhost:8000/api/variants/add/', {
+      const response = await fetch(API_ENDPOINTS.VARIANTS.ADD, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ const VariantsPage: React.FC = () => {
     if (!editingVariantName.trim() || editingVariantId === null) return;
     
     try {
-      const response = await fetch(`http://localhost:8000/api/variants/${editingVariantId}/`, {
+      const response = await fetch(API_ENDPOINTS.VARIANTS.UPDATE(editingVariantId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +165,7 @@ const VariantsPage: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/variants/${id}/`, {
+      const response = await fetch(API_ENDPOINTS.VARIANTS.DELETE(id), {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,

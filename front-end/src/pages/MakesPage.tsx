@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredAuth } from '../utils/auth';
 import { Make } from '../types/car';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 const MakesPage: React.FC = () => {
   const [makes, setMakes] = useState<Make[]>([]);
@@ -25,7 +26,7 @@ const MakesPage: React.FC = () => {
   const fetchMakes = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/makes/', {
+      const response = await fetch(API_ENDPOINTS.MAKES, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -50,7 +51,7 @@ const MakesPage: React.FC = () => {
     if (!newMakeName.trim()) return;
     
     try {
-      const response = await fetch('http://localhost:8000/api/makes/add/', {
+      const response = await fetch(API_ENDPOINTS.MAKES + 'add/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ const MakesPage: React.FC = () => {
     if (!editingMakeName.trim() || editingMakeId === null) return;
     
     try {
-      const response = await fetch(`http://localhost:8000/api/makes/${editingMakeId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.MAKES}${editingMakeId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +111,7 @@ const MakesPage: React.FC = () => {
     }
     
     try {
-      const response = await fetch(`http://localhost:8000/api/makes/${id}/`, {
+      const response = await fetch(`${API_ENDPOINTS.MAKES}delete/${id}/`, {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,

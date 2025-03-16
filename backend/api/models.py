@@ -37,14 +37,16 @@ class ExteriorColor(models.Model):
 
 class InteriorColor(models.Model):
     name = models.CharField(max_length=100)
-    upholstery = models.CharField(max_length=100)  # e.g., Leather, Alcantara, Cloth
     hex_code = models.CharField(max_length=7, default="#000000")  # Store color hex codes
 
-    class Meta:
-        unique_together = ['name', 'upholstery']
-
     def __str__(self):
-        return f"{self.name} {self.upholstery}"
+        return self.name 
+    
+class Upholstery(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    
+    def __str__(self):
+        return self.name
 
 class OptionCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -89,6 +91,7 @@ class Car(models.Model):
     # Replace single color field with exterior and interior color references
     exterior_color = models.ForeignKey(ExteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     interior_color = models.ForeignKey(InteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
+    upholstery = models.ForeignKey(Upholstery, on_delete=models.SET_NULL, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discussed_price = models.BooleanField(default=False) 
     description = models.TextField(blank=True)

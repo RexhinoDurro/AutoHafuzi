@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FaEnvelope, FaEnvelopeOpen, FaTrash, FaFilter } from 'react-icons/fa';
+import { FaEnvelope, FaEnvelopeOpen, FaTrash, FaFilter, FaGoogle } from 'react-icons/fa';
+import { API_ENDPOINTS } from '../config/api';
+import { useNavigate } from 'react-router-dom';
+import { getStoredAuth } from '../utils/auth';
 
 interface ContactMessage {
   id: number;
@@ -20,15 +23,26 @@ const ContactMessages: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const navigate = useNavigate();
+  const { token } = getStoredAuth();
   
   useEffect(() => {
+    if (!token) {
+      navigate('/auth/login');
+      return;
+    }
+    
     fetchMessages();
-  }, [filter]);
+  }, [token, filter, navigate]);
   
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      let url = '/api/contact/messages/';
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      let url = API_ENDPOINTS.CONTACT.MESSAGES;
       
       if (filter === 'unread') {
         url += '?read=false';
@@ -36,23 +50,31 @@ const ContactMessages: React.FC = () => {
         url += '?read=true';
       }
       
-      const response = await axios.get(url);
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Ensure response.data is an array, otherwise use empty array
       if (Array.isArray(response.data)) {
         setMessages(response.data);
       } else if (response.data && typeof response.data === 'object' && Array.isArray(response.data.results)) {
-        // Handle paginated responses
         setMessages(response.data.results);
       } else {
         console.error('Unexpected response format:', response.data);
-        setMessages([]); // Initialize as empty array if response format is unexpected
+        setMessages([]);
         setError('Received unexpected data format from server');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching contact messages:', error);
-      setMessages([]); // Initialize as empty array on error
-      setError('Failed to load contact messages');
+      setMessages([]);
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        navigate('/auth/login');
+      } else {
+        setError('Failed to load messages. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -60,16 +82,21 @@ const ContactMessages: React.FC = () => {
   
   const handleMarkAsRead = async (id: number) => {
     try {
-      await axios.put(`/api/contact/messages/${id}/read/`);
+      if (!token) return;
       
-      // Update message in state
+      await axios.put(API_ENDPOINTS.CONTACT.MARK_READ(id), {}, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       setMessages(prevMessages => 
         prevMessages.map(msg => 
           msg.id === id ? { ...msg, is_read: true } : msg
         )
       );
       
-      // If this is the selected message, update it
       if (selectedMessage?.id === id) {
         setSelectedMessage(prev => prev ? { ...prev, is_read: true } : null);
       }
@@ -84,14 +111,19 @@ const ContactMessages: React.FC = () => {
     }
     
     try {
-      await axios.delete(`/api/contact/messages/${id}/delete/`);
+      if (!token) return;
       
-      // Remove from state
+      await axios.delete(API_ENDPOINTS.CONTACT.DELETE(id), {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       setMessages(prevMessages => 
         prevMessages.filter(msg => msg.id !== id)
       );
       
-      // Clear selected message if it's the one being deleted
       if (selectedMessage?.id === id) {
         setSelectedMessage(null);
       }
@@ -103,10 +135,30 @@ const ContactMessages: React.FC = () => {
   const handleSelectMessage = (message: ContactMessage) => {
     setSelectedMessage(message);
     
-    // Mark as read if not already read
     if (!message.is_read) {
       handleMarkAsRead(message.id);
     }
+  };
+  
+  // Function to create Gmail compose URL with pre-filled fields
+  const createGmailComposeUrl = (email: string, subject: string, body: string = '') => {
+    const params = new URLSearchParams({
+      to: email,
+      subject: `Re: ${subject}`,
+      body: body
+    });
+    
+    return `https://mail.google.com/mail/u/0/?view=cm&fs=1&tf=1&${params.toString()}`;
+  };
+  
+  // Function to reply via Gmail
+  const handleReplyWithGmail = (email: string, subject: string, message: string) => {
+    // Create a message template with the original message quoted
+    const originalMessageDate = selectedMessage ? format(new Date(selectedMessage.created_at), 'MMM dd, yyyy HH:mm') : '';
+    const replyBody = `\n\n\n---------- Original Message ----------\nFrom: ${selectedMessage?.name}\nDate: ${originalMessageDate}\n\n${message}`;
+    
+    // Open Gmail compose window in a new tab
+    window.open(createGmailComposeUrl(email, subject, replyBody), '_blank');
   };
   
   if (loading && messages.length === 0) {
@@ -114,10 +166,13 @@ const ContactMessages: React.FC = () => {
   }
   
   if (error) {
-    return <div className="bg-red-100 text-red-700 p-4 rounded">{error}</div>;
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 p-4 rounded mb-4">
+        <strong>Error:</strong> {error}
+      </div>
+    );
   }
 
-  // Render empty state if no messages
   if (messages.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8">
@@ -232,12 +287,25 @@ const ContactMessages: React.FC = () => {
               </div>
               
               <div className="pt-4 border-t">
-                <button
-                  onClick={() => window.location.href = `mailto:${selectedMessage.email}?subject=Re: ${selectedMessage.subject}`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Reply via Email
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => handleReplyWithGmail(
+                      selectedMessage.email, 
+                      selectedMessage.subject, 
+                      selectedMessage.message
+                    )}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center"
+                  >
+                    <FaGoogle className="mr-2" /> Reply with Gmail
+                  </button>
+                  
+                  <button
+                    onClick={() => window.location.href = `mailto:${selectedMessage.email}?subject=Re: ${selectedMessage.subject}`}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Reply with Default Email
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

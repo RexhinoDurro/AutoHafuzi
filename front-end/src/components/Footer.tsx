@@ -13,27 +13,27 @@ const Footer = () => {
               <img src={hafuzilogo} alt="Hafuzi Auto" className="h-12 w-auto"/>
             </Link>
             <p className="text-gray-400 text-sm">
-              Your trusted partner in automotive excellence
+              Partneri juaj i besuar në përsosmërinë e automjeteve
             </p>
           </div>
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-green-600">Quick Links</h3>
+            <h3 className="text-lg font-semibold text-green-600">Lidhje të Shpejta</h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/" className="text-gray-400 hover:text-white transition-colors">
-                  Home
+                  Kryefaqja
                 </Link>
               </li>
               <li>
                 <Link to="/rental" className="text-gray-400 hover:text-white transition-colors">
-                  Rental
+                  Makinë me Qira
                 </Link>
               </li>
               <li>
                 <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">
-                  Contact
+                  Kontakt
                 </Link>
               </li>
             </ul>
@@ -41,12 +41,12 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-green-600">Contact Us</h3>
+            <h3 className="text-lg font-semibold text-green-600">Na Kontaktoni</h3>
             <ul className="space-y-2">
               <li className="flex items-center space-x-2 text-gray-400">
                 <Phone className="h-4 w-4" />
-                <a href="tel:+41791234567" className="hover:text-white transition-colors">
-                  +41 79 123 45 67
+                <a href="tel:+355699311111" className="hover:text-white transition-colors">
+                  069 931 1111
                 </a>
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
@@ -57,17 +57,17 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
                 <MapPin className="h-4 w-4" />
-                <span>Züricherstrasse 123, 8000 Zürich</span>
+                <span>Fushë-Kruje, Albania, E762, Fushë Krujë</span>
               </li>
             </ul>
           </div>
 
           {/* Social Media */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-green-600">Follow Us</h3>
+            <h3 className="text-lg font-semibold text-green-600">Na Ndiqni</h3>
             <div className="flex space-x-4">
               <a 
-                href="https://facebook.com/hafuziauto" 
+                href="https://www.facebook.com/autohafuzi/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -75,7 +75,7 @@ const Footer = () => {
                 <Facebook className="h-6 w-6" />
               </a>
               <a 
-                href="https://instagram.com/hafuziauto" 
+                href="https://www.instagram.com/autohafuzi" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -90,14 +90,14 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} Hafuzi Auto. All rights reserved.
+              © {new Date().getFullYear()} Hafuzi Auto. Të gjitha të drejtat e rezervuara.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link to="/privacy" className="text-gray-400 text-sm hover:text-white transition-colors">
-                Privacy Policy
+                Politika e Privatësisë
               </Link>
               <Link to="/terms" className="text-gray-400 text-sm hover:text-white transition-colors">
-                Terms of Service
+                Kushtet e Shërbimit
               </Link>
             </div>
           </div>

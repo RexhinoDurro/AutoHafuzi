@@ -9,6 +9,7 @@ import CarForm from './components/CarForm/CarForm';
 import CarDetail from './pages/CarDetail';
 import OptionsPage from './pages/OptionsPage';
 import ColorManagementPage from './pages/ColorManagementPage';
+import UpholsteryManagementPage from './pages/UpholsteryManagementPage';
 import { getStoredAuth } from './utils/auth';
 import Footer from './components/Footer';
 import AboutPage from './pages/About';
@@ -155,6 +156,18 @@ function App() {
                 <ProtectedRoute>
                   <AdminDashboard>
                     <ColorManagementPage />
+                  </AdminDashboard>
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Upholstery management route */}
+            <Route
+              path="/upholstery-management"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard>
+                    <UpholsteryManagementPage />
                   </AdminDashboard>
                 </ProtectedRoute>
               }

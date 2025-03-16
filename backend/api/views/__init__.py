@@ -12,7 +12,8 @@ from .make_model_views import (
 )
 from .color_views import (
     get_exterior_colors, add_exterior_color, update_exterior_color, delete_exterior_color, 
-    get_interior_colors, add_interior_color, update_interior_color, delete_interior_color
+    get_interior_colors, add_interior_color, update_interior_color, delete_interior_color,
+    get_upholstery_types, add_upholstery, update_upholstery, delete_upholstery
 )
 from .contact_views import contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message
 
@@ -50,6 +51,10 @@ __all__ = [
     'add_interior_color',
     'update_interior_color',
     'delete_interior_color',
+    'get_upholstery_types',
+    'add_upholstery',
+    'update_upholstery',
+    'delete_upholstery',
     'get_site_analytics',
     'contact_page',
     'submit_contact_form', 

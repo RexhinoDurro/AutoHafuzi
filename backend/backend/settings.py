@@ -29,7 +29,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '192.168.56.1',    # Your network IP
-    '192.168.0.105'
+    '192.168.0.102'
 ]
 
 
@@ -87,7 +87,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Allow React frontend
     "http://192.168.56.1:5173",
-    "http://192.168.0.105:5173"
+    "http://192.168.0.102:5173"
 ]
 
 
@@ -112,6 +112,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
     'x-requested-for-analytics',
+    'x-view-tracking',
 ]
 
 TEMPLATES = [

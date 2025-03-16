@@ -3,12 +3,24 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from ..models import CarMake, CarModel, CarVariant, Option
+from django.db.models import Count
+from ..models import CarMake, CarModel, CarVariant, Option, Car
 from ..serializers import CarMakeSerializer, CarModelSerializer, CarVariantSerializer, OptionSerializer
 
 @api_view(['GET'])
 def get_makes(request):
-    makes = CarMake.objects.all().order_by('name')
+    # Check if we're in admin form context
+    is_admin = request.query_params.get('admin', 'false').lower() == 'true'
+    
+    if is_admin:
+        # Return all makes for admin forms
+        makes = CarMake.objects.all().order_by('name')
+    else:
+        # Return only makes with cars for public frontend display
+        makes = CarMake.objects.annotate(
+            car_count=Count('models__car')
+        ).filter(car_count__gt=0).order_by('name')
+        
     serializer = CarMakeSerializer(makes, many=True)
     return Response(serializer.data)
 
@@ -59,7 +71,18 @@ def delete_make(request, make_id):
 
 @api_view(['GET'])
 def get_models(request, make_id):
-    models = CarModel.objects.filter(make_id=make_id).order_by('name')
+    # Check if we're in admin form context
+    is_admin = request.query_params.get('admin', 'false').lower() == 'true'
+    
+    if is_admin:
+        # Return all models for the selected make when in admin context
+        models = CarModel.objects.filter(make_id=make_id).order_by('name')
+    else:
+        # Return only models with cars for public frontend display
+        models = CarModel.objects.filter(make_id=make_id).annotate(
+            car_count=Count('car')
+        ).filter(car_count__gt=0).order_by('name')
+        
     serializer = CarModelSerializer(models, many=True)
     return Response(serializer.data)
 
@@ -112,7 +135,18 @@ def delete_model(request, model_id):
 def get_variants(request, model_id):
     try:
         model = CarModel.objects.get(id=model_id)
-        variants = CarVariant.objects.filter(model=model).order_by('name')
+        # Check if we're in admin form context
+        is_admin = request.query_params.get('admin', 'false').lower() == 'true'
+        
+        if is_admin:
+            # Return all variants for the selected model when in admin context
+            variants = CarVariant.objects.filter(model=model).order_by('name')
+        else:
+            # Return only variants with cars for public frontend display
+            variants = CarVariant.objects.filter(model=model).annotate(
+                car_count=Count('car')
+            ).filter(car_count__gt=0).order_by('name')
+            
         serializer = CarVariantSerializer(variants, many=True)
         return Response(serializer.data)
     except CarModel.DoesNotExist:

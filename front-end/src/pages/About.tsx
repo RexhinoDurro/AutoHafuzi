@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Award, Car, Clock, Settings, Sparkles, Map, Phone, Mail, Shield } from 'lucide-react';
+import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 
 const AboutPage = () => {
   const [companyDescription, setCompanyDescription] = useState('Driven by passion, committed to quality. We\'ve been helping customers find their perfect ride since 2010.');
@@ -17,7 +18,7 @@ const AboutPage = () => {
     // Fetch company information
     const fetchAboutData = async () => {
       try {
-        const response = await fetch('/api/about/');
+        const response = await fetch(API_ENDPOINTS.ABOUT);
         const data = await response.json();
         
         setCompanyDescription(data.company_description);

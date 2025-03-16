@@ -4,8 +4,10 @@ import CarCard from '../components/CarCard';
 import CarFilter from '../components/CarFilter';
 import { Car } from '../types/car';
 import { saveLastSearch, getRecentlyViewedCarIds, getLastSearch } from '../utils/userActivityService';
+import { API_ENDPOINTS } from '../config/api';
 
 const Home = () => {
+  // State definitions
   const [lastSearchCars, setLastSearchCars] = useState<Car[]>([]);
   const [interestCars, setInterestCars] = useState<Car[]>([]);
   const [latestCars, setLatestCars] = useState<Car[]>([]);
@@ -16,6 +18,7 @@ const Home = () => {
   const [interestQuery, setInterestQuery] = useState<URLSearchParams | null>(null);
   const navigate = useNavigate();
 
+  // Handle filter submission
   const handleFilterSubmit = (filters = {}) => {
     // Save the search parameters for recommendations
     saveLastSearch(filters);
@@ -39,7 +42,7 @@ const Home = () => {
       latestCarsQuery.append('limit', '4');
       latestCarsQuery.append('ordering', '-created_at'); // Order by most recently added
 
-      const response = await fetch(`http://localhost:8000/api/cars/?${latestCarsQuery}`);
+      const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${latestCarsQuery}`);
       if (response.ok) {
         const data = await response.json();
         const latestCarsData = data.results || [];
@@ -62,7 +65,7 @@ const Home = () => {
       const randomCarsQuery = new URLSearchParams();
       randomCarsQuery.append('limit', '8'); // Get more to shuffle
       
-      const response = await fetch(`http://localhost:8000/api/cars/?${randomCarsQuery}`);
+      const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${randomCarsQuery}`);
       if (response.ok) {
         const data = await response.json();
         // Shuffle the results to get random cars
@@ -159,7 +162,7 @@ const Home = () => {
       
       // Only make the API call if we have query parameters
       if (lastSearchQueryParams.toString() !== 'limit=4') {
-        const lastSearchResponse = await fetch(`http://localhost:8000/api/cars/?${lastSearchQueryParams}`);
+        const lastSearchResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${lastSearchQueryParams}`);
         if (lastSearchResponse.ok) {
           lastSearchData = await lastSearchResponse.json();
         } else {
@@ -171,7 +174,7 @@ const Home = () => {
       
       // Only make the API call if we have both make and model
       if (interestQueryParams.toString() !== 'limit=4') {
-        const interestResponse = await fetch(`http://localhost:8000/api/cars/?${interestQueryParams}`);
+        const interestResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${interestQueryParams}`);
         if (interestResponse.ok) {
           interestData = await interestResponse.json();
         } else {
@@ -266,7 +269,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-0 sm:p-6">
       {/* Main Car Filter */}
       <CarFilter onFilterChange={handleFilterSubmit} />
       
@@ -275,8 +278,8 @@ const Home = () => {
       
       {/* "Based on your last search" OR "Latest Cars" Recommendation Section */}
       {!recommendationsLoading && lastSearchCars.length > 0 && (
-        <div className="mt-12 mb-16 bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-xl shadow border border-blue-100">
-          <h2 className="text-2xl font-bold mb-6 text-blue-800 flex items-center">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 pt-4 pb-4 border border-blue-100 my-2 sm:mt-12 sm:mb-16 sm:p-8 sm:rounded-xl sm:shadow">
+          <h2 className="text-2xl font-bold mb-3 ml-0.5 text-blue-800 flex items-center sm:mb-6 sm:ml-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -284,14 +287,15 @@ const Home = () => {
               ? 'Bazuar në kërkimin e fundit' 
               : 'Makina të shtuara së fundmi'}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
             {lastSearchCars.map(car => (
               <CarCard key={car.id} car={car} />
             ))}
           </div>
           <button
             onClick={() => navigate('/cars')}
-            className="mt-8 w-full py-4 bg-blue-600 text-white font-semibold text-lg rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center"
+            className="mt-3 mb-1 mx-0.5 w-full py-3 bg-blue-600 text-white font-semibold text-lg rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center sm:mt-8 sm:mb-0 sm:mx-0"
           >
             <span>Dëshironi të shihni më shumë makina?</span>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
@@ -303,8 +307,8 @@ const Home = () => {
       
       {/* "Cars You Might Like" OR "Randomly Selected Cars" Recommendation Section */}
       {!recommendationsLoading && interestCars.length > 0 && (
-        <div className="my-16 bg-gradient-to-r from-amber-50 to-yellow-50 p-8 rounded-xl shadow border border-amber-100">
-          <h2 className="text-2xl font-bold mb-6 text-amber-800 flex items-center">
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2 pt-4 pb-4 border border-amber-100 my-2 sm:my-16 sm:p-8 sm:rounded-xl sm:shadow">
+          <h2 className="text-2xl font-bold mb-3 ml-0.5 text-amber-800 flex items-center sm:mb-6 sm:ml-0">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
             </svg>
@@ -312,7 +316,8 @@ const Home = () => {
               ? 'Makina që mund t\'ju interesojnë' 
               : 'Makina të zgjedhura për ju'}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
             {interestCars.map(car => (
               <CarCard key={car.id} car={car} />
             ))}
@@ -322,7 +327,7 @@ const Home = () => {
       
       {/* Loading state for recommendations */}
       {recommendationsLoading && (
-        <div className="flex justify-center my-16">
+        <div className="flex justify-center my-4 sm:my-16">
           <div className="animate-pulse flex space-x-4">
             <div className="rounded-full bg-blue-200 h-12 w-12"></div>
             <div className="flex-1 space-y-4 py-1">

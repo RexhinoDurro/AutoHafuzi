@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LoginFormData } from '../types/auth';
 import { setStoredAuth } from '../utils/auth';
+import { API_ENDPOINTS } from '../config/api';
+import { apiClient } from '../utils/api';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -16,23 +18,12 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStoredAuth(data.token);
-        navigate('/auth/dashboard');
-      } else {
-        setError('Invalid credentials');
-      }
+      const data = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, formData);
+      setStoredAuth(data.token);
+      navigate('/auth/dashboard');
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      console.error('Login error:', error);
+      setError('Invalid credentials or connection issue');
     }
   };
 

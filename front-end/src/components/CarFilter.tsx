@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import RangeSlider from './RangeSlider';
 import { getLastSearch, saveLastSearch } from '../utils/userActivityService';
+import { API_ENDPOINTS } from '../config/api';
 
 interface Make {
   id: number;
@@ -28,8 +29,12 @@ interface ExteriorColor {
 interface InteriorColor {
   id: number;
   name: string;
-  upholstery: string;
   hex_code: string;
+}
+
+interface Upholstery {
+  id: number;
+  name: string;
 }
 
 interface Option {
@@ -63,7 +68,7 @@ interface FilterState {
   options?: string[];
   exterior_color?: string;
   interior_color?: string;
-  interior_upholstery?: string;
+  upholstery?: string;
   fuel_type?: string;
   emission_class?: string;
   created_since?: string;
@@ -75,11 +80,21 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
+  const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
   const [filters, setFilters] = useState<FilterState>({});
   const [showDetails, setShowDetails] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [groupedOptions, setGroupedOptions] = useState<Record<string, Option[]>>({});
+  const [loading, setLoading] = useState({
+    makes: false,
+    models: false,
+    variants: false,
+    exteriorColors: false,
+    interiorColors: false,
+    upholstery: false,
+    options: false
+  });
 
   // Get current year for registration date ranges
   const currentYear = new Date().getFullYear();
@@ -175,6 +190,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
     fetchMakes();
     fetchExteriorColors();
     fetchInteriorColors();
+    fetchUpholsteryTypes();
     fetchOptions();
   }, []);
 
@@ -201,62 +217,92 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
 
   const fetchMakes = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/makes/');
+      setLoading(prev => ({ ...prev, makes: true }));
+      const response = await fetch(API_ENDPOINTS.MAKES);
       if (!response.ok) throw new Error('Failed to fetch makes');
       const data = await response.json();
       setMakes(data);
+      setLoading(prev => ({ ...prev, makes: false }));
     } catch (error) {
       console.error('Error fetching makes:', error);
+      setLoading(prev => ({ ...prev, makes: false }));
     }
   };
 
   const fetchModels = async (makeId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/models/${makeId}/`);
+      setLoading(prev => ({ ...prev, models: true }));
+      const response = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId));
       if (!response.ok) throw new Error('Failed to fetch models');
       const data = await response.json();
       setModels(data);
+      setLoading(prev => ({ ...prev, models: false }));
     } catch (error) {
       console.error('Error fetching models:', error);
+      setLoading(prev => ({ ...prev, models: false }));
     }
   };
 
   const fetchVariants = async (modelId: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/variants/${modelId}/`);
+      setLoading(prev => ({ ...prev, variants: true }));
+      const response = await fetch(API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(modelId));
       if (!response.ok) throw new Error('Failed to fetch variants');
       const data = await response.json();
       setVariants(data);
+      setLoading(prev => ({ ...prev, variants: false }));
     } catch (error) {
       console.error('Error fetching variants:', error);
+      setLoading(prev => ({ ...prev, variants: false }));
     }
   };
 
   const fetchExteriorColors = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/exterior-colors/');
+      setLoading(prev => ({ ...prev, exteriorColors: true }));
+      const response = await fetch(API_ENDPOINTS.EXTERIOR_COLORS);
       if (!response.ok) throw new Error('Failed to fetch exterior colors');
       const data = await response.json();
       setExteriorColors(data);
+      setLoading(prev => ({ ...prev, exteriorColors: false }));
     } catch (error) {
       console.error('Error fetching exterior colors:', error);
+      setLoading(prev => ({ ...prev, exteriorColors: false }));
     }
   };
 
   const fetchInteriorColors = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/interior-colors/');
+      setLoading(prev => ({ ...prev, interiorColors: true }));
+      const response = await fetch(API_ENDPOINTS.INTERIOR_COLORS);
       if (!response.ok) throw new Error('Failed to fetch interior colors');
       const data = await response.json();
       setInteriorColors(data);
+      setLoading(prev => ({ ...prev, interiorColors: false }));
     } catch (error) {
       console.error('Error fetching interior colors:', error);
+      setLoading(prev => ({ ...prev, interiorColors: false }));
+    }
+  };
+
+  const fetchUpholsteryTypes = async () => {
+    try {
+      setLoading(prev => ({ ...prev, upholstery: true }));
+      const response = await fetch(API_ENDPOINTS.UPHOLSTERY);
+      if (!response.ok) throw new Error('Failed to fetch upholstery types');
+      const data = await response.json();
+      setUpholsteryTypes(data);
+      setLoading(prev => ({ ...prev, upholstery: false }));
+    } catch (error) {
+      console.error('Error fetching upholstery types:', error);
+      setLoading(prev => ({ ...prev, upholstery: false }));
     }
   };
 
   const fetchOptions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/options/list/');
+      setLoading(prev => ({ ...prev, options: true }));
+      const response = await fetch(API_ENDPOINTS.OPTIONS.LIST);
       if (!response.ok) {
         throw new Error(`Failed to fetch options: ${response.status}`);
       }
@@ -268,9 +314,11 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
         console.error('Options data is not an array:', data);
         setOptions([]);
       }
+      setLoading(prev => ({ ...prev, options: false }));
     } catch (error) {
       console.error('Error fetching options:', error);
       setOptions([]);
+      setLoading(prev => ({ ...prev, options: false }));
     }
   };
 
@@ -369,51 +417,70 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               value={filters.make || ''}
               onChange={(e) => handleFilterChange('make', e.target.value)}
               className="w-full p-2 border rounded-lg"
+              disabled={loading.makes}
             >
               <option value="">Të gjitha markat</option>
-              {makes.map((make) => (
-                <option key={make.id} value={make.id}>
-                  {make.name}
-                </option>
-              ))}
+              {loading.makes ? (
+                <option value="" disabled>Duke ngarkuar...</option>
+              ) : makes.length > 0 ? (
+                makes.map((make) => (
+                  <option key={make.id} value={make.id}>
+                    {make.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Nuk ka marka të disponueshme</option>
+              )}
             </select>
           </div>
-
+  
           <div>
             <label className="block text-sm font-medium mb-1">Modeli</label>
             <select
               value={filters.model || ''}
               onChange={(e) => handleFilterChange('model', e.target.value)}
               className="w-full p-2 border rounded-lg"
-              disabled={!filters.make}
+              disabled={!filters.make || loading.models}
             >
               <option value="">Të gjitha modelet</option>
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
+              {loading.models ? (
+                <option value="" disabled>Duke ngarkuar...</option>
+              ) : models.length > 0 ? (
+                models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))
+              ) : filters.make ? (
+                <option value="" disabled>Nuk ka modele të disponueshme për këtë markë</option>
+              ) : null}
             </select>
           </div>
-
+  
           <div>
             <label className="block text-sm font-medium mb-1">Varianti</label>
             <select
               value={filters.variant || ''}
               onChange={(e) => handleFilterChange('variant', e.target.value)}
               className="w-full p-2 border rounded-lg"
-              disabled={!filters.model}
+              disabled={!filters.model || loading.variants}
             >
               <option value="">Të gjitha variantet</option>
-              {variants.map((variant) => (
-                <option key={variant.id} value={variant.id}>
-                  {variant.name}
-                </option>
-              ))}
+              {loading.variants ? (
+                <option value="" disabled>Duke ngarkuar...</option>
+              ) : variants.length > 0 ? (
+                variants.map((variant) => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name}
+                  </option>
+                ))
+              ) : filters.model ? (
+                <option value="" disabled>Nuk ka variante të disponueshme për këtë model</option>
+              ) : null}
             </select>
           </div>
         </div>
-
+  
         {/* First Registration From/To */}
         <div className="space-y-3">
           <div>
@@ -431,7 +498,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               ))}
             </select>
           </div>
-
+  
           <div>
             <label className="block text-sm font-medium mb-1">Regjistrimi i parë deri</label>
             <select
@@ -448,7 +515,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
             </select>
           </div>
         </div>
-
+  
         {/* Price Range Slider */}
         <div className="space-y-3">
           <RangeSlider 
@@ -464,7 +531,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           />
         </div>
       </div>
-
+  
       {/* Show/Hide Detailed Search Button */}
       <div className="mb-4">
         <button
@@ -484,7 +551,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </svg>
         </button>
       </div>
-
+  
       {/* Detailed Search */}
       {showDetails && (
         <div className="space-y-6">
@@ -603,7 +670,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               </div>
             </div>
           </div>
-
+  
           {/* Options Section */}
           {Object.keys(groupedOptions).length > 0 && (
             <div className="border-t pt-4">
@@ -633,54 +700,61 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               </div>
             </div>
           )}
-
+  
           {/* Exterior Color Section */}
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-2">Ngjyra e Jashtme</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {exteriorColors.map((color) => (
-                <div
-                  key={color.id}
-                  className={`flex flex-col items-center p-2 border rounded-lg cursor-pointer ${
-                    filters.exterior_color === color.id.toString() ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => handleFilterChange('exterior_color', color.id.toString())}
-                >
+            {loading.exteriorColors ? (
+              <p className="text-sm text-gray-500">Duke ngarkuar ngjyrat...</p>
+            ) : exteriorColors.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {exteriorColors.map((color) => (
                   <div
-                    className="w-8 h-8 rounded-full mb-1"
-                    style={{ backgroundColor: color.hex_code }}
-                  ></div>
-                  <span className="text-xs text-center">{color.name}</span>
-                </div>
-              ))}
-              {filters.exterior_color && (
-                <div
-                  className="flex flex-col items-center p-2 border rounded-lg cursor-pointer border-gray-200"
-                  onClick={() => handleFilterChange('exterior_color', '')}
-                >
-                  <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                    key={color.id}
+                    className={`flex flex-col items-center p-2 border rounded-lg cursor-pointer ${
+                      filters.exterior_color === color.id.toString() ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                    }`}
+                    onClick={() => handleFilterChange('exterior_color', color.id.toString())}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full mb-1"
+                      style={{ backgroundColor: color.hex_code }}
+                    ></div>
+                    <span className="text-xs text-center">{color.name}</span>
                   </div>
-                  <span className="text-xs text-center">Pastro</span>
-                </div>
-              )}
-            </div>
+                ))}
+                {filters.exterior_color && (
+                  <div
+                    className="flex flex-col items-center p-2 border rounded-lg cursor-pointer border-gray-200"
+                    onClick={() => handleFilterChange('exterior_color', '')}
+                  >
+                    <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center">
+                      <svg
+                        className="w-6 h-6 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </div>
+                    <span className="text-xs text-center">Pastro</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Nuk ka ngjyra të disponueshme</p>
+            )}
           </div>
-
-          {/* Interior Color and Upholstery Section */}
+  
+          {/* Interior Color Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Interiori</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="font-semibold mb-2">Ngjyra e Interiorit</h3>
+            {loading.interiorColors ? (
+              <p className="text-sm text-gray-500">Duke ngarkuar ngjyrat...</p>
+            ) : interiorColors.length > 0 ? (
               <div>
-                <label className="block text-sm font-medium mb-1">Ngjyra e interiorit</label>
                 <select
                   value={filters.interior_color || ''}
                   onChange={(e) => handleFilterChange('interior_color', e.target.value)}
@@ -695,25 +769,36 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   ))}
                 </select>
               </div>
+            ) : (
+              <p className="text-sm text-gray-500">Nuk ka ngjyra të disponueshme</p>
+            )}
+          </div>
+  
+          {/* Upholstery Section - New separate section */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-2">Tapiceria</h3>
+            {loading.upholstery ? (
+              <p className="text-sm text-gray-500">Duke ngarkuar tapiceritë...</p>
+            ) : upholsteryTypes.length > 0 ? (
               <div>
-                <label className="block text-sm font-medium mb-1">Tapiceria</label>
                 <select
-                  value={filters.interior_upholstery || ''}
-                  onChange={(e) => handleFilterChange('interior_upholstery', e.target.value)}
+                  value={filters.upholstery || ''}
+                  onChange={(e) => handleFilterChange('upholstery', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
                   <option value="">Të gjitha tapiceri</option>
-                  {/* Group interior colors by upholstery */}
-                  {Array.from(new Set(interiorColors.map(color => color.upholstery))).map((upholstery) => (
-                    <option key={upholstery} value={upholstery}>
-                      {upholstery}
+                  {upholsteryTypes.map((upholstery) => (
+                    <option key={upholstery.id} value={upholstery.id.toString()}>
+                      {upholstery.name}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
+            ) : (
+              <p className="text-sm text-gray-500">Nuk ka tapiceri të disponueshme</p>
+            )}
           </div>
-
+  
           {/* Fuel Section */}
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-2">Karburanti</h3>
@@ -750,7 +835,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               </div>
             </div>
           </div>
-
+  
           {/* Offer Details Section */}
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-2">Detajet e ofertës</h3>
@@ -772,7 +857,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
           </div>
         </div>
       )}
-
+  
       {/* Action Buttons */}
       <div className="mt-6 flex gap-2">
         <button
@@ -790,6 +875,5 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
       </div>
     </div>
   );
-};
-
-export default CarFilter;
+}
+  export default CarFilter

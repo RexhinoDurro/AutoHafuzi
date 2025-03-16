@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock } from 'react-icons/fa';
+import { API_ENDPOINTS } from '../config/api';
 
 interface ContactFormData {
   name: string;
@@ -8,6 +9,13 @@ interface ContactFormData {
   phone: string;
   subject: string;
   message: string;
+}
+
+interface ContactInfo {
+  address: string;
+  phone: string;
+  email: string;
+  working_hours: string;
 }
 
 const ContactPage: React.FC = () => {
@@ -19,11 +27,41 @@ const ContactPage: React.FC = () => {
     message: ''
   });
   
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    address: '123 Auto Avenue, Car City, CC 12345',
+    phone: '+1 (555) 123-4567',
+    email: 'info@cardealer.com',
+    working_hours: 'Monday to Friday: 9:00 AM - 6:00 PM, Saturday: 10:00 AM - 4:00 PM'
+  });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{
     type: 'success' | 'error',
     text: string
   } | null>(null);
+  
+  // Fetch contact information from the API
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        // Using INFO endpoint instead of PAGE which doesn't exist in your API structure
+        const response = await axios.get(API_ENDPOINTS.CONTACT.INFO, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.data) {
+          setContactInfo(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching contact information:', error);
+        // Use default values if fetch fails
+      }
+    };
+    
+    fetchContactInfo();
+  }, []);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -39,7 +77,7 @@ const ContactPage: React.FC = () => {
     setSubmitMessage(null);
     
     try {
-      const response = await axios.post('/api/contact/submit/', formData);
+      const response = await axios.post(API_ENDPOINTS.CONTACT.SUBMIT, formData);
       
       // Clear the form on success
       setFormData({
@@ -55,23 +93,16 @@ const ContactPage: React.FC = () => {
         text: response.data.message || 'Your message has been sent successfully!'
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting contact form:', error);
       
       setSubmitMessage({
         type: 'error',
-        text: 'There was a problem sending your message. Please try again later.'
+        text: error.response?.data?.error || 'There was a problem sending your message. Please try again later.'
       });
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  const contactInfo = {
-    address: '123 Auto Avenue, Car City, CC 12345',
-    phone: '+1 (555) 123-4567',
-    email: 'info@cardealer.com',
-    workingHours: 'Monday to Friday: 9:00 AM - 6:00 PM, Saturday: 10:00 AM - 4:00 PM'
   };
   
   return (
@@ -120,7 +151,7 @@ const ContactPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-medium">Working Hours</h3>
-                <p className="text-gray-600">{contactInfo.workingHours}</p>
+                <p className="text-gray-600">{contactInfo.working_hours}</p>
               </div>
             </div>
           </div>

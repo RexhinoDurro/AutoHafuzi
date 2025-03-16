@@ -11,8 +11,9 @@ export interface Car {
   exterior_color_hex?: string;
   interior_color?: number;
   interior_color_name?: string;
-  interior_upholstery?: string;
   interior_color_hex?: string;
+  upholstery?: number;  // New field for upholstery ID
+  upholstery_name?: string;  // New field for upholstery name
   price: number;
   discussed_price?: boolean;
   description: string;
@@ -83,8 +84,13 @@ export interface ExteriorColor {
 export interface InteriorColor {
   id: number;
   name: string;
-  upholstery: string;
   hex_code: string;
+}
+
+// New interface for Upholstery
+export interface Upholstery {
+  id: number;
+  name: string;
 }
 
 export interface Option {
@@ -123,7 +129,8 @@ export interface FormData {
   interior_color_id?: number;
   interior_color_name?: string;
   interior_color_hex?: string;
-  interior_upholstery?: string;
+  upholstery_id?: number;  // New field for upholstery ID
+  upholstery_name?: string;  // New field for upholstery name
   price: number;
   discussedPrice?: boolean;
   description: string;
