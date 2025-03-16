@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getStoredAuth } from "../utils/auth";
+import { API_ENDPOINTS } from "../config/api"; // Import API endpoints
 
 interface OptionFormProps {
     onOptionAdded?: (data: any) => void;
@@ -24,7 +25,8 @@ const OptionForm: React.FC<OptionFormProps> = ({ onOptionAdded }) => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/option-categories/", {
+            // Use API_ENDPOINTS instead of hardcoded URL
+            const response = await fetch(API_ENDPOINTS.OPTIONS.CATEGORIES, {
                 headers: {
                     "Authorization": `Token ${token}`,
                 },
@@ -66,7 +68,8 @@ const OptionForm: React.FC<OptionFormProps> = ({ onOptionAdded }) => {
         }
 
         try {
-            const response = await fetch("http://localhost:8000/api/options/", {
+            // Use API_ENDPOINTS instead of hardcoded URL
+            const response = await fetch(API_ENDPOINTS.OPTIONS.ADD, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

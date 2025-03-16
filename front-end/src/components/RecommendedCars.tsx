@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CarCard from './CarCard';
 import { Car } from '../types/car';
+import { API_ENDPOINTS } from '../config/api'; // Import API endpoints
 
 interface RecommendedCarsProps {
   excludeCarIds?: number[];
@@ -63,10 +64,10 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({ excludeCarIds = [] })
         if (topModel) interestQuery.append('model', topModel);
         interestQuery.append('limit', '4'); // Limit to 4 cars
         
-        // Make the API calls in parallel
+        // Make the API calls in parallel using the API_ENDPOINTS
         const [lastSearchResponse, interestResponse] = await Promise.all([
-          fetch(`http://localhost:8000/api/cars/?${lastSearchQuery}`),
-          fetch(`http://localhost:8000/api/cars/?${interestQuery}`)
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${lastSearchQuery}`),
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${interestQuery}`)
         ]);
         
         if (!lastSearchResponse.ok || !interestResponse.ok) {

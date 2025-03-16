@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { getStoredAuth, clearStoredAuth } from '../utils/auth';
 import useUpholstery from '../components/useUpholstery';
+import { API_ENDPOINTS } from '../config/api'; // Import API endpoints
 
 // Define types
 interface ExteriorColor {
@@ -78,8 +79,8 @@ const ColorManagementPage: React.FC = () => {
   const fetchColors = async () => {
     setLoading(true);
     try {
-      // Fetch exterior colors
-      const exteriorResponse = await axios.get('http://localhost:8000/api/exterior-colors/');
+      // Fetch exterior colors using API_ENDPOINTS
+      const exteriorResponse = await axios.get(API_ENDPOINTS.EXTERIOR_COLORS);
       console.log("Exterior colors response:", exteriorResponse.data);
       
       // Ensure exteriorColors is always an array
@@ -93,8 +94,8 @@ const ColorManagementPage: React.FC = () => {
         setExteriorColors([]);
       }
       
-      // Fetch interior colors
-      const interiorResponse = await axios.get('http://localhost:8000/api/interior-colors/');
+      // Fetch interior colors using API_ENDPOINTS
+      const interiorResponse = await axios.get(API_ENDPOINTS.INTERIOR_COLORS);
       console.log("Interior colors response:", interiorResponse.data);
       
       // Ensure interiorColors is always an array
@@ -149,7 +150,7 @@ const ColorManagementPage: React.FC = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8000/api/exterior-colors/add/', 
+        API_ENDPOINTS.EXTERIOR_COLORS + '/add/', 
         newExteriorColor, 
         {
           headers: {
@@ -185,7 +186,7 @@ const ColorManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:8000/api/exterior-colors/delete/${id}/`, {
+      await axios.delete(`${API_ENDPOINTS.EXTERIOR_COLORS}/delete/${id}/`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -220,7 +221,7 @@ const ColorManagementPage: React.FC = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:8000/api/interior-colors/add/', 
+        `${API_ENDPOINTS.INTERIOR_COLORS}/add/`, 
         newInteriorColor, 
         {
           headers: {
@@ -256,7 +257,7 @@ const ColorManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:8000/api/interior-colors/delete/${id}/`, {
+      await axios.delete(`${API_ENDPOINTS.INTERIOR_COLORS}/delete/${id}/`, {
         headers: {
           'Authorization': `Token ${token}`
         }

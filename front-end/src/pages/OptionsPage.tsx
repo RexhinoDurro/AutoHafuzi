@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OptionForm from '../components/OptionForm';
 import { getStoredAuth } from '../utils/auth';
+import { API_ENDPOINTS } from '../config/api'; // Import API endpoints
 
 interface Option {
   id: number;
@@ -35,7 +36,8 @@ const OptionsPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/option-categories/', {
+      // Use API_ENDPOINTS instead of hardcoded URL
+      const response = await fetch(API_ENDPOINTS.OPTIONS.CATEGORIES, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -62,7 +64,8 @@ const OptionsPage = () => {
   const fetchOptions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/options/list/', {
+      // Use API_ENDPOINTS instead of hardcoded URL
+      const response = await fetch(API_ENDPOINTS.OPTIONS.LIST, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -90,7 +93,8 @@ const OptionsPage = () => {
     if (!window.confirm('Are you sure you want to delete this option?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/options/${id}/`, {
+      // Use API_ENDPOINTS with parameter function for DELETE
+      const response = await fetch(API_ENDPOINTS.OPTIONS.DELETE(id), {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,
