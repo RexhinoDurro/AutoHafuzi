@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CarFront, Phone, CarIcon, Home, Users, Menu, X, Heart } from 'lucide-react';
+import { Phone, CarIcon, Home, Users, Menu, X, Heart } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useFavorites } from '../context/FavouritesContext';
 
