@@ -23,9 +23,9 @@ MIDDLEWARE = [
     'api.middleware.SiteVisitMiddleware',
 ]
 
-# CORS_ALLOWED_ORIGINS = [
-  
-# ]
+CORS_ALLOWED_ORIGINS = [
+  "https://autohafuzi-fe.onrender.com",
+]
 
 STORAGES = {
   "default": {
