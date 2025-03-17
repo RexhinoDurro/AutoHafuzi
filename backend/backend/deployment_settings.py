@@ -27,9 +27,6 @@ CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
 ]
 
-ALLOWED_HOSTS = [
-    "https://autohafuzi-fe.onrender.com"
-]
 
 STORAGES = {
   "default": {
