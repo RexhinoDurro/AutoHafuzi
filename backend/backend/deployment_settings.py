@@ -27,6 +27,10 @@ CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
 ]
 
+ALLOWED_HOSTS = [
+    "https://autohafuzi.onrender.com"
+]
+
 STORAGES = {
   "default": {
     "BACKEND": "django.core.files.storage.FileSystemStorage",
