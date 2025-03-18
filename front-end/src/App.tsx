@@ -107,7 +107,7 @@ function App() {
             />
             
             {/* Auth routes */}
-            <Route path="/auth/login" element={<AdminLogin />} />
+            <Route path="/auth" element={<AdminLogin />} />
             <Route
               path="/auth/dashboard"
               element={
