@@ -6,22 +6,28 @@ from rest_framework.authtoken.models import Token
 from django.views.decorators.csrf import csrf_exempt
 
 
-@api_view(['POST'])
+
+@api_view(['POST', 'GET'])
 @csrf_exempt
 def admin_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
+    if request.method == 'POST':
+        # Handle login as is
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(username=username, password=password)
+
+        if user and user.is_staff:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                }
+            })
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     
-    user = authenticate(username=username, password=password)
-    
-    if user and user.is_staff:
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token.key,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            }
-        })
-    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    elif request.method == 'GET':
+        return Response({'message': 'GET method not supported for login.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
