@@ -36,7 +36,7 @@ export const API_ENDPOINTS = {
     },
   },
   AUTH: {
-    LOGIN: `${API_BASE_URL}/api/auth/login/`,
+    LOGIN: `${API_BASE_URL}/api/auth/`,
   },
   ABOUT: `${API_BASE_URL}/api/about/`,
   CONTACT: {
