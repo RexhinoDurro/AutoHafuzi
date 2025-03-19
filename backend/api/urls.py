@@ -38,7 +38,7 @@ urlpatterns = [
     
     path('cars/<int:car_id>/images/', add_car_images, name='add_car_images'),
     path('cars/images/<int:image_id>/', delete_car_image, name='delete_car_image'),
-    
+    #
     path('auth/', admin_login, name='admin_login'),
     
     path('about/', about_page, name='about_page'),
