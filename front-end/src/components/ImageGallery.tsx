@@ -1,3 +1,5 @@
+// Update the ImageGallery.tsx component with better fallback images
+
 import React, { useState } from 'react';
 import { CarImage } from '../types/car';
 import { API_BASE_URL } from '../config/api';
@@ -7,7 +9,6 @@ interface TempImage {
   preview: string;
 }
 
-// Export the props interface so it can be imported elsewhere if needed
 export interface CarImageCarouselProps {
   images: (CarImage | TempImage)[];
   baseUrl?: string;
@@ -20,6 +21,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   isMobile = false
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
   
   // Helper function to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
@@ -35,11 +37,20 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
       if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
         return image.image;
       }
+      // Check if image.url is available and use that instead
+      if ('url' in image && image.url) {
+        return image.url;
+      }
       // Make sure image.image doesn't start with a slash if baseUrl ends with one
+      const baseUrlWithoutTrailingSlash = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
       const imagePath = image.image.startsWith('/') ? image.image : `/${image.image}`;
-      return `${baseUrl}${imagePath}`;
+      return `${baseUrlWithoutTrailingSlash}${imagePath}`;
     }
   };
+
+  // Local fallback image URL that works offline
+  const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
+  const thumbnailFallbackUrl = `${baseUrl}/api/placeholder/100/100`;
 
   if (!images || images.length === 0) {
     return (
@@ -57,12 +68,14 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
       {/* Main selected image - adjusted height for better mobile experience */}
       <div className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow">
         <img 
-          src={getImageUrl(images[selectedIndex])}
+          src={imageErrors[selectedIndex] ? fallbackImageUrl : getImageUrl(images[selectedIndex])}
           alt={`Car view ${selectedIndex + 1}`} 
           className="w-full h-full object-cover"
-          onError={(e) => {
+          onError={() => {
             console.error(`Failed to load image: ${getImageUrl(images[selectedIndex])}`);
-            e.currentTarget.src = 'https://via.placeholder.com/800x600?text=Image+Not+Found';
+            // Set this image as errored
+            setImageErrors(prev => ({...prev, [selectedIndex]: true}));
+            // Don't set src here - React will rerender with fallback
           }}
         />
         
@@ -114,11 +127,13 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
               }}
             >
               <img 
-                src={getImageUrl(image)}
+                src={imageErrors[index] ? thumbnailFallbackUrl : getImageUrl(image)}
                 alt={`Thumbnail ${index + 1}`} 
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Thumbnail';
+                onError={() => {
+                  // Set this thumbnail as errored
+                  setImageErrors(prev => ({...prev, [index]: true}));
+                  // Don't set src here - React will rerender with fallback
                 }}
               />
             </div>

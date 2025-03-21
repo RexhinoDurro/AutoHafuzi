@@ -7,8 +7,7 @@ from .views import (
     add_car_images, delete_car_image, about_page, add_option, get_options, delete_option,
     get_categories, get_exterior_colors, add_exterior_color, update_exterior_color, delete_exterior_color, get_upholstery_types, add_upholstery, update_upholstery, delete_upholstery,
     get_interior_colors, add_interior_color, update_interior_color, delete_interior_color,
-    get_site_analytics, contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message
-    
+    get_site_analytics, contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message, placeholder_image
 )
 
 urlpatterns = [
@@ -38,6 +37,7 @@ urlpatterns = [
     
     path('cars/<int:car_id>/images/', add_car_images, name='add_car_images'),
     path('cars/images/<int:image_id>/', delete_car_image, name='delete_car_image'),
+    path('placeholder/<int:width>/<int:height>/', placeholder_image, name='placeholder_image'),
     #
     path('auth/', admin_login, name='admin_login'),
     

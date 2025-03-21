@@ -65,5 +65,8 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'dist'),  # Point to Vite's dist folder instead of build
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # This setting should already be in your file
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

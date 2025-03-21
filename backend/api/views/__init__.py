@@ -16,7 +16,7 @@ from .color_views import (
     get_upholstery_types, add_upholstery, update_upholstery, delete_upholstery
 )
 from .contact_views import contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message
-
+from .placeholder_views import placeholder_image
 __all__ = [
     'admin_login',
     'get_cars',
@@ -61,4 +61,5 @@ __all__ = [
     'get_contact_messages',
     'mark_message_as_read',
     'delete_message'
+    'placeholder_image'
 ]
