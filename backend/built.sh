@@ -4,6 +4,7 @@ set -o errexit
 cd "$(dirname "$0")"
 
 pip install -r requirements.txt
+pip install django-cloudinary-storage cloudinary
 python manage.py collectstatic --noinput
 python manage.py migrate
 #python manage.py init_car_data

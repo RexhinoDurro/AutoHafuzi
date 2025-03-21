@@ -3,13 +3,15 @@ import dj_database_url
 from .settings import *
 from .settings import BASE_DIR
 
-
+# Allowed hosts and CSRF settings
 ALLOWED_HOSTS = [os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
-CSRF_TRUSTED_ORIGINS = ['https://'+ os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
+CSRF_TRUSTED_ORIGINS = ['https://' + os.environ.get('RENDER_EXTERNAL_HOSTNAME')]
 
+# Security settings
 DEBUG = False
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
+# Middleware configuration
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -23,15 +25,33 @@ MIDDLEWARE = [
     'api.middleware.SiteVisitMiddleware',
 ]
 
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
 ]
 
-# Add templates directory for index.html
+# Add cloudinary to INSTALLED_APPS
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django_extensions',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'cloudinary_storage',  # Add this before django.contrib.staticfiles
+    'django.contrib.staticfiles',
+    'cloudinary',  # Add cloudinary
+    'api',
+    'corsheaders',
+    'rest_framework',
+    'rest_framework.authtoken',
+]
+
+# Templates configuration
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Add this line to include templates
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -44,15 +64,23 @@ TEMPLATES = [
     },
 ]
 
+# Cloudinary configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dka3gcr36'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4')
+}
+
+# Storage configuration
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 STORAGES = {
-  "default": {
-    "BACKEND": "django.core.files.storage.FileSystemStorage",
-   },
-  "staticfiles": {  # Changed from "static" to "staticfiles"
+  "staticfiles": {
     "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
   },
 }
 
+# Database configuration
 DATABASES = {
     'default': dj_database_url.config(
       default=os.environ['DATABASE_URL'],
@@ -60,13 +88,22 @@ DATABASES = {
     )
 }
 
-# Make sure your React build files are properly collected
+# Static files configuration
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'dist'),  # Point to Vite's dist folder instead of build
+    os.path.join(BASE_DIR, 'dist'),  # Point to Vite's dist folder
 ]
 
+# Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# This setting should already be in your file
+# Static root setting
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Security settings for production
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
