@@ -71,14 +71,11 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4')
 }
 
-# Storage configuration
+# Media files configuration - Use Cloudinary for media
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
-STORAGES = {
-  "staticfiles": {
-    "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
-  },
-}
+# Static files configuration - Use both old and new settings syntax for compatibility
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Database configuration
 DATABASES = {
@@ -89,9 +86,10 @@ DATABASES = {
 }
 
 # Static files configuration
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'dist'),  # Point to Vite's dist folder
-]
+# IMPORTANT: Comment this out if the directory doesn't exist
+# STATICFILES_DIRS = [
+#    os.path.join(BASE_DIR, 'dist'),  # This directory doesn't exist on Render
+# ]
 
 # Media files configuration
 MEDIA_URL = '/media/'
@@ -103,7 +101,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Security settings for production
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
