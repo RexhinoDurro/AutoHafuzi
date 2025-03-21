@@ -1,5 +1,3 @@
-// Update the ImageGallery.tsx component with better fallback images
-
 import React, { useState } from 'react';
 import { CarImage } from '../types/car';
 import { API_BASE_URL } from '../config/api';
@@ -28,27 +26,36 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return 'preview' in image;
   };
 
+  // Helper function to normalize image path
+  const normalizeImagePath = (path: string): string => {
+    if (!path) return `${baseUrl}/api/placeholder/800/600`;
+    
+    // If it's already a full URL, return it
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    // Make sure baseUrl doesn't end with a slash and path starts with one
+    const baseUrlFormatted = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const pathFormatted = path.startsWith('/') ? path : `/${path}`;
+    
+    return `${baseUrlFormatted}${pathFormatted}`;
+  };
+
   // Helper function to get the correct image URL
   const getImageUrl = (image: CarImage | TempImage): string => {
     if (isTempImage(image)) {
       return image.preview;
     } else {
-      // Check if image.image already contains http:// or https://
-      if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
-        return image.image;
-      }
-      // Check if image.url is available and use that instead
+      // Check if image.url is available and use that first
       if ('url' in image && image.url) {
         return image.url;
       }
-      // Make sure image.image doesn't start with a slash if baseUrl ends with one
-      const baseUrlWithoutTrailingSlash = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-      const imagePath = image.image.startsWith('/') ? image.image : `/${image.image}`;
-      return `${baseUrlWithoutTrailingSlash}${imagePath}`;
+      return normalizeImagePath(image.image);
     }
   };
 
-  // Local fallback image URL that works offline
+  // Get appropriate fallback image URLs
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
   const thumbnailFallbackUrl = `${baseUrl}/api/placeholder/100/100`;
 
@@ -75,7 +82,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
             console.error(`Failed to load image: ${getImageUrl(images[selectedIndex])}`);
             // Set this image as errored
             setImageErrors(prev => ({...prev, [selectedIndex]: true}));
-            // Don't set src here - React will rerender with fallback
+            // No need to manually set src, React will rerender with fallback
           }}
         />
         
@@ -133,7 +140,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 onError={() => {
                   // Set this thumbnail as errored
                   setImageErrors(prev => ({...prev, [index]: true}));
-                  // Don't set src here - React will rerender with fallback
+                  // No need to manually set src, React will rerender with fallback
                 }}
               />
             </div>
