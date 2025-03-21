@@ -27,6 +27,22 @@ CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
 ]
 
+# Add templates directory for index.html
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Add this line to include templates
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 STORAGES = {
   "default": {
@@ -43,3 +59,11 @@ DATABASES = {
       conn_max_age=600
     )
 }
+
+# Make sure your React build files are properly collected
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'dist'),  # Point to Vite's dist folder instead of build
+]
+
+# This setting should already be in your file
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
