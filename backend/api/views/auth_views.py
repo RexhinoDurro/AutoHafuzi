@@ -3,12 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from django.views.decorators.csrf import csrf_exempt
+
 
 
 
 @api_view(['POST', 'GET'])
-@csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         # Handle login as is
