@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Hafuzi</title>
+    {% load static %}
+    <!-- Vite typically injects CSS in JS, so we don't need a separate CSS link -->
+</head>
+<body>
+    <div id="root"></div>
+    <!-- For Vite, the main JS file is often named differently -->
+    <script type="module" src="{% static 'assets/index.js' %}"></script>
+    <!-- If the path above doesn't work, you'll need to check the exact filename in your dist folder -->
+</body>
+</html>
