@@ -902,7 +902,7 @@ const CarHolderFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                 onChange={(e) => handleFilterChange('seats', e.target.value)}
                 className="w-full p-1 text-sm border rounded"
               >
-                <option value="">Vendet</option>
+                <option value="">Sedilet</option>
                 {seatOptions.map((seats) => (
                   <option key={seats} value={seats.toString()}>
                     {seats}

@@ -490,7 +490,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               onChange={(e) => handleFilterChange('first_registration_from', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">Të gjitha vit</option>
+              <option value="">Të gjitha vitet</option>
               {years.map((year) => (
                 <option key={year} value={year.toString()}>
                   {year}
@@ -506,7 +506,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
               onChange={(e) => handleFilterChange('first_registration_to', e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="">Të gjitha vit</option>
+              <option value="">Të gjitha vitet</option>
               {years.map((year) => (
                 <option key={year} value={year.toString()}>
                   {year}
@@ -581,7 +581,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('bodyType', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha lloj karrocerie</option>
+                  <option value="">Të gjitha llojet e karocerive</option>
                   {bodyTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -612,7 +612,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('gearbox', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha transmision</option>
+                  <option value="">Të gjitha transmisionet</option>
                   {gearboxTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -628,7 +628,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('doors', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha numër dyersh</option>
+                  <option value="">Të gjitha dyerte</option>
                   {doorOptions.map((doors) => (
                     <option key={doors} value={doors.toString()}>
                       {doors}
@@ -644,7 +644,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('seats', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha numër ndenjësesh</option>
+                  <option value="">Të gjitha ndenjëset</option>
                   {seatOptions.map((seats) => (
                     <option key={seats} value={seats.toString()}>
                       {seats}
@@ -660,7 +660,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('condition', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha gjendje</option>
+                  <option value="">Të gjitha gjendjet</option>
                   {conditionOptions.map((condition, index) => (
                     <option key={condition} value={['new', 'used'][index]}>
                       {condition}
@@ -750,7 +750,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
   
           {/* Interior Color Section */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold mb-2">Ngjyra e Interiorit</h3>
+            <h3 className="font-semibold mb-2">Ngjyra e Brendshme</h3>
             {loading.interiorColors ? (
               <p className="text-sm text-gray-500">Duke ngarkuar ngjyrat...</p>
             ) : interiorColors.length > 0 ? (
@@ -810,7 +810,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('fuel_type', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha lloj karburanti</option>
+                  <option value="">Të gjitha llojet e  karburanteve</option>
                   {fuelTypes.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -825,7 +825,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                   onChange={(e) => handleFilterChange('emission_class', e.target.value)}
                   className="w-full p-2 border rounded-lg"
                 >
-                  <option value="">Të gjitha klasë emetimi</option>
+                  <option value="">Të gjitha klasat e emetimeve</option>
                   {emissionClasses.map((cls) => (
                     <option key={cls} value={cls}>
                       {cls}
@@ -846,7 +846,7 @@ const CarFilter: React.FC<FilterProps> = ({ onFilterChange }) => {
                 onChange={(e) => handleFilterChange('created_since', e.target.value)}
                 className="w-full p-2 border rounded-lg"
               >
-                <option value="">Të gjitha kohë</option>
+                <option value="">Të gjitha kohët</option>
                 {createdSinceOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}

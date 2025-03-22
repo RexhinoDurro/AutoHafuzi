@@ -20,6 +20,11 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({});
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
   
   // Helper function to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
@@ -52,6 +57,38 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return `${baseUrl}/api/placeholder/800/600`;
   };
 
+  // Touch handlers for swipe functionality
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && images.length > 1) {
+      // Navigate to next image
+      setSelectedIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+    }
+    
+    if (isRightSwipe && images.length > 1) {
+      // Navigate to previous image
+      setSelectedIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+    }
+    
+    // Reset touch coordinates
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
   // Get appropriate fallback image URLs
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
   const thumbnailFallbackUrl = `${baseUrl}/api/placeholder/100/100`;
@@ -69,8 +106,13 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
 
   return (
     <div className="w-full">
-      {/* Main selected image */}
-      <div className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow">
+      {/* Main selected image with swipe functionality */}
+      <div 
+        className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <img 
           src={imageErrors[selectedIndex] ? fallbackImageUrl : getImageUrl(images[selectedIndex])}
           alt={`Car view ${selectedIndex + 1}`} 
@@ -82,8 +124,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
           }}
         />
         
-        {/* Navigation arrows */}
-        {images.length > 1 && (
+        {/* Navigation arrows - show on desktop or when not mobile */}
+        {images.length > 1 && !isMobile && (
           <>
             <button
               onClick={(e) => {
@@ -106,6 +148,13 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
               &#10095;
             </button>
           </>
+        )}
+        
+        {/* Swipe indicator for mobile */}
+        {images.length > 1 && isMobile && (
+          <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+            Swipe to navigate
+          </div>
         )}
         
         {/* Image counter */}
