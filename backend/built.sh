@@ -10,94 +10,57 @@ mkdir -p staticfiles media
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Run Django commands
+# Run Django collectstatic
 python manage.py collectstatic --noinput
 
-# Generate and apply migrations safely
-# First, check if there are any model changes to migrate
-python manage.py makemigrations --dry-run | grep -q "No changes detected" || {
-    # Create a safe migration for the slug and public_id fields
-    python manage.py makemigrations api --empty --name safe_column_additions
-    
-    # Edit the generated migration file to safely check if columns exist before adding them
-    MIGRATION_FILE=$(find api/migrations -name "*safe_column_additions.py" | sort -r | head -n 1)
-    
-    # Replace the migration content with our safe SQL operations
-    cat > $MIGRATION_FILE << 'EOF'
-from django.db import migrations, models
+echo "Fixing migration dependencies..."
 
-class Migration(migrations.Migration):
-    dependencies = [
-        ('api', '__previous_migration__'),  # Will be automatically filled by makemigrations
-    ]
-    
-    operations = [
-        # Safely check if slug doesn't exist before adding it to Car model
-        migrations.RunSQL(
-            sql="""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT FROM information_schema.columns 
-                    WHERE table_name = 'api_car' 
-                    AND column_name = 'slug'
-                ) THEN
-                    ALTER TABLE api_car ADD COLUMN slug character varying(255) NULL;
-                END IF;
-            END $$;
-            """,
-            reverse_sql="-- No reverse operation needed"
-        ),
-        
-        # Safely check if public_id doesn't exist before adding it to CarImage model
-        migrations.RunSQL(
-            sql="""
-            DO $$
-            BEGIN
-                IF NOT EXISTS (
-                    SELECT FROM information_schema.columns 
-                    WHERE table_name = 'api_carimage' 
-                    AND column_name = 'public_id'
-                ) THEN
-                    ALTER TABLE api_carimage ADD COLUMN public_id character varying(255) NULL;
-                END IF;
-            END $$;
-            """,
-            reverse_sql="-- No reverse operation needed"
-        ),
-    ]
-EOF
-    
-    # Now run normal migrations
-    python manage.py makemigrations
-    python manage.py makemigrations api
-}
+# Check for broken migrations and fix them
+if [ -f api/migrations/0012_populate_existing_slugs.py ]; then
+  echo "Found migration 0012 with broken dependency - fixing..."
+  
+  # Find the latest actual migration before 0012
+  LATEST_MIGRATION=$(find api/migrations -name "*.py" | grep -v "__init__" | grep -v "0012_" | sort -V | tail -n 1)
+  LATEST_MIGRATION_NUM=$(basename $LATEST_MIGRATION | cut -d'_' -f1)
+  LATEST_MIGRATION_NAME=$(basename $LATEST_MIGRATION .py | cut -d'_' -f2-)
+  
+  echo "Latest valid migration: $LATEST_MIGRATION ($LATEST_MIGRATION_NUM - $LATEST_MIGRATION_NAME)"
+  
+  # Update 0012 to depend on the latest actual migration
+  sed -i "s/('api', '0011_car_slug_carimage_public_id_alter_carimage_image')/('api', '${LATEST_MIGRATION_NUM}_${LATEST_MIGRATION_NAME}')/g" api/migrations/0012_populate_existing_slugs.py
+  
+  # Do the same for 0013 if it exists
+  if [ -f api/migrations/0013_safe_carimage_fields.py ]; then
+    echo "Found migration 0013 - updating it to depend on 0012"
+    sed -i "s/('api', '[^']*')/('api', '0012_populate_existing_slugs')/g" api/migrations/0013_safe_carimage_fields.py
+  fi
+fi
 
-# Apply migrations
+# If there are no migration files at all, create initial migrations
+MIGRATION_COUNT=$(find api/migrations -name "*.py" | grep -v "__init__" | wc -l)
+if [ "$MIGRATION_COUNT" -eq 0 ]; then
+  echo "No migrations found - creating initial migrations..."
+  python manage.py makemigrations
+  python manage.py makemigrations api
+fi
+
+# Now run the actual migrations
+echo "Running migrations..."
 python manage.py migrate
 
-# Create a data migration to populate missing slugs if needed
-if python manage.py shell -c "from api.models import Car; print(Car.objects.filter(slug__isnull=True).count() + Car.objects.filter(slug='').count())" | grep -q "[^0]"; then
-    echo "Found cars with missing slugs - creating data migration to populate them"
-    python manage.py makemigrations api --empty --name populate_missing_slugs
-    
-    # Get the latest migration file
-    SLUG_MIGRATION_FILE=$(find api/migrations -name "*populate_missing_slugs.py" | sort -r | head -n 1)
-    
-    # Replace the migration content with our slug population script
-    cat > $SLUG_MIGRATION_FILE << 'EOF'
-from django.db import migrations
-from django.utils.text import slugify
+# Create a simple migration to ensure Car has a slug field
+cat > ensure_car_slug.py << 'EOF'
+from django.db import migrations, models
 import uuid
+from django.utils.text import slugify
 
-def populate_missing_slugs(apps, schema_editor):
-    """Generate slugs for cars that don't have them yet"""
+def generate_slugs_for_existing_cars(apps, schema_editor):
+    """
+    Generate slugs for all existing Car objects that don't have one
+    """
     Car = apps.get_model('api', 'Car')
     
-    # Get all cars with empty slugs
-    cars_without_slugs = Car.objects.filter(slug__isnull=True) | Car.objects.filter(slug='')
-    
-    for car in cars_without_slugs:
+    for car in Car.objects.filter(slug__isnull=True) | Car.objects.filter(slug=''):
         # Create base for the slug
         base_slug = f"{car.make.name}-{car.model.name}"
         
@@ -115,22 +78,29 @@ def populate_missing_slugs(apps, schema_editor):
         
         # Slugify and save
         car.slug = slugify(base_slug)
-        car.save(update_fields=['slug'])
+        car.save()
 
-class Migration(migrations.Migration):
-
-    dependencies = [
-        ('api', '__previous_migration__'),  # Will be automatically filled by makemigrations
-    ]
-
-    operations = [
-        migrations.RunPython(populate_missing_slugs),
-    ]
-EOF
+# Run this script directly
+try:
+    import django
+    django.setup()
+    from django.apps import apps
+    Car = apps.get_model('api', 'Car')
+    from django.utils.text import slugify
+    import uuid
     
-    # Apply the data migration
-    python manage.py migrate api
-fi
+    # Check if slug field exists and populate it
+    if hasattr(Car, 'slug'):
+        print("Generating slugs for cars without slugs...")
+        generate_slugs_for_existing_cars(None, None)
+    else:
+        print("Car model doesn't have slug field yet - skipping slug generation")
+except Exception as e:
+    print(f"Error running slug script: {str(e)}")
+EOF
+
+# Run the script to ensure slug field is populated
+python ensure_car_slug.py
 
 # Uncomment these if you need to run your data initialization scripts
 # python manage.py init_car_data
@@ -140,3 +110,6 @@ fi
 #if [[ $CREATE_SUPERUSER ]]; then
 #    python manage.py createsuperuser --noinput
 #fi
+
+# Cleanup
+rm -f ensure_car_slug.py
