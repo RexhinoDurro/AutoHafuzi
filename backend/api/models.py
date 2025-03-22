@@ -107,7 +107,6 @@ class Car(models.Model):
     first_registration_day = models.IntegerField(null=True, blank=True)
     first_registration_month = models.IntegerField(null=True, blank=True)
     first_registration_year = models.IntegerField(null=True, blank=True)
-    # Replace single color field with exterior and interior color references
     exterior_color = models.ForeignKey(ExteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     interior_color = models.ForeignKey(InteriorColor, on_delete=models.SET_NULL, null=True, blank=True)
     upholstery = models.ForeignKey(Upholstery, on_delete=models.SET_NULL, null=True, blank=True)
@@ -115,9 +114,9 @@ class Car(models.Model):
     discussed_price = models.BooleanField(default=False) 
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    view_count = models.IntegerField(default=0)  # Track total views
+    view_count = models.IntegerField(default=0)
     
-    # Add slug field for SEO-friendly URLs
+    # The slug field already exists in the database, just include it in the model
     slug = models.SlugField(max_length=255, unique=True, blank=True)
 
     # Car specifications (remaining fields are the same)
