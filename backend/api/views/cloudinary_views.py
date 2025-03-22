@@ -30,6 +30,12 @@ def add_car_images(request, car_slug):
     except Car.DoesNotExist:
         return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
     
+    # Extensive logging for debugging
+    logger.info(f"Image upload request for car: {car_slug}")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request content type: {request.content_type}")
+    logger.info(f"Request FILES keys: {list(request.FILES.keys())}")
+    
     # Configure Cloudinary
     cloudinary.config(
         cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
@@ -45,6 +51,7 @@ def add_car_images(request, car_slug):
     images = request.FILES.getlist('images')
     
     if not images:
+        logger.error("No images provided in the request")
         return Response({'error': 'No images provided'}, status=status.HTTP_400_BAD_REQUEST)
     
     # Check existing images count
@@ -56,40 +63,55 @@ def add_car_images(request, car_slug):
     
     for img in images:
         try:
+            # Validate file size (5MB limit)
+            if img.size > 5 * 1024 * 1024:  # 5MB
+                errors.append(f"Image {img.name} exceeds 5MB size limit")
+                continue
+            
+            # Validate file type
+            allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+            if img.content_type not in allowed_types:
+                errors.append(f"Invalid file type for {img.name}. Allowed: JPEG, PNG, WebP")
+                continue
+            
             # Generate a unique folder path for this car
             folder_path = f"autohafuzi/cars/{car.id}"
             unique_id = uuid.uuid4().hex[:8]
             
-            # Upload to Cloudinary
+            # Upload to Cloudinary with additional transformations
             upload_result = cloudinary.uploader.upload(
                 img,
                 folder=folder_path,
                 public_id=unique_id,
                 overwrite=True,
-                resource_type="auto"
+                resource_type="image",
+                transformation=[
+                    {'quality': 'auto:good'},
+                    {'format': 'auto'}
+                ]
             )
             
-            logger.debug(f"Cloudinary upload result: {upload_result}")
+            logger.info(f"Cloudinary upload result for {img.name}: {upload_result}")
             
             # Create CarImage object with Cloudinary data
             image = CarImage.objects.create(
                 car=car,
                 image=upload_result['public_id'],
                 public_id=upload_result['public_id'],
-                is_primary=current_images_count == 0 and len(uploaded_images) == 0  # First image is primary if no other images
+                is_primary=current_images_count == 0 and len(uploaded_images) == 0  # First image is primary
             )
             
-            # Get the serialized data without trying to access image.url attribute
+            # Get the serialized data 
             image_data = CarImageSerializer(image).data
             # Explicitly add the URL from the upload result
-            image_data['url'] = upload_result['secure_url']
+            image_data['url'] = upload_result.get('secure_url', '')
             uploaded_images.append(image_data)
             
         except Exception as e:
-            logger.error(f"Error uploading image to Cloudinary: {str(e)}")
-            errors.append(str(e))
+            logger.error(f"Error uploading image {img.name} to Cloudinary: {str(e)}")
+            errors.append(f"Failed to upload {img.name}: {str(e)}")
     
-    # Return the results
+    # Determine response based on upload results
     if uploaded_images:
         return Response({
             'uploaded': uploaded_images,
@@ -100,7 +122,6 @@ def add_car_images(request, car_slug):
         'error': 'Failed to upload images',
         'details': errors
     }, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -141,7 +162,6 @@ def delete_car_image(request, image_id):
         logger.error(f"Error deleting image from Cloudinary: {str(e)}")
         return Response({'error': f'Failed to delete image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def set_primary_image(request, car_slug, image_id):
@@ -156,7 +176,12 @@ def set_primary_image(request, car_slug, image_id):
         image = CarImage.objects.get(id=image_id, car=car)
         
         # Set as primary image
-        car.set_primary_image(image_id)
+        # First, clear any existing primary images
+        car.images.update(is_primary=False)
+        
+        # Then set the new primary image
+        image.is_primary = True
+        image.save()
         
         return Response({'message': 'Primary image set successfully'}, status=status.HTTP_200_OK)
     
@@ -169,7 +194,6 @@ def set_primary_image(request, car_slug, image_id):
     except Exception as e:
         logger.error(f"Error setting primary image: {str(e)}")
         return Response({'error': f'Failed to set primary image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(['GET'])
 def get_car_images(request, car_slug):
@@ -201,7 +225,6 @@ def get_car_images(request, car_slug):
         logger.error(f"Error getting car images: {str(e)}")
         return Response({'error': f'Failed to get images: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reorder_car_images(request, car_slug):
@@ -227,10 +250,10 @@ def reorder_car_images(request, car_slug):
                 image.order = index
                 image.save(update_fields=['order'])
             except CarImage.DoesNotExist:
-                logger.warning(f"Image {image_id} not found or does not belong to car {car.slug}")
+                logger.warning(f"Image {image_id} not found or does not belong to car {car_slug}")
         
         # Return updated images with manually constructed URLs
-        images = car.images.all()
+        images = car.images.all().order_by('order')
         response_data = []
         
         for image in images:
