@@ -26,33 +26,24 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return 'preview' in image;
   };
 
-  // Helper function to normalize image path
-  const normalizeImagePath = (path: string): string => {
-    if (!path) return `${baseUrl}/api/placeholder/800/600`;
-    
-    // If it's already a full URL, return it
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    
-    // Make sure baseUrl doesn't end with a slash and path starts with one
-    const baseUrlFormatted = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    const pathFormatted = path.startsWith('/') ? path : `/${path}`;
-    
-    return `${baseUrlFormatted}${pathFormatted}`;
-  };
-
   // Helper function to get the correct image URL
   const getImageUrl = (image: CarImage | TempImage): string => {
     if (isTempImage(image)) {
       return image.preview;
-    } else {
-      // Check if image.url is available and use that first
-      if ('url' in image && image.url) {
-        return image.url;
-      }
-      return normalizeImagePath(image.image);
     }
+    
+    // Check if image.url is available and use that first (for Cloudinary URLs)
+    if ('url' in image && image.url) {
+      return image.url;
+    }
+    
+    // For non-Cloudinary URLs or fallback
+    if (image.image && (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
+      return image.image;
+    }
+    
+    // Default case - prepend the baseUrl
+    return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
   };
 
   // Get appropriate fallback image URLs
@@ -72,7 +63,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
 
   return (
     <div className="w-full">
-      {/* Main selected image - adjusted height for better mobile experience */}
+      {/* Main selected image */}
       <div className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow">
         <img 
           src={imageErrors[selectedIndex] ? fallbackImageUrl : getImageUrl(images[selectedIndex])}
@@ -82,11 +73,10 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
             console.error(`Failed to load image: ${getImageUrl(images[selectedIndex])}`);
             // Set this image as errored
             setImageErrors(prev => ({...prev, [selectedIndex]: true}));
-            // No need to manually set src, React will rerender with fallback
           }}
         />
         
-        {/* Navigation arrows - improved touch targets for mobile */}
+        {/* Navigation arrows */}
         {images.length > 1 && (
           <>
             <button
@@ -112,13 +102,13 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
           </>
         )}
         
-        {/* Image counter - made more visible */}
+        {/* Image counter */}
         <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs md:text-sm">
           {selectedIndex + 1} / {images.length}
         </div>
       </div>
       
-      {/* Thumbnails - Only show on larger screens or if explicitly not mobile */}
+      {/* Thumbnails */}
       {images.length > 1 && shouldShowThumbnails && (
         <div className="hidden md:flex space-x-2 overflow-x-auto py-2 mt-2">
           {images.map((image, index) => (
@@ -140,7 +130,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 onError={() => {
                   // Set this thumbnail as errored
                   setImageErrors(prev => ({...prev, [index]: true}));
-                  // No need to manually set src, React will rerender with fallback
                 }}
               />
             </div>
@@ -148,7 +137,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         </div>
       )}
       
-      {/* Mobile-friendly dots indicator for small screens */}
+      {/* Mobile indicator */}
       {images.length > 1 && isMobile && (
         <div className="flex justify-center mt-2 md:hidden">
           {images.map((_, index) => (

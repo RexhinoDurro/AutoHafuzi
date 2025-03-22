@@ -28,6 +28,7 @@ MIDDLEWARE = [
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
+  "https://res.cloudinary.com", 
 ]
 
 # Add cloudinary to INSTALLED_APPS
@@ -38,9 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',  # Add this before django.contrib.staticfiles
+    'cloudinary_storage',  # Must come before django.contrib.staticfiles
     'django.contrib.staticfiles',
-    'cloudinary',  # Add cloudinary
+    'cloudinary',  # Add cloudinary itself
     'api',
     'corsheaders',
     'rest_framework',
@@ -57,6 +58,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -68,7 +70,12 @@ TEMPLATES = [
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dka3gcr36'),
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4')
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'your-api-secret-here'),
+    'SECURE': True,  # Always use HTTPS
+    'MEDIA_TAG': 'media',  # Folder structure in Cloudinary
+    'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
+    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],  # Keep everything by default
+    'STATIC_TAG': 'static'  # Optional: for static files
 }
 
 # Media files configuration - Use Cloudinary for media

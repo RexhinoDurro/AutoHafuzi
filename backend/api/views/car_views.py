@@ -13,6 +13,10 @@ import json
 import uuid
 from django.shortcuts import render
 from django.http import JsonResponse
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 class CarPagination(PageNumberPagination):
     page_size = 12
@@ -28,7 +32,7 @@ def handle_m2m_options(request_data, serializer_data):
     option_ids = request_data.getlist('options', [])
     
     # Print for debugging
-    print(f"Received option_ids: {option_ids}")
+    logger.debug(f"Received option_ids: {option_ids}")
     
     # Remove options field from serializer data to avoid validation issues
     if 'options' in serializer_data:
@@ -111,6 +115,7 @@ def get_cars(request):
         paginator = CarPagination()
         paginated_queryset = paginator.paginate_queryset(queryset, request)
         
+        # Pass request in context for correct URL generation
         serializer = CarSerializer(paginated_queryset, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
@@ -118,8 +123,8 @@ def get_cars(request):
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         import traceback
-        print(f"Error in get_cars: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error in get_cars: {str(e)}")
+        logger.error(traceback.format_exc())
         return Response(
             {'error': 'An unexpected error occurred', 'detail': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -143,7 +148,7 @@ def get_car(request, car_id):
         if 'HTTP_X_VIEW_TRACKING' in request.META:
             if request.META['HTTP_X_VIEW_TRACKING'].lower() == 'false':
                 should_track_view = False
-                print(f"Skipping view count for car {car_id} due to X-View-Tracking: false header")
+                logger.debug(f"Skipping view count for car {car_id} due to X-View-Tracking: false header")
         
         # Only track views if the header allows it
         if should_track_view:
@@ -171,16 +176,17 @@ def get_car(request, car_id):
                     # Increment the view counter exactly once
                     car.view_count += 1
                     car.save(update_fields=['view_count'])
-                    print(f"View count incremented for car {car_id} - now {car.view_count}")
+                    logger.debug(f"View count incremented for car {car_id} - now {car.view_count}")
                 else:
-                    print(f"Skipped view increment - car {car_id} viewed recently by session {session_id}")
+                    logger.debug(f"Skipped view increment - car {car_id} viewed recently by session {session_id}")
             except Exception as e:
-                print(f"Error recording car view: {e}")
+                logger.error(f"Error recording car view: {e}")
                 import traceback
-                print(traceback.format_exc())
+                logger.error(traceback.format_exc())
         
         # Always return the car data
-        serializer = CarSerializer(car)
+        # Make sure to include request in context for proper URL generation
+        serializer = CarSerializer(car, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Car.DoesNotExist:
         return Response({"error": "Car not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -192,7 +198,7 @@ def add_car(request):
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     data = request.data.copy()
-    print(f"Received data: {data}")
+    logger.debug(f"Received car data: {data}")
     
     # Process boolean fields
     for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:
@@ -218,7 +224,7 @@ def add_car(request):
             first_registration_date = datetime(year, month, day).date()
             data['first_registration'] = first_registration_date.isoformat()
         except ValueError as e:
-            print(f"Error creating date from day={day}, month={month}, year={year}: {e}")
+            logger.error(f"Error creating date from day={day}, month={month}, year={year}: {e}")
     
     # Extract options to handle separately
     option_ids = handle_m2m_options(request.data, data)
@@ -227,10 +233,12 @@ def add_car(request):
     image = request.FILES.get('image')
     if image:
         data['image'] = image
+        logger.debug(f"Processing initial image: {image.name}, size: {image.size}")
     
-    serializer = CarSerializer(data=data)
+    # Include request in context for URL generation
+    serializer = CarSerializer(data=data, context={'request': request})
     if not serializer.is_valid():
-        print(f"Serializer errors: {serializer.errors}")  # Debug log
+        logger.error(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     car = serializer.save()
@@ -241,18 +249,26 @@ def add_car(request):
             options = Option.objects.filter(id__in=option_ids)
             car.options.set(options)
         except Exception as e:
-            print(f"Error setting options: {e}")
+            logger.error(f"Error setting options: {e}")
     
     # If an image was uploaded, create a CarImage for it
     if image:
         from ..models import CarImage
-        car_image = CarImage.objects.create(
-            car=car,
-            image=image,
-            is_primary=True  # First image is primary
-        )
+        try:
+            logger.debug(f"Creating CarImage with initial image: {image.name}")
+            car_image = CarImage.objects.create(
+                car=car,
+                image=image,
+                is_primary=True  # First image is primary
+            )
+            logger.debug(f"Created image with URL: {car_image.image.url}")
+        except Exception as e:
+            logger.error(f"Error creating initial image: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
     
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    # Return the serialized data with request context for proper URLs
+    return Response(CarSerializer(car, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -263,6 +279,7 @@ def update_car(request, car_id):
     try:
         car = Car.objects.get(id=car_id)
         data = request.data.copy()
+        logger.debug(f"Updating car {car_id} with data: {data}")
         
         # Process boolean fields
         for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:
@@ -288,12 +305,13 @@ def update_car(request, car_id):
                 first_registration_date = datetime(year, month, day).date()
                 data['first_registration'] = first_registration_date.isoformat()
             except ValueError as e:
-                print(f"Error creating date from day={day}, month={month}, year={year}: {e}")
+                logger.error(f"Error creating date from day={day}, month={month}, year={year}: {e}")
             
         # Extract options to handle separately
         option_ids = handle_m2m_options(request.data, data)
         
-        serializer = CarSerializer(car, data=data, partial=True)
+        # Include request in context for URL generation
+        serializer = CarSerializer(car, data=data, partial=True, context={'request': request})
         if serializer.is_valid():
             car = serializer.save()
             # Set the options manually after saving
@@ -303,7 +321,7 @@ def update_car(request, car_id):
                     options = Option.objects.filter(id__in=option_ids)
                     car.options.set(options)
                 except Exception as e:
-                    print(f"Error setting options: {e}")
+                    logger.error(f"Error setting options: {e}")
             
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -318,6 +336,17 @@ def delete_car(request, car_id):
     
     try:
         car = Car.objects.get(id=car_id)
+        
+        # Delete all associated images first to properly clean up Cloudinary
+        for image in car.images.all():
+            # Delete the file from Cloudinary
+            try:
+                if image.image:
+                    image.image.delete(save=False)
+            except Exception as e:
+                logger.error(f"Error deleting image from Cloudinary: {str(e)}")
+        
+        # Now delete the car (which will cascade delete related objects)
         car.delete()
         return Response({'message': 'Car deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Car.DoesNotExist:

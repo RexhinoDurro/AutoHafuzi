@@ -37,9 +37,8 @@ class CarImageSerializer(serializers.ModelSerializer):
     
     def get_url(self, obj):
         if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
+            # For Cloudinary, the URL is already absolute
+            # Just return the URL provided by Cloudinary
             return obj.image.url
         return None
 
