@@ -1,4 +1,5 @@
 # views/cloudinary_views.py
+
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
@@ -79,6 +80,8 @@ def add_car_images(request, car_id):
             
             # Add the CloudinaryField result to the uploaded_images list
             image_data = CarImageSerializer(image, context={'request': request}).data
+            # Explicitly add the URL from the upload result
+            image_data['url'] = upload_result['secure_url']
             uploaded_images.append(image_data)
             
         except Exception as e:
@@ -176,7 +179,19 @@ def get_car_images(request, car_id):
         car = Car.objects.get(id=car_id)
         images = car.images.all()
         serializer = CarImageSerializer(images, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        # Add Cloudinary URLs for each image
+        response_data = serializer.data
+        for image_data in response_data:
+            # If there's a public_id, manually construct the Cloudinary URL
+            # This is a fallback in case url isn't already in the serializer
+            if 'public_id' in image_data and not image_data.get('url'):
+                public_id = image_data['public_id']
+                if public_id:
+                    # Construct a Cloudinary URL
+                    image_data['url'] = f"https://res.cloudinary.com/{settings.CLOUDINARY_STORAGE['CLOUD_NAME']}/image/upload/{public_id}"
+                    
+        return Response(response_data, status=status.HTTP_200_OK)
     
     except Car.DoesNotExist:
         return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
