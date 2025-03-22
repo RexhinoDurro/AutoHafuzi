@@ -75,16 +75,28 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
     });
   };
 
-  // Function to get the primary image or the first image if no primary is set
+  // Function to get the image URL from car images with Cloudinary support
   const getDisplayImage = (car: Car) => {
-    if (car.images && car.images.length > 0) {
-      const primaryImage = car.images.find(img => img.is_primary);
-      if (primaryImage) {
-        return primaryImage.image;
-      }
-      return car.images[0].image;
+    if (!car.images || car.images.length === 0) {
+      return undefined;
     }
-    return undefined;
+    
+    // First try to find the primary image
+    const primaryImage = car.images.find(img => img.is_primary);
+    const imageToUse = primaryImage || car.images[0];
+    
+    // Check if Cloudinary URL is available
+    if (imageToUse.url) {
+      return imageToUse.url;
+    } else if (imageToUse.image) {
+      // Handle legacy image or direct path
+      return imageToUse.image.startsWith('http') 
+        ? imageToUse.image 
+        : `${API_BASE_URL}${imageToUse.image}`;
+    }
+    
+    // Fallback to placeholder
+    return `${API_BASE_URL}/api/placeholder/400/300`;
   };
 
   const toggleSidebar = () => {
@@ -126,6 +138,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
           >
             {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
           </button>
+          <button
+            onClick={() => navigate('/auth/add-car')}
+            className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700"
+          >
+            Add New Car
+          </button>
         </div>
       </div>
 
@@ -150,22 +168,28 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
             {cars.map((car) => (
               <tr key={car.id} className="border-t hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  {getDisplayImage(car) ? (
+                  <div className="w-20 h-20 overflow-hidden rounded">
                     <img
-                      src={getDisplayImage(car)?.startsWith('http') ? getDisplayImage(car) : `${API_BASE_URL}${getDisplayImage(car)}`}
+                      src={getDisplayImage(car)}
                       alt={`${car.brand} ${car.model_name}`}
-                      className="w-20 h-20 object-cover rounded"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.src = `${API_BASE_URL}/api/placeholder/400/300`;
+                      }}
                     />
-                  ) : (
-                    <div className="w-20 h-20 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-gray-400">No Image</span>
-                    </div>
-                  )}
+                  </div>
                 </td>
                 <td className="px-6 py-4">{car.brand}</td>
                 <td className="px-6 py-4">{car.model_name}</td>
                 <td className="px-6 py-4">{car.first_registration_year}</td>
-                <td className="px-6 py-4">€{car.price.toLocaleString()}</td>
+                <td className="px-6 py-4">
+                  {car.discussed_price 
+                    ? "Negotiable" 
+                    : `€${car.price.toLocaleString()}`
+                  }
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center">
                     <Eye className="text-gray-400 mr-2" size={16} />
@@ -173,22 +197,29 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                   </div>
                 </td>
                 <td className="px-6 py-4">{formatDate(car.created_at)}</td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 space-x-2">
                   <button
                     onClick={() => navigate(`/auth/edit-car/${car.id}`)}
-                    className="text-blue-600 hover:text-blue-800 mr-4"
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(car.id)}
-                    className="text-red-600 hover:text-red-800"
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                   >
                     Delete
                   </button>
                 </td>
               </tr>
             ))}
+            {cars.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  No cars found. Click "Add New Car" to create one.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

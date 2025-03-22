@@ -30,22 +30,22 @@ const Navbar = () => {
             <div className="hidden md:flex items-center space-x-8">
               <Link to="/" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Home className="h-5 w-5" />
-                <span className="font-medium">Home</span>
+                <span className="font-medium">Kryefaqja</span>
               </Link>
 
               <Link to="/about" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Users className="h-5 w-5" />
-                <span className="font-medium">About Us</span>
+                <span className="font-medium">Rreth Nesh</span>
               </Link>
 
               <Link to="/cars" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <CarIcon className="h-5 w-5" />
-                <span className="font-medium">Cars for Sale</span>
+                <span className="font-medium">Makina në Shitje</span>
               </Link>
 
               <Link to="/contact" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Phone className="h-5 w-5" />
-                <span className="font-medium">Contact</span>
+                <span className="font-medium">Kontakt</span>
               </Link>
 
               {/* Favorites Link */}
@@ -58,7 +58,7 @@ const Navbar = () => {
                     </span>
                   )}
                 </div>
-                <span className="font-medium">Favorites</span>
+                <span className="font-medium">Të Preferuarat</span>
               </Link>
             </div>
 
@@ -98,7 +98,7 @@ const Navbar = () => {
             className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
           >
             <Home className="h-5 w-5" />
-            <span>Home</span>
+            <span>Kryefaqja</span>
           </Link>
           <Link 
             to="/about" 
@@ -106,7 +106,7 @@ const Navbar = () => {
             className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
           >
             <Users className="h-5 w-5" />
-            <span>About Us</span>
+            <span>Rreth Nesh</span>
           </Link>
           <Link 
             to="/cars" 
@@ -114,7 +114,7 @@ const Navbar = () => {
             className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
           >
             <CarIcon className="h-5 w-5" />
-            <span>Cars for Sale</span>
+            <span>Makina në Shitje</span>
           </Link>
           <Link 
             to="/contact" 
@@ -122,7 +122,7 @@ const Navbar = () => {
             className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
           >
             <Phone className="h-5 w-5" />
-            <span>Contact</span>
+            <span>Kontakt</span>
           </Link>
           <Link 
             to="/favorites" 
@@ -137,7 +137,7 @@ const Navbar = () => {
                 </span>
               )}
             </div>
-            <span>Favorites</span>
+            <span>Të Preferuarat</span>
           </Link>
         </div>
       </div>

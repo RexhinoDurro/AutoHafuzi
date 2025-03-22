@@ -230,7 +230,7 @@ const CarHolder: React.FC = () => {
         <button 
           onClick={toggleFilter}
           className="bg-blue-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
-          aria-label="Toggle Filters"
+          aria-label="Ndrysho Filtrat"
         >
           <Filter className="h-6 w-6" />
         </button>
@@ -243,7 +243,7 @@ const CarHolder: React.FC = () => {
         }`}
       >
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold">Filters</h2>
+          <h2 className="text-xl font-bold">Filtrat</h2>
           <button 
             onClick={toggleFilter}
             className="text-gray-500 hover:text-gray-700"
@@ -266,29 +266,29 @@ const CarHolder: React.FC = () => {
         {/* Car listing section */}
         <div className="flex-grow w-full">
           <div id="car-listing-top" className="flex justify-between items-center mb-6 flex-wrap">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2 md:mb-0">Car Listings</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 md:mb-0">Listimi i Makinave</h1>
             
             {/* Sorting dropdown */}
             <div className="flex items-center">
-              <label htmlFor="sortCars" className="mr-2 text-gray-700">Sort:</label>
+              <label htmlFor="sortCars" className="mr-2 text-gray-700">Rendit:</label>
               <select
                 id="sortCars"
                 value={sortBy}
                 onChange={handleSortChange}
                 className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="best_results">Best Match</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="year_desc">Registration: Newest First</option>
-                <option value="year_asc">Registration: Oldest First</option>
-                <option value="mileage_asc">Mileage: Low to High</option>
-                <option value="mileage_desc">Mileage: High to Low</option>
+                <option value="best_results">Përputhja më e mirë</option>
+                <option value="price_asc">Çmimi: Nga më i ulëti</option>
+                <option value="price_desc">Çmimi: Nga më i larti</option>
+                <option value="year_desc">Regjistrimi: Nga më i riu</option>
+                <option value="year_asc">Regjistrimi: Nga më i vjetri</option>
+                <option value="mileage_asc">Kilometrazhi: Nga më i ulëti</option>
+                <option value="mileage_desc">Kilometrazhi: Nga më i larti</option>
               </select>
             </div>
           </div>
           
-          {loading && <p className="text-center text-gray-500 py-8">Loading cars...</p>}
+          {loading && <p className="text-center text-gray-500 py-8">Duke ngarkuar makinat...</p>}
           {error && <p className="text-center text-red-500 py-8">{error}</p>}
 
           <div className="space-y-4">
@@ -321,7 +321,7 @@ const CarHolder: React.FC = () => {
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-gray-200">
-                          <p className="text-gray-500">No image</p>
+                          <p className="text-gray-500">Pa imazh</p>
                         </div>
                       )}
                       
@@ -334,7 +334,7 @@ const CarHolder: React.FC = () => {
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
                         {car.full_service_history && (
                           <div className="bg-white p-1 rounded shadow-sm">
-                            <img src="/service-history-badge.png" alt="Service History" className="h-6 w-6" />
+                            <img src="/service-history-badge.png" alt="Historia e Shërbimit" className="h-6 w-6" />
                           </div>
                         )}
                       </div>
@@ -395,13 +395,13 @@ const CarHolder: React.FC = () => {
                       {/* Created date info */}
                       <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
                         <div className="text-sm text-gray-600">
-                          <span className="mr-1">Added on</span>
+                          <span className="mr-1">Shtuar më</span>
                           <span className="text-gray-800">{new Date(car.created_at).toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center">
                           <FavoriteButton carId={car.id} size={16} className="mr-3" />
                           <button className="text-sm text-blue-600 hover:text-blue-800">
-                            + Show more
+                            + Shfaq më shumë
                           </button>
                         </div>
                       </div>
@@ -410,7 +410,7 @@ const CarHolder: React.FC = () => {
                 </div>
               ))
             ) : (
-              !loading && <p className="text-center text-gray-500 py-8">No cars found.</p>
+              !loading && <p className="text-center text-gray-500 py-8">Nuk u gjetën makina.</p>
             )}
           </div>
 
@@ -427,7 +427,7 @@ const CarHolder: React.FC = () => {
                       ? 'text-gray-400 cursor-not-allowed' 
                       : 'text-blue-600 hover:bg-blue-50'
                   }`}
-                  aria-label="Previous page"
+                  aria-label="Faqja e mëparshme"
                 >
                   &laquo;
                 </button>
@@ -461,7 +461,7 @@ const CarHolder: React.FC = () => {
                       ? 'text-gray-400 cursor-not-allowed' 
                       : 'text-blue-600 hover:bg-blue-50'
                   }`}
-                  aria-label="Next page"
+                  aria-label="Faqja tjetër"
                 >
                   &raquo;
                 </button>
@@ -472,7 +472,7 @@ const CarHolder: React.FC = () => {
           {/* Results summary */}
           <div className="mt-4 text-center text-gray-500 text-sm">
             {!loading && cars.length > 0 && (
-              <p>Showing {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, ((totalPages - 1) * carsPerPage) + cars.length)} of {(totalPages - 1) * carsPerPage + cars.length} cars</p>
+              <p>Duke treguar {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, ((totalPages - 1) * carsPerPage) + cars.length)} nga {(totalPages - 1) * carsPerPage + cars.length} makina</p>
             )}
           </div>
         </div>

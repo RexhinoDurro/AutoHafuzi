@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Users, Award, Car, Clock, Settings, Sparkles, Map, Phone, Mail, Shield } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import { useNavigate } from 'react-router-dom';
 
 const AboutPage = () => {
-  const [companyDescription, setCompanyDescription] = useState('Driven by passion, committed to quality. We\'ve been helping customers find their perfect ride since 2010.');
+  const [companyDescription, setCompanyDescription] = useState('I shtyrë nga pasioni, i përkushtuar ndaj cilësisë. Ne kemi ndihmuar klientët të gjejnë automjetin e tyre të përsosur që nga viti 2010.');
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible] = useState({
     'overview': true,
@@ -13,6 +14,7 @@ const AboutPage = () => {
     'why-us': true,
     'contact': true
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch company information
@@ -25,7 +27,7 @@ const AboutPage = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching about page data:', error);
-        setCompanyDescription('Driven by passion, committed to quality. We\'ve been helping customers find their perfect ride since 2010.');
+        setCompanyDescription('I shtyrë nga pasioni, i përkushtuar ndaj cilësisë. Ne kemi ndihmuar klientët të gjejnë automjetin e tyre të përsosur që nga viti 2010.');
         setIsLoading(false);
       }
     };
@@ -76,6 +78,10 @@ const AboutPage = () => {
     );
   }
 
+  const handleDiscoverClick = () => {
+    navigate('/cars');
+  };
+
   return (
     <div className="overflow-hidden">
       {/* Hero Section with Parallax Effect */}
@@ -95,10 +101,14 @@ const AboutPage = () => {
             Auto Hafuzi
           </h1>
           <p className="text-xl md:text-2xl text-white mb-8 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            Your Trusted Partner in Automotive Excellence
+            Partneri juaj i besuar në përsosmërinë e automjeteve
           </p>
-          <button className="bg-white text-blue-600 hover:bg-blue-100 font-bold py-3 px-8 rounded-full transition duration-300 animate-fade-in-up" style={{animationDelay: '0.4s'}}>
-            Discover Our Collection
+          <button 
+            onClick={handleDiscoverClick}
+            className="bg-white text-blue-600 hover:bg-blue-100 font-bold py-3 px-8 rounded-full transition duration-300 animate-fade-in-up" 
+            style={{animationDelay: '0.4s'}}
+          >
+            Zbuloni Koleksionin Tonë
           </button>
         </div>
       </section>
@@ -127,7 +137,7 @@ const AboutPage = () => {
 
         <div className="container mx-auto px-4 relative z-10">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['overview'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">About Auto Hafuzi</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">Rreth Auto Hafuzi</h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-white max-w-3xl mx-auto">
               {companyDescription}
@@ -138,20 +148,20 @@ const AboutPage = () => {
             {[
               { 
                 icon: <Users className="h-12 w-12 text-yellow-400" />, 
-                title: "Expert Team", 
-                description: "Our dedicated team of automotive specialists brings years of experience and passion to serve you better.", 
+                title: "Ekip Ekspert", 
+                description: "Ekipi ynë i dedikuar i specialistëve të automjeteve sjell vite përvojë dhe pasion për t'ju shërbyer më mirë.", 
                 delay: 0 
               },
               { 
                 icon: <Car className="h-12 w-12 text-yellow-400" />, 
-                title: "Premium Selection", 
-                description: "Every vehicle in our inventory is carefully selected and thoroughly inspected to ensure quality.", 
+                title: "Përzgjedhje Premium", 
+                description: "Çdo automjet në inventarin tonë është përzgjedhur me kujdes dhe inspektuar tërësisht për të siguruar cilësi.", 
                 delay: 0.2 
               },
               { 
                 icon: <Award className="h-12 w-12 text-yellow-400" />, 
-                title: "Customer First", 
-                description: "We prioritize your satisfaction and work tirelessly to make your car buying experience exceptional.", 
+                title: "Klienti në Rend të Parë", 
+                description: "Ne i japim prioritet kënaqësisë suaj dhe punojmë pa pushim për ta bërë përvojën tuaj të blerjes së makinës të jashtëzakonshme.", 
                 delay: 0.4 
               }
             ].map((item, index) => (
@@ -175,10 +185,10 @@ const AboutPage = () => {
       <section id="history" className="py-20 bg-gray-100">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['history'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Our Journey</h2>
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Rrugëtimi Ynë</h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              From humble beginnings to becoming a trusted name in the automotive industry
+              Nga fillime të thjeshta deri në bërjen një emër të besuar në industrinë e automobilave
             </p>
           </div>
 
@@ -188,10 +198,10 @@ const AboutPage = () => {
             
             {/* Timeline items */}
             {[
-              { year: "2010", title: "Founded", description: "Auto Hafuzi opened its doors with a small collection of premium vehicles." },
-              { year: "2015", title: "Expansion", description: "We expanded our inventory and moved to a larger showroom to better serve our growing customer base." },
-              { year: "2018", title: "Service Center", description: "Launched our state-of-the-art service center to provide comprehensive maintenance and repair services." },
-              { year: "2023", title: "Digital Transformation", description: "Embraced the latest technology to enhance the car buying experience both online and in-person." }
+              { year: "2010", title: "Themelimi", description: "Auto Hafuzi hapi dyert e saj me një koleksion të vogël të automjeteve premium." },
+              { year: "2015", title: "Zgjerimi", description: "Ne zgjeruam inventarin tonë dhe u zhvendosëm në një sallë ekspozimi më të madhe për t'i shërbyer më mirë bazës sonë gjithnjë në rritje të klientëve." },
+              { year: "2018", title: "Qendra e Shërbimit", description: "Lançuam qendrën tonë moderne të shërbimit për të ofruar shërbime gjithëpërfshirëse të mirëmbajtjes dhe riparimit." },
+              { year: "2023", title: "Transformimi Dixhital", description: "Përqafuam teknologjinë më të fundit për të përmirësuar përvojën e blerjes së makinave si online ashtu edhe personalisht." }
             ].map((item, index) => (
               <div 
                 key={index} 
@@ -218,19 +228,19 @@ const AboutPage = () => {
       <section id="services" className="py-20">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['services'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Our Services</h2>
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Shërbimet Tona</h2>
             <div className="w-24 h-1 bg-green-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Comprehensive automotive solutions tailored to your needs
+              Zgjidhje gjithëpërfshirëse automobilistike të përshtatura për nevojat tuaja
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: <Car className="h-12 w-12 text-white" />, title: "Vehicle Sales", description: "Browse our extensive selection of new and pre-owned vehicles.", color: "bg-blue-600" },
-              { icon: <Settings className="h-12 w-12 text-white" />, title: "Maintenance", description: "Keep your vehicle in optimal condition with our expert maintenance services.", color: "bg-green-600" },
-              { icon: <Clock className="h-12 w-12 text-white" />, title: "Financing", description: "Flexible financing options to make your dream car affordable.", color: "bg-purple-600" },
-              { icon: <Sparkles className="h-12 w-12 text-white" />, title: "Detailing", description: "Professional detailing services to make your car look brand new.", color: "bg-red-600" }
+              { icon: <Car className="h-12 w-12 text-white" />, title: "Shitja e Automjeteve", description: "Shfletoni përzgjedhjen tonë të gjerë të automjeteve të reja dhe të përdorura.", color: "bg-blue-600" },
+              { icon: <Settings className="h-12 w-12 text-white" />, title: "Mirëmbajtja", description: "Mbani automjetin tuaj në gjendje optimale me shërbimet tona eksperte të mirëmbajtjes.", color: "bg-green-600" },
+              { icon: <Clock className="h-12 w-12 text-white" />, title: "Financimi", description: "Opsione fleksibile financimi për ta bërë makinën tuaj të ëndrrave të përballueshme.", color: "bg-purple-600" },
+              { icon: <Sparkles className="h-12 w-12 text-white" />, title: "Detajimi", description: "Shërbime profesionale detajimi për ta bërë makinën tuaj të duket si e re.", color: "bg-red-600" }
             ].map((service, index) => (
               <div 
                 key={index} 
@@ -263,15 +273,15 @@ const AboutPage = () => {
 
         <div className="container mx-auto px-4 relative z-10">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['testimonials'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">What Our Customers Say</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">Çfarë Thonë Klientët Tanë</h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: "Ahmed Kovačević", role: "Business Owner", quote: "Auto Hafuzi provided exceptional service throughout my car buying journey. Their team was knowledgeable and patient in helping me find the perfect vehicle for my needs." },
-              { name: "Maja Popović", role: "Software Engineer", quote: "I've been maintaining my car at Auto Hafuzi for years. Their attention to detail and technical expertise has kept my vehicle running perfectly." },
-              { name: "Emir Hodžić", role: "Doctor", quote: "The financing options offered by Auto Hafuzi made it possible for me to purchase my dream car. The process was straightforward and transparent." }
+              { name: "Ahmed Kovačević", role: "Pronar Biznesi", quote: "Auto Hafuzi ofroi shërbim të jashtëzakonshëm gjatë gjithë udhëtimit tim të blerjes së makinës. Ekipi i tyre ishte i ditur dhe i durueshëm në ndihmën për të gjetur automjetin e përkryer për nevojat e mia." },
+              { name: "Maja Popović", role: "Inxhiniere Softueri", quote: "Kam mirëmbajtur makinën time në Auto Hafuzi për vite me radhë. Vëmendja e tyre ndaj detajeve dhe ekspertiza teknike e ka mbajtur automjetin tim në funksion perfekt." },
+              { name: "Emir Hodžić", role: "Doktor", quote: "Opsionet e financimit të ofruara nga Auto Hafuzi e bënë të mundur për mua të blej makinën e ëndrrave të mia. Procesi ishte i thjeshtë dhe transparent." }
             ].map((testimonial, index) => (
               <div 
                 key={index} 
@@ -303,21 +313,21 @@ const AboutPage = () => {
       <section id="why-us" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['why-us'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Why Choose Auto Hafuzi</h2>
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Pse të Zgjidhni Auto Hafuzi</h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              We differentiate ourselves through commitment to excellence in every aspect
+              Ne dallojmë veten përmes përkushtimit ndaj përsosmërisë në çdo aspekt
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: <Shield className="h-10 w-10 text-blue-600" />, title: "Warranty Protection", description: "All our vehicles come with comprehensive warranty options for your peace of mind." },
-              { icon: <Award className="h-10 w-10 text-blue-600" />, title: "Quality Certified", description: "Every vehicle undergoes a rigorous 150-point inspection before joining our inventory." },
-              { icon: <Users className="h-10 w-10 text-blue-600" />, title: "Experienced Staff", description: "Our team brings decades of automotive expertise to serve you better." },
-              { icon: <Settings className="h-10 w-10 text-blue-600" />, title: "Complete Service", description: "From purchase to maintenance, we provide end-to-end automotive solutions." },
-              { icon: <Sparkles className="h-10 w-10 text-blue-600" />, title: "Transparent Pricing", description: "No hidden fees or surprises - just honest, straightforward pricing." },
-              { icon: <Clock className="h-10 w-10 text-blue-600" />, title: "Flexible Financing", description: "Tailored financial solutions that work with your budget and circumstances." }
+              { icon: <Shield className="h-10 w-10 text-blue-600" />, title: "Mbrojtje me Garanci", description: "Të gjitha automjetet tona vijnë me opsione gjithëpërfshirëse garancie për qetësinë tuaj." },
+              { icon: <Award className="h-10 w-10 text-blue-600" />, title: "Certifikuar për Cilësi", description: "Çdo automjet i nënshtrohet një inspektimi rigoroz 150-pikësh përpara se t'i bashkohet inventarit tonë." },
+              { icon: <Users className="h-10 w-10 text-blue-600" />, title: "Staf me Përvojë", description: "Ekipi ynë sjell dekada ekspertize automobilistike për t'ju shërbyer më mirë." },
+              { icon: <Settings className="h-10 w-10 text-blue-600" />, title: "Shërbim i Plotë", description: "Nga blerja tek mirëmbajtja, ne ofrojmë zgjidhje automobilistike të plota." },
+              { icon: <Sparkles className="h-10 w-10 text-blue-600" />, title: "Çmime Transparente", description: "Pa tarifa të fshehura apo surpriza - vetëm çmime të ndershme dhe të drejtpërdrejta." },
+              { icon: <Clock className="h-10 w-10 text-blue-600" />, title: "Financim Fleksibël", description: "Zgjidhje financiare të përshtatura që funksionojnë me buxhetin dhe rrethanat tuaja." }
             ].map((item, index) => (
               <div 
                 key={index} 
@@ -341,18 +351,18 @@ const AboutPage = () => {
       <section id="contact" className="py-20 bg-blue-900">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">Get In Touch</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">Na Kontaktoni</h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Visit our showroom or reach out to us directly
+              Vizitoni sallonin tonë ose kontaktoni me ne drejtpërdrejt
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: <Map className="h-12 w-12 text-yellow-400" />, title: "Our Location", description: "Sarajevska ulica 123, Sarajevo 71000, Bosnia and Herzegovina", color: "bg-blue-800" },
-              { icon: <Phone className="h-12 w-12 text-yellow-400" />, title: "Phone Number", description: "+387 33 123 456", color: "bg-blue-800" },
-              { icon: <Mail className="h-12 w-12 text-yellow-400" />, title: "Email Address", description: "info@autohafuzi.ba", color: "bg-blue-800" }
+              { icon: <Map className="h-12 w-12 text-yellow-400" />, title: "Vendndodhja Jonë", description: "Fushë-Kruje, Albania, E762, Fushë Krujë", color: "bg-blue-800" },
+              { icon: <Phone className="h-12 w-12 text-yellow-400" />, title: "Numri i Telefonit", description: "069 931 1111", color: "bg-blue-800" },
+              { icon: <Mail className="h-12 w-12 text-yellow-400" />, title: "Adresa Email", description: "info@hafuziauto.ch", color: "bg-blue-800" }
             ].map((contact, index) => (
               <div 
                 key={index} 
@@ -369,8 +379,11 @@ const AboutPage = () => {
           </div>
 
           <div className={`mt-16 text-center transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`} style={{ transitionDelay: '0.6s' }}>
-            <button className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-3 px-8 rounded-full transition duration-300">
-              Contact Us Today
+            <button 
+              onClick={() => navigate('/contact')}
+              className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-3 px-8 rounded-full transition duration-300"
+            >
+              Na Kontaktoni Sot
             </button>
           </div>
         </div>

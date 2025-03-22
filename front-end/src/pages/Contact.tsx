@@ -28,10 +28,10 @@ const ContactPage: React.FC = () => {
   });
   
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
-    address: '123 Auto Avenue, Car City, CC 12345',
-    phone: '+1 (555) 123-4567',
-    email: 'info@cardealer.com',
-    working_hours: 'Monday to Friday: 9:00 AM - 6:00 PM, Saturday: 10:00 AM - 4:00 PM'
+    address: 'Fushë-Kruje, Albania, E762, Fushë Krujë',
+    phone: '069 931 1111',
+    email: 'info@hafuziauto.ch',
+    working_hours: 'E hënë deri të premte: 9:00 - 18:00, E shtunë: 10:00 - 16:00'
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,7 +90,7 @@ const ContactPage: React.FC = () => {
       
       setSubmitMessage({
         type: 'success',
-        text: response.data.message || 'Your message has been sent successfully!'
+        text: response.data.message || 'Mesazhi juaj është dërguar me sukses!'
       });
       
     } catch (error: any) {
@@ -98,7 +98,7 @@ const ContactPage: React.FC = () => {
       
       setSubmitMessage({
         type: 'error',
-        text: error.response?.data?.error || 'There was a problem sending your message. Please try again later.'
+        text: error.response?.data?.error || 'Kishte një problem me dërgimin e mesazhit tuaj. Ju lutemi provoni përsëri më vonë.'
       });
     } finally {
       setIsSubmitting(false);
@@ -107,12 +107,12 @@ const ContactPage: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8">Contact Us</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">Na Kontaktoni</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Contact Information Card */}
         <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-6">Our Information</h2>
+          <h2 className="text-xl font-semibold mb-6">Informacioni Ynë</h2>
           
           <div className="space-y-4">
             <div className="flex items-start">
@@ -120,7 +120,7 @@ const ContactPage: React.FC = () => {
                 <FaMapMarkerAlt size={20} />
               </div>
               <div>
-                <h3 className="font-medium">Address</h3>
+                <h3 className="font-medium">Adresa</h3>
                 <p className="text-gray-600">{contactInfo.address}</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ const ContactPage: React.FC = () => {
                 <FaPhone size={20} />
               </div>
               <div>
-                <h3 className="font-medium">Phone</h3>
+                <h3 className="font-medium">Telefoni</h3>
                 <p className="text-gray-600">{contactInfo.phone}</p>
               </div>
             </div>
@@ -150,7 +150,7 @@ const ContactPage: React.FC = () => {
                 <FaClock size={20} />
               </div>
               <div>
-                <h3 className="font-medium">Working Hours</h3>
+                <h3 className="font-medium">Orari i Punës</h3>
                 <p className="text-gray-600">{contactInfo.working_hours}</p>
               </div>
             </div>
@@ -158,13 +158,13 @@ const ContactPage: React.FC = () => {
           
           {/* Add a Google Maps embed or a static map image here */}
           <div className="mt-6 bg-gray-200 h-48 rounded flex items-center justify-center">
-            <p className="text-gray-500">Map will be displayed here</p>
+            <p className="text-gray-500">Harta do të shfaqet këtu</p>
           </div>
         </div>
         
         {/* Contact Form */}
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-6">Send Us a Message</h2>
+          <h2 className="text-xl font-semibold mb-6">Na Dërgoni një Mesazh</h2>
           
           {submitMessage && (
             <div className={`p-4 mb-6 rounded ${
@@ -180,7 +180,7 @@ const ContactPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name <span className="text-red-600">*</span>
+                  Emri i Plotë <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -195,7 +195,7 @@ const ContactPage: React.FC = () => {
               
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address <span className="text-red-600">*</span>
+                  Adresa Email <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="email"
@@ -212,7 +212,7 @@ const ContactPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number
+                  Numri i Telefonit
                 </label>
                 <input
                   type="tel"
@@ -226,7 +226,7 @@ const ContactPage: React.FC = () => {
               
               <div>
                 <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject <span className="text-red-600">*</span>
+                  Subjekti <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="text"
@@ -242,7 +242,7 @@ const ContactPage: React.FC = () => {
             
             <div className="mb-4">
               <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                Message <span className="text-red-600">*</span>
+                Mesazhi <span className="text-red-600">*</span>
               </label>
               <textarea
                 id="message"
@@ -263,7 +263,7 @@ const ContactPage: React.FC = () => {
                   isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
-                {isSubmitting ? 'Sending...' : 'Send Message'}
+                {isSubmitting ? 'Duke dërguar...' : 'Dërgo Mesazhin'}
               </button>
             </div>
           </form>
