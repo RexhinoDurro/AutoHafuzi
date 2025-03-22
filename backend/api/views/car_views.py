@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
 
-from backend.backend import settings
+from django.conf import settings
 from ..models import Car, CarView, SiteVisit
 from ..serializers import CarSerializer, SiteVisitSerializer
 import json
