@@ -1,3 +1,4 @@
+# car_views.py - Update views to use slug instead of car_id
 import cloudinary
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -14,7 +15,7 @@ from ..models import Car, CarView, SiteVisit
 from ..serializers import CarSerializer, SiteVisitSerializer
 import json
 import uuid
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 import logging
 
@@ -45,6 +46,7 @@ def handle_m2m_options(request_data, serializer_data):
 
 @api_view(["GET"])
 def get_cars(request):
+    # This function remains largely the same, just update the serializer to include the slug
     try:
         queryset = Car.objects.all()
         
@@ -134,9 +136,10 @@ def get_cars(request):
         )
 
 @api_view(["GET"])
-def get_car(request, car_id):
+def get_car(request, car_slug):
+    """Get car details by slug instead of ID"""
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         session_id = request.session.get('visitor_id')
         
         # If no session ID yet, create one
@@ -151,7 +154,7 @@ def get_car(request, car_id):
         if 'HTTP_X_VIEW_TRACKING' in request.META:
             if request.META['HTTP_X_VIEW_TRACKING'].lower() == 'false':
                 should_track_view = False
-                logger.debug(f"Skipping view count for car {car_id} due to X-View-Tracking: false header")
+                logger.debug(f"Skipping view count for car {car.id} due to X-View-Tracking: false header")
         
         # Only track views if the header allows it
         if should_track_view:
@@ -179,9 +182,9 @@ def get_car(request, car_id):
                     # Increment the view counter exactly once
                     car.view_count += 1
                     car.save(update_fields=['view_count'])
-                    logger.debug(f"View count incremented for car {car_id} - now {car.view_count}")
+                    logger.debug(f"View count incremented for car {car.id} - now {car.view_count}")
                 else:
-                    logger.debug(f"Skipped view increment - car {car_id} viewed recently by session {session_id}")
+                    logger.debug(f"Skipped view increment - car {car.id} viewed recently by session {session_id}")
             except Exception as e:
                 logger.error(f"Error recording car view: {e}")
                 import traceback
@@ -248,22 +251,20 @@ def add_car(request):
         except Exception as e:
             logger.error(f"Error setting options: {e}")
     
-    # Note: We no longer create the first image here - that's done in the separate
-    # add_car_images view which directly uploads to Cloudinary
-    
     # Return the serialized data with request context for proper URLs
     return Response(CarSerializer(car, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def update_car(request, car_id):
+def update_car(request, car_slug):
+    """Update car details by slug instead of ID"""
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         data = request.data.copy()
-        logger.debug(f"Updating car {car_id} with data: {data}")
+        logger.debug(f"Updating car {car.id} with data: {data}")
         
         # Process boolean fields
         for key in ['is_used', 'full_service_history', 'customs_paid', 'discussed_price']:
@@ -314,12 +315,13 @@ def update_car(request, car_id):
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_car(request, car_id):
+def delete_car(request, car_slug):
+    """Delete car by slug instead of ID"""
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         
         # Delete all associated images first to properly clean up Cloudinary
         for image in car.images.all():

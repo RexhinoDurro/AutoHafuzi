@@ -116,8 +116,11 @@ class Car(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     view_count = models.IntegerField(default=0)  # Track total views
+    
+    # Add slug field for SEO-friendly URLs
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
 
-    # Car specifications
+    # Car specifications (remaining fields are the same)
     body_type = models.CharField(max_length=50, default="Sedan")
     is_used = models.BooleanField(default=True)
     drivetrain = models.CharField(max_length=50, default="FWD")
@@ -140,6 +143,29 @@ class Car(models.Model):
     class Meta:
         ordering = ['-created_at']
         
+    def save(self, *args, **kwargs):
+        # Generate a slug if one doesn't exist
+        if not self.slug:
+            # Create base for the slug
+            base_slug = f"{self.make.name}-{self.model.name}"
+            
+            # Add variant if available
+            if self.variant:
+                base_slug += f"-{self.variant.name}"
+                
+            # Add year if available
+            if self.first_registration_year:
+                base_slug += f"-{self.first_registration_year}"
+                
+            # Add a unique identifier (last 6 chars of UUID)
+            unique_id = uuid.uuid4().hex[:6]
+            base_slug += f"-{unique_id}"
+            
+            # Slugify and save
+            self.slug = slugify(base_slug)
+            
+        super().save(*args, **kwargs)
+        
     @property
     def primary_image(self):
         """Get the primary image or None if no images exist"""
@@ -151,6 +177,10 @@ class Car(models.Model):
         image = self.images.get(id=image_id)
         image.is_primary = True
         image.save()
+        
+    def get_absolute_url(self):
+        """Return the URL for this car using the slug"""
+        return f"/cars/{self.slug}/"
 
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.first_registration_year or 'N/A'})"

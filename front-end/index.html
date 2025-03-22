@@ -56,11 +56,13 @@
     <title>Auto Hafuzi - Quality Cars</title>
   </head>
   <body>
-    <!-- Provide an immediate visual for users while the app loads -->
-    <div id="initial-loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; z-index: 9999;">
-      <img src="/assets/logo-DLfMMOFV.png" alt="Auto Hafuzi" style="height: 80px; width: auto;">
-      <div style="margin-left: 16px; font-size: 24px; font-weight: bold; color: #111827;">Loading...</div>
+  <!-- Updated loading animation with styled text and rotation -->
+  <div id="initial-loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; z-index: 9999;">
+    <div style="display: flex; align-items: center;">
+      <div style="font-size: 32px; font-weight: bold; color: #6B7280;">Auto</div>
+      <div id="rotating-text" style="font-size: 32px; font-weight: bold; color: #10B981; margin-left: 8px; display: inline-block; transform-origin: center;">Hafuzi</div>
     </div>
+  </div>
     
     <div id="root"></div>
     
@@ -68,17 +70,38 @@
     
     <!-- Remove the initial loading screen once the app loads -->
     <script>
-      window.addEventListener('load', function() {
-        const initialLoading = document.getElementById('initial-loading');
-        if (initialLoading) {
-          initialLoading.style.opacity = '0';
-          initialLoading.style.transition = 'opacity 0.5s ease';
-          setTimeout(() => {
-            initialLoading.remove();
-          }, 500);
-        }
-      });
-    </script>
+  // Rotation animation for the "Hafuzi" text
+  let rotationDegree = 0;
+  const rotatingText = document.getElementById('rotating-text');
+  
+  function rotateText() {
+    rotationDegree = (rotationDegree + 3) % 360; // Increment by 3 degrees
+    rotatingText.style.transform = `rotate(${rotationDegree}deg)`;
+    
+    if (rotationDegree < 360) {
+      requestAnimationFrame(rotateText);
+    } else {
+      // Reset and start again
+      rotationDegree = 0;
+      requestAnimationFrame(rotateText);
+    }
+  }
+  
+  // Start the rotation animation
+  requestAnimationFrame(rotateText);
+  
+  // Remove the loading screen once the app loads
+  window.addEventListener('load', function() {
+    const initialLoading = document.getElementById('initial-loading');
+    if (initialLoading) {
+      initialLoading.style.opacity = '0';
+      initialLoading.style.transition = 'opacity 0.5s ease';
+      setTimeout(() => {
+        initialLoading.remove();
+      }, 500);
+    }
+  });
+</script>
     
     <!-- Add a meaningful noscript message for users without JavaScript -->
     <noscript>

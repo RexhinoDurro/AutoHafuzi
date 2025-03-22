@@ -1,4 +1,3 @@
-# serializers.py
 from rest_framework import serializers
 from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, Upholstery, SiteVisit, ContactMessage
 from django.conf import settings
@@ -47,10 +46,6 @@ class CarImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarImage
         fields = ['id', 'image', 'is_primary', 'order', 'url', 'public_id']
-
-    class Meta:
-        model = CarImage
-        fields = ['id', 'image', 'is_primary', 'order', 'url', 'public_id']
         
 class OptionSerializer(serializers.ModelSerializer):
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -68,6 +63,8 @@ class CarSerializer(serializers.ModelSerializer):
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all())
     variant = serializers.PrimaryKeyRelatedField(queryset=CarVariant.objects.all(), required=False, allow_null=True)
     view_count = serializers.IntegerField(read_only=True)
+    slug = serializers.SlugField(read_only=True)  # Include slug in serializer
+    url = serializers.SerializerMethodField()  # Add URL method field
     
     # Add explicit fields for first registration values
     first_registration_day = serializers.IntegerField(required=False, allow_null=True)
@@ -111,6 +108,13 @@ class CarSerializer(serializers.ModelSerializer):
             return obj.variant.name
         return None
     
+    def get_url(self, obj):
+        """Return the URL for this car using the slug"""
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.get_absolute_url())
+        return obj.get_absolute_url()
+    
     def get_image(self, obj):
         """Return the primary image URL for backward compatibility"""
         primary = obj.primary_image
@@ -129,7 +133,8 @@ class CarSerializer(serializers.ModelSerializer):
             'body_type', 'is_used', 'drivetrain', 'seats', 'doors', 'mileage', 
             'first_registration', 'full_service_history', 
             'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 
-            'weight', 'emission_class', 'fuel_type', 'options', 'view_count'
+            'weight', 'emission_class', 'fuel_type', 'options', 'view_count',
+            'slug', 'url'  # Added slug and url fields to the output
         ]
 
     def validate(self, data):

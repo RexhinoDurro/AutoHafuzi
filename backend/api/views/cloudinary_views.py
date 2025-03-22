@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from ..models import Car, CarImage
 from ..serializers import CarImageSerializer
 
@@ -17,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def add_car_images(request, car_id):
+def add_car_images(request, car_slug):
     """
-    Upload images directly to Cloudinary for a specific car
+    Upload images directly to Cloudinary for a specific car (using slug)
     """
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
     except Car.DoesNotExist:
         return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)
     
@@ -56,7 +57,7 @@ def add_car_images(request, car_id):
     for img in images:
         try:
             # Generate a unique folder path for this car
-            folder_path = f"autohafuzi/cars/{car_id}"
+            folder_path = f"autohafuzi/cars/{car.id}"
             unique_id = uuid.uuid4().hex[:8]
             
             # Upload to Cloudinary
@@ -143,15 +144,15 @@ def delete_car_image(request, image_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def set_primary_image(request, car_id, image_id):
+def set_primary_image(request, car_slug, image_id):
     """
-    Set an image as the primary image for a car
+    Set an image as the primary image for a car (using slug)
     """
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         image = CarImage.objects.get(id=image_id, car=car)
         
         # Set as primary image
@@ -171,12 +172,12 @@ def set_primary_image(request, car_id, image_id):
 
 
 @api_view(['GET'])
-def get_car_images(request, car_id):
+def get_car_images(request, car_slug):
     """
-    Get all images for a specific car
+    Get all images for a specific car (using slug)
     """
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         images = car.images.all()
         response_data = []
         
@@ -203,15 +204,15 @@ def get_car_images(request, car_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def reorder_car_images(request, car_id):
+def reorder_car_images(request, car_slug):
     """
-    Reorder car images based on provided order list
+    Reorder car images based on provided order list (using slug)
     """
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        car = Car.objects.get(id=car_id)
+        car = get_object_or_404(Car, slug=car_slug)
         
         # Get the ordered list of image IDs from the request
         image_ids = request.data.get('image_ids', [])
@@ -226,7 +227,7 @@ def reorder_car_images(request, car_id):
                 image.order = index
                 image.save(update_fields=['order'])
             except CarImage.DoesNotExist:
-                logger.warning(f"Image {image_id} not found or does not belong to car {car_id}")
+                logger.warning(f"Image {image_id} not found or does not belong to car {car.slug}")
         
         # Return updated images with manually constructed URLs
         images = car.images.all()
