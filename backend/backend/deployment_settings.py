@@ -70,7 +70,7 @@ TEMPLATES = [
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dka3gcr36'),
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'your-api-secret-here'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4'),
     'SECURE': True,  # Always use HTTPS
     'MEDIA_TAG': 'media',  # Folder structure in Cloudinary
     'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
