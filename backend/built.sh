@@ -13,6 +13,8 @@ pip install -r requirements.txt
 
 # Run Django commands
 python manage.py collectstatic --noinput
+python manage.py makemigrations
+python manage.py makemigrations api
 python manage.py migrate
 
 # Uncomment these if you need to run your data initialization scripts
