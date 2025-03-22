@@ -78,8 +78,8 @@ def add_car_images(request, car_id):
                 is_primary=current_images_count == 0 and len(uploaded_images) == 0  # First image is primary if no other images
             )
             
-            # Add the CloudinaryField result to the uploaded_images list
-            image_data = CarImageSerializer(image, context={'request': request}).data
+            # Get the serialized data without trying to access image.url attribute
+            image_data = CarImageSerializer(image).data
             # Explicitly add the URL from the upload result
             image_data['url'] = upload_result['secure_url']
             uploaded_images.append(image_data)
@@ -178,18 +178,18 @@ def get_car_images(request, car_id):
     try:
         car = Car.objects.get(id=car_id)
         images = car.images.all()
-        serializer = CarImageSerializer(images, many=True, context={'request': request})
+        response_data = []
         
-        # Add Cloudinary URLs for each image
-        response_data = serializer.data
-        for image_data in response_data:
+        for image in images:
+            # Serialize each image manually to avoid url attribute issue
+            image_data = CarImageSerializer(image).data
+            
             # If there's a public_id, manually construct the Cloudinary URL
-            # This is a fallback in case url isn't already in the serializer
-            if 'public_id' in image_data and not image_data.get('url'):
-                public_id = image_data['public_id']
-                if public_id:
-                    # Construct a Cloudinary URL
-                    image_data['url'] = f"https://res.cloudinary.com/{settings.CLOUDINARY_STORAGE['CLOUD_NAME']}/image/upload/{public_id}"
+            if image.public_id:
+                # Construct a Cloudinary URL
+                image_data['url'] = f"https://res.cloudinary.com/{settings.CLOUDINARY_STORAGE['CLOUD_NAME']}/image/upload/{image.public_id}"
+            
+            response_data.append(image_data)
                     
         return Response(response_data, status=status.HTTP_200_OK)
     
@@ -228,10 +228,17 @@ def reorder_car_images(request, car_id):
             except CarImage.DoesNotExist:
                 logger.warning(f"Image {image_id} not found or does not belong to car {car_id}")
         
-        # Return updated images
+        # Return updated images with manually constructed URLs
         images = car.images.all()
-        serializer = CarImageSerializer(images, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = []
+        
+        for image in images:
+            image_data = CarImageSerializer(image).data
+            if image.public_id:
+                image_data['url'] = f"https://res.cloudinary.com/{settings.CLOUDINARY_STORAGE['CLOUD_NAME']}/image/upload/{image.public_id}"
+            response_data.append(image_data)
+            
+        return Response(response_data, status=status.HTTP_200_OK)
     
     except Car.DoesNotExist:
         return Response({'error': 'Car not found'}, status=status.HTTP_404_NOT_FOUND)

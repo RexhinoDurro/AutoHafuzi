@@ -1,6 +1,7 @@
 # serializers.py
 from rest_framework import serializers
 from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, Upholstery, SiteVisit, ContactMessage
+from django.conf import settings
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,10 +38,15 @@ class CarImageSerializer(serializers.ModelSerializer):
     
     def get_url(self, obj):
         """Get the Cloudinary URL for the image"""
-        if obj.image:
-            # For CloudinaryField, this returns the full URL
-            return obj.image.url
+        if obj.public_id:
+            # Construct URL directly from public_id
+            cloud_name = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
+            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{obj.public_id}"
         return None
+
+    class Meta:
+        model = CarImage
+        fields = ['id', 'image', 'is_primary', 'order', 'url', 'public_id']
 
     class Meta:
         model = CarImage
