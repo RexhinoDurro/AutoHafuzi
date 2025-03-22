@@ -7,15 +7,13 @@ const Footer = () => {
     <footer className="bg-black text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Company Info */}
+          {/* Company Info - Fixed logo with proper aspect ratio */}
           <div className="space-y-4">
             <Link to="/" className="block">
               <img 
                 src={hafuzilogo} 
                 alt="Hafuzi Auto" 
-                className="h-12 w-auto"
-                width="48"
-                height="48"
+                className="h-12 w-auto" 
               />
             </Link>
             <p className="text-gray-400 text-sm">
@@ -68,7 +66,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Social Media - Fixed with accessible links */}
+          {/* Social Media with accessible labels */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-green-600">Na Ndiqni</h3>
             <div className="flex space-x-4">

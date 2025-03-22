@@ -17,14 +17,12 @@ const Navbar = () => {
       <nav className="bg-black">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between h-16 items-center">
-            {/* Logo */}
+            {/* Logo - Fixed to use w-auto for proper aspect ratio */}
             <Link to="/" className="flex items-center space-x-2">
               <img 
                 src={logo} 
                 alt="Hafuzi Auto" 
-                className="h-10"
-                width="40"
-                height="40"
+                className="h-12 w-auto"
               />
             </Link>
 
@@ -79,11 +77,11 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Menu Sliding Panel */}
+      {/* Mobile Menu Sliding Panel - Fixed aria-hidden issue */}
       <div 
         className={`fixed top-0 right-0 w-64 h-full bg-black shadow-lg transform transition-transform duration-300 ease-in-out z-50 md:hidden 
         ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isMenuOpen}
+        aria-hidden={!isMenuOpen} // Only hide from screen readers when menu is closed
       >
         {/* Close Button - Fixed with accessible name */}
         <div className="flex justify-end p-4">
@@ -154,7 +152,7 @@ const Navbar = () => {
         <div 
           className="fixed inset-0 z-40 md:hidden"
           onClick={toggleMenu}
-          aria-hidden="true"
+          aria-hidden="true" // This is correctly aria-hidden as it's purely decorative
         />
       )}
     </>

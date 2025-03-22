@@ -1,18 +1,27 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { FavoritesProvider } from './context/FavouritesContext';
 import { getStoredAuth } from './utils/auth';
 
-// Core components that are used on most pages
+// Core components that are used on most pages - eagerly loaded
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
-// Implement a loading component
+// Implement a better loading component
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center min-h-screen">
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600"></div>
+    <span className="sr-only">Loading...</span>
   </div>
 );
+
+// Preload critical routes
+const preloadRoutes = () => {
+  // Start preloading the most common routes
+  import('./pages/Home');
+  import('./pages/CarHolder');
+  import('./pages/CarDetail');
+};
 
 // Lazy load all page components
 const Home = lazy(() => import('./pages/Home'));
@@ -22,7 +31,7 @@ const AboutPage = lazy(() => import('./pages/About'));
 const FavoritesPage = lazy(() => import('./pages/FavouritesPage'));
 const ContactPage = lazy(() => import('./pages/Contact'));
 
-// Admin components
+// Admin components - load these last as they are less frequently used
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const CarForm = lazy(() => import('./components/CarForm/CarForm'));
@@ -53,7 +62,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => (
   </>
 );
 
-
 interface ProtectedRouteProps {
   children: ReactNode;
 }
@@ -69,6 +77,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 function App() {
+  // Start preloading critical routes when the app loads
+  useEffect(() => {
+    preloadRoutes();
+  }, []);
+
   return (
     <Router>
       <FavoritesProvider>
