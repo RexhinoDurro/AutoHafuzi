@@ -33,18 +33,19 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       return image.preview;
     }
     
-    // For Cloudinary-stored images
+    // For Cloudinary-stored images - this is the primary way now
     if ('url' in image && image.url) {
       return image.url;
     }
     
-    // For direct URLs
-    if (image.image && (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
+    // Fallback for direct URLs (shouldn't be needed with Cloudinary)
+    if (image.image && typeof image.image === 'string' && 
+        (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
       return image.image;
     }
     
-    // Fallback - prepend the baseUrl
-    return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+    // Last resort fallback - rarely needed with Cloudinary
+    return fallbackImageUrl;
   };
   
   return (

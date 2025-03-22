@@ -46,9 +46,10 @@ export interface Car {
 export interface CarImage {
   id: number;
   image: string;
-  is_primary?: boolean;
-  order?: number;
-  url?: string;
+  url?: string;    // Cloudinary URL
+  public_id?: string;  // Cloudinary public ID
+  is_primary: boolean;
+  order: number;
 }
 
 export interface TempImage {

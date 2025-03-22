@@ -1,3 +1,4 @@
+import cloudinary
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,6 +8,8 @@ from django.db.models import Q, Count
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta, datetime
+
+from backend.backend import settings
 from ..models import Car, CarView, SiteVisit
 from ..serializers import CarSerializer, SiteVisitSerializer
 import json
@@ -229,12 +232,6 @@ def add_car(request):
     # Extract options to handle separately
     option_ids = handle_m2m_options(request.data, data)
     
-    # Process image if present
-    image = request.FILES.get('image')
-    if image:
-        data['image'] = image
-        logger.debug(f"Processing initial image: {image.name}, size: {image.size}")
-    
     # Include request in context for URL generation
     serializer = CarSerializer(data=data, context={'request': request})
     if not serializer.is_valid():
@@ -251,21 +248,8 @@ def add_car(request):
         except Exception as e:
             logger.error(f"Error setting options: {e}")
     
-    # If an image was uploaded, create a CarImage for it
-    if image:
-        from ..models import CarImage
-        try:
-            logger.debug(f"Creating CarImage with initial image: {image.name}")
-            car_image = CarImage.objects.create(
-                car=car,
-                image=image,
-                is_primary=True  # First image is primary
-            )
-            logger.debug(f"Created image with URL: {car_image.image.url}")
-        except Exception as e:
-            logger.error(f"Error creating initial image: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
+    # Note: We no longer create the first image here - that's done in the separate
+    # add_car_images view which directly uploads to Cloudinary
     
     # Return the serialized data with request context for proper URLs
     return Response(CarSerializer(car, context={'request': request}).data, status=status.HTTP_201_CREATED)
@@ -339,10 +323,21 @@ def delete_car(request, car_id):
         
         # Delete all associated images first to properly clean up Cloudinary
         for image in car.images.all():
-            # Delete the file from Cloudinary
             try:
-                if image.image:
-                    image.image.delete(save=False)
+                # Get the image's public_id for Cloudinary
+                public_id = image.public_id
+                
+                # Configure Cloudinary
+                cloudinary.config(
+                    cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
+                    api_key=settings.CLOUDINARY_STORAGE['API_KEY'],
+                    api_secret=settings.CLOUDINARY_STORAGE['API_SECRET'],
+                    secure=settings.CLOUDINARY_STORAGE['SECURE']
+                )
+                
+                # Delete from Cloudinary if public_id exists
+                if public_id:
+                    cloudinary.uploader.destroy(public_id)
             except Exception as e:
                 logger.error(f"Error deleting image from Cloudinary: {str(e)}")
         

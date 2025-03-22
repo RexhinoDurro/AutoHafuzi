@@ -1,6 +1,10 @@
 # models.py
 from django.db import models
 from django.contrib.auth.models import User
+import os
+import uuid
+from django.utils.text import slugify
+from cloudinary.models import CloudinaryField
 
 class CarMake(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -70,7 +74,16 @@ class Option(models.Model):
 
 class CarImage(models.Model):
     car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='car_images/', default='default.jpg')
+    # Replace ImageField with CloudinaryField
+    image = CloudinaryField(
+        'image',
+        folder='autohafuzi/cars',
+        resource_type='image',
+        transformation={'quality': 'auto:good'},
+        format='auto'
+    )
+    # Store the Cloudinary public_id for direct access
+    public_id = models.CharField(max_length=255, blank=True, null=True)
     is_primary = models.BooleanField(default=False)
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -80,6 +93,12 @@ class CarImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.car} ({'primary' if self.is_primary else 'secondary'})"
+    
+    def save(self, *args, **kwargs):
+        # Ensure images are saved to structured folders by car ID
+        if not self.public_id and self.car and self.car.id:
+            self.public_id = f"autohafuzi/cars/{self.car.id}/{uuid.uuid4().hex[:8]}"
+        super().save(*args, **kwargs)
 
 class Car(models.Model):
     make = models.ForeignKey(CarMake, on_delete=models.CASCADE)
@@ -134,7 +153,7 @@ class Car(models.Model):
         image.save()
 
     def __str__(self):
-        return f"{self.make.name} {self.model.name} ({self.year})"
+        return f"{self.make.name} {self.model.name} ({self.first_registration_year or 'N/A'})"
 
 class CarView(models.Model):
     """Track unique views for cars by storing visitor sessions"""

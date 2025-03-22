@@ -33,10 +33,12 @@ const CarForm = () => {
     formData,
     setFormData,
     handleSubmit,
-    handleImagesUpload,
     handleImageDelete,
     tempImages,
-    fetchVariants
+    fetchVariants,
+    nextTempId,
+    setTempImages,
+    setNextTempId
   } = useCarForm(id);
 
   // State for form validation errors
@@ -62,6 +64,8 @@ const CarForm = () => {
     EXTRAS: 'Extras'
   };
 
+  // Helper function to get correct image URL for any image type
+
   // Add this useEffect at the top level to prevent continuous refreshes
   useEffect(() => {
     // This runs only once when the component mounts
@@ -76,11 +80,19 @@ const CarForm = () => {
     
     window.addEventListener('beforeunload', handleBeforeUnload);
     
+    // Cleanup function to prevent memory leaks
     return () => {
       console.log('CarForm unmounted');
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Revoke object URLs for temp images
+      tempImages.forEach(image => {
+        if (image.preview) {
+          URL.revokeObjectURL(image.preview);
+        }
+      });
     };
-  }, []);
+  }, [tempImages]);
 
   // Load variants when model changes
   useEffect(() => {
@@ -140,7 +152,28 @@ const CarForm = () => {
       return;
     }
   
-    handleImagesUpload(e);
+    // Create temporary image previews for display before upload
+    let currentTempId = nextTempId;
+    const newTempImages = Array.from(files).map(file => {
+      const imageId = currentTempId;
+      currentTempId -= 1;
+      
+      // Create object URL for preview
+      const preview = URL.createObjectURL(file);
+      
+      return {
+        id: imageId,
+        file,
+        preview
+      };
+    });
+    
+    // Fix: Use explicit type for the prev parameter
+    setTempImages((prev: TempImage[]) => [...prev, ...newTempImages]);
+    setNextTempId(currentTempId);
+    
+    // Reset input value
+    e.target.value = '';
   };
 
   // Fetch exterior and interior colors
@@ -997,8 +1030,6 @@ const CarForm = () => {
           ...formData,
           option_ids: newSelectedOptions
         });
-        
-        console.log("Updated options:", newSelectedOptions);
       }}
       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
     />

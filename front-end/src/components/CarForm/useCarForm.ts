@@ -84,6 +84,7 @@ export const useCarForm = (id?: string) => {
     fuel_type: 'Petrol',
     options: [],
     images: [],
+    option_ids: []
   });
 
   const fetchMakes = useCallback(async () => {
@@ -198,6 +199,16 @@ export const useCarForm = (id?: string) => {
       
       console.log("Fetched car data:", data); // For debugging
       
+      // Process images to ensure they work with Cloudinary
+      if (data.images && data.images.length > 0) {
+        // Make sure each image has the necessary properties
+        data.images = data.images.map((img: any) => ({
+          ...img,
+          // If URL is available but image is not, set image to URL for backward compatibility
+          image: img.image || img.url || '',
+        }));
+      }
+      
       // Save the current data
       const carData = {
         ...formData,
@@ -218,7 +229,9 @@ export const useCarForm = (id?: string) => {
         first_registration_month: data.first_registration_month || currentMonth,
         first_registration_year: data.first_registration_year || currentYear,
         // Important: Map discussed_price (from backend) to discussedPrice (for frontend)
-        discussedPrice: data.discussed_price || false
+        discussedPrice: data.discussed_price || false,
+        // Make sure we have option_ids
+        option_ids: data.options?.map((opt: any) => opt.id || opt) || []
       };
       
       setFormData(carData);
@@ -463,6 +476,14 @@ export const useCarForm = (id?: string) => {
         
         if (updatedCarResponse.ok) {
           const updatedCar = await updatedCarResponse.json();
+          // Make sure to process the images with Cloudinary URLs
+          if (updatedCar.images && updatedCar.images.length > 0) {
+            updatedCar.images = updatedCar.images.map((img: any) => ({
+              ...img,
+              image: img.image || img.url || '',
+            }));
+          }
+          
           setFormData({
             ...updatedCar,
             make: updatedCar.make_id?.toString() || '',
@@ -480,6 +501,7 @@ export const useCarForm = (id?: string) => {
             first_registration_month: updatedCar.first_registration_month || currentMonth,
             first_registration_year: updatedCar.first_registration_year || currentYear,
             discussedPrice: updatedCar.discussed_price || false,
+            option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || []
           });
         }
         
@@ -507,7 +529,7 @@ export const useCarForm = (id?: string) => {
     return () => {
       tempImages.forEach(image => URL.revokeObjectURL(image.preview));
     };
-  }, [fetchMakes, fetchUpholsteryTypes, fetchCarDetails, id]);
+  }, [fetchMakes, fetchUpholsteryTypes, fetchCarDetails, id, tempImages]);
 
   return { 
     isLoading, 
@@ -529,6 +551,9 @@ export const useCarForm = (id?: string) => {
     handleImageDelete, 
     handleSubmit,
     fetchVariants,
-    fetchUpholsteryTypes
+    fetchUpholsteryTypes,
+    nextTempId,
+    setTempImages,  // Add this
+    setNextTempId   // Add this
   };
 };

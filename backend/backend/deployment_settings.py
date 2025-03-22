@@ -72,10 +72,8 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4'),
     'SECURE': True,  # Always use HTTPS
-    'MEDIA_TAG': 'media',  # Folder structure in Cloudinary
     'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
     'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],  # Keep everything by default
-    'STATIC_TAG': 'static'  # Optional: for static files
 }
 
 # Media files configuration - Use Cloudinary for media
@@ -99,8 +97,8 @@ DATABASES = {
 # ]
 
 # Media files configuration
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static root setting
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

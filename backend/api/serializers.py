@@ -36,15 +36,15 @@ class CarImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     
     def get_url(self, obj):
+        """Get the Cloudinary URL for the image"""
         if obj.image:
-            # For Cloudinary, the URL is already absolute
-            # Just return the URL provided by Cloudinary
+            # For CloudinaryField, this returns the full URL
             return obj.image.url
         return None
 
     class Meta:
         model = CarImage
-        fields = ['id', 'image', 'is_primary', 'order', 'url']
+        fields = ['id', 'image', 'is_primary', 'order', 'url', 'public_id']
         
 class OptionSerializer(serializers.ModelSerializer):
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -109,9 +109,6 @@ class CarSerializer(serializers.ModelSerializer):
         """Return the primary image URL for backward compatibility"""
         primary = obj.primary_image
         if primary and primary.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(primary.image.url)
             return primary.image.url
         return None
 

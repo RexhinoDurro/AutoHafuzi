@@ -50,6 +50,43 @@ const CarHolder: React.FC = () => {
     window.location.href = `/car/${carId}`;
   };
 
+  // Helper function to get the proper image URL for a car
+  const getCarImageUrl = (car: Car): string => {
+    if (!car.images || car.images.length === 0) {
+      return `${API_BASE_URL}/api/placeholder/800/600`;
+    }
+
+    // First try to find the primary image
+    const primaryImage = car.images.find(img => img.is_primary);
+    
+    if (primaryImage) {
+      // Use Cloudinary URL if available
+      if (primaryImage.url) {
+        return primaryImage.url;
+      }
+      
+      // Otherwise use the image path
+      if (primaryImage.image) {
+        return primaryImage.image.startsWith('http')
+          ? primaryImage.image
+          : `${API_BASE_URL}${primaryImage.image}`;
+      }
+    }
+    
+    // Fallback to the first image if no primary is set
+    const firstImage = car.images[0];
+    
+    // Check for Cloudinary URL
+    if (firstImage.url) {
+      return firstImage.url;
+    }
+    
+    // Otherwise use the image path
+    return firstImage.image.startsWith('http')
+      ? firstImage.image
+      : `${API_BASE_URL}${firstImage.image}`;
+  };
+
   const fetchCars = async (filters = {}, page = 1, sort = sortBy) => {
     setLoading(true);
     setError(null);
@@ -251,8 +288,6 @@ const CarHolder: React.FC = () => {
             </div>
           </div>
           
-          {/* Removed desktop favorite section from top left */}
-          
           {loading && <p className="text-center text-gray-500 py-8">Loading cars...</p>}
           {error && <p className="text-center text-red-500 py-8">{error}</p>}
 
@@ -275,13 +310,14 @@ const CarHolder: React.FC = () => {
                       
                       {car.images && car.images.length > 0 ? (
                         <img
-                          src={
-                            car.images[0].image.startsWith('http') 
-                              ? car.images[0].image 
-                              : `${API_BASE_URL}${car.images[0].image}`
-                          }
+                          src={getCarImageUrl(car)}
                           alt={`${car.brand} ${car.model_name}`}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback to placeholder if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.src = `${API_BASE_URL}/api/placeholder/800/600`;
+                          }}
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-gray-200">

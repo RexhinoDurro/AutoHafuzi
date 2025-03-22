@@ -32,18 +32,24 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
       return image.preview;
     }
     
-    // Check if image.url is available and use that first (for Cloudinary URLs)
+    // Check if image.url is available from Cloudinary
     if ('url' in image && image.url) {
       return image.url;
     }
     
-    // For non-Cloudinary URLs or fallback
-    if (image.image && (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
+    // For direct HTTP URLs
+    if (image.image && typeof image.image === 'string' && 
+        (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
       return image.image;
     }
     
-    // Default case - prepend the baseUrl
-    return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+    // Default case for relative URLs - prepend the baseUrl
+    if (typeof image.image === 'string') {
+      return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+    }
+    
+    // Complete fallback
+    return `${baseUrl}/api/placeholder/800/600`;
   };
 
   // Get appropriate fallback image URLs

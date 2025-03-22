@@ -11,9 +11,20 @@ const CarCard = ({ car }: CarCardProps) => {
   // Get the primary image or the first image if no primary is set
   const getDisplayImage = () => {
     if (car.images && car.images.length > 0) {
+      // First try to find the primary image
       const primaryImage = car.images.find(img => img.is_primary);
+      
       if (primaryImage) {
+        // Check if Cloudinary URL is available
+        if (primaryImage.url) {
+          return primaryImage.url;
+        }
         return primaryImage.image;
+      }
+      
+      // If no primary image, use the first image
+      if (car.images[0].url) {
+        return car.images[0].url;
       }
       return car.images[0].image;
     }
@@ -32,6 +43,13 @@ const CarCard = ({ car }: CarCardProps) => {
 
   const fuelInfo = car.fuel_type || "N/A";
   const registrationInfo = getFormattedRegistration();
+  
+  // Check if the image is already a full URL (Cloudinary or otherwise)
+  const getImageUrl = (imageUrl: string) => {
+    if (!imageUrl) return "";
+    if (imageUrl.startsWith('http')) return imageUrl;
+    return `${API_BASE_URL}${imageUrl}`;
+  };
 
   return (
     <Link 
@@ -46,9 +64,14 @@ const CarCard = ({ car }: CarCardProps) => {
         
         {displayImage ? (
           <img
-            src={displayImage.startsWith('http') ? displayImage : `${API_BASE_URL}${displayImage}`}
+            src={getImageUrl(displayImage)}
             alt={`${car.brand} ${car.model_name}`}
             className="w-full h-full object-cover rounded-t-sm"
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.src = `${API_BASE_URL}/api/placeholder/400/300`;
+            }}
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-t-sm">
