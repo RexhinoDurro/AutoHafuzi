@@ -27,11 +27,11 @@ export const API_ENDPOINTS = {
   CARS: {
     LIST: `${API_BASE_URL}/api/cars/`,
     ADD: `${API_BASE_URL}/api/cars/add/`,
-    UPDATE: (id: string | number) => `${API_BASE_URL}/api/cars/update/${id}/`,
-    GET: (id: string | number) => `${API_BASE_URL}/api/cars/${id}/`,
-    DELETE: (id: string | number) => `${API_BASE_URL}/api/cars/delete/${id}/`,
+    UPDATE: (slug: string) => `${API_BASE_URL}/api/cars/update/${slug}/`,
+    GET: (slug: string) => `${API_BASE_URL}/api/cars/${slug}/`, // Changed from ID to slug
+    DELETE: (slug: string) => `${API_BASE_URL}/api/cars/delete/${slug}/`,
     IMAGES: {
-      UPLOAD: (carId: string | number) => `${API_BASE_URL}/api/cars/${carId}/images/`,
+      UPLOAD: (slug: string) => `${API_BASE_URL}/api/cars/${slug}/images/`,
       DELETE: (imageId: number) => `${API_BASE_URL}/api/cars/images/${imageId}/`,
     },
   },

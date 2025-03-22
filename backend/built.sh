@@ -10,7 +10,6 @@ mkdir -p staticfiles media
 # Install Python dependencies
 pip install -r requirements.txt
 
-python manage.py migrate api zero
 # Run Django commands
 python manage.py collectstatic --noinput
 python manage.py makemigrations
