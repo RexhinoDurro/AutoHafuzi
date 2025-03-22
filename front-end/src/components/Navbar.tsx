@@ -21,8 +21,10 @@ const Navbar = () => {
             <Link to="/" className="flex items-center space-x-2">
               <img 
                 src={logo} 
-                alt="Company Logo" 
+                alt="Hafuzi Auto" 
                 className="h-10"
+                width="40"
+                height="40"
               />
             </Link>
 
@@ -62,11 +64,13 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Fixed with accessible name */}
             <div className="md:hidden">
               <button 
                 onClick={toggleMenu} 
-                className="text-white focus:outline-none"
+                className="text-white focus:outline-none focus:ring-2 focus:ring-white p-1 rounded"
+                aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={isMenuOpen}
               >
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -79,12 +83,14 @@ const Navbar = () => {
       <div 
         className={`fixed top-0 right-0 w-64 h-full bg-black shadow-lg transform transition-transform duration-300 ease-in-out z-50 md:hidden 
         ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        aria-hidden={!isMenuOpen}
       >
-        {/* Close Button */}
+        {/* Close Button - Fixed with accessible name */}
         <div className="flex justify-end p-4">
           <button 
             onClick={toggleMenu} 
-            className="text-red-500 hover:text-red-700 focus:outline-none"
+            className="text-red-500 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 p-1 rounded"
+            aria-label="Close menu"
           >
             <X className="h-8 w-8" />
           </button>
@@ -148,6 +154,7 @@ const Navbar = () => {
         <div 
           className="fixed inset-0 z-40 md:hidden"
           onClick={toggleMenu}
+          aria-hidden="true"
         />
       )}
     </>

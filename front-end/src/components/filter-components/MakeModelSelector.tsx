@@ -20,6 +20,7 @@ interface MakeModelSelectorProps {
 
 /**
  * Component for selecting make, model, and variant
+ * Fixed with proper accessibility labels
  */
 export const MakeModelSelector = memo(({
   makes,
@@ -36,11 +37,17 @@ export const MakeModelSelector = memo(({
   return (
     <div className="space-y-2">
       <div>
+        {/* Added proper label with associated ID */}
+        <label htmlFor="make-select" className="block text-sm font-medium text-gray-700 mb-1">
+          Marka (Make)
+        </label>
         <select
+          id="make-select"
           value={selectedMake || ''}
           onChange={(e) => onMakeChange(e.target.value)}
           className="w-full p-2 border rounded"
           disabled={loading.makes}
+          aria-busy={loading.makes}
         >
           <option value="">Të gjitha Markat</option>
           {loading.makes ? (
@@ -58,11 +65,17 @@ export const MakeModelSelector = memo(({
       </div>
       
       <div>
+        {/* Added proper label with associated ID */}
+        <label htmlFor="model-select" className="block text-sm font-medium text-gray-700 mb-1">
+          Modeli (Model)
+        </label>
         <select
+          id="model-select"
           value={selectedModel || ''}
           onChange={(e) => onModelChange(e.target.value)}
           className="w-full p-2 border rounded"
           disabled={!selectedMake || loading.models}
+          aria-busy={loading.models}
         >
           <option value="">Të gjitha Modelet</option>
           {loading.models ? (
@@ -80,11 +93,17 @@ export const MakeModelSelector = memo(({
       </div>
       
       <div>
+        {/* Added proper label with associated ID */}
+        <label htmlFor="variant-select" className="block text-sm font-medium text-gray-700 mb-1">
+          Varianti (Variant)
+        </label>
         <select
+          id="variant-select"
           value={selectedVariant || ''}
           onChange={(e) => onVariantChange(e.target.value)}
           className="w-full p-2 border rounded"
           disabled={!selectedModel || loading.variants}
+          aria-busy={loading.variants}
         >
           <option value="">Të gjitha Variantet</option>
           {loading.variants ? (

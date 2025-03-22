@@ -8,7 +8,6 @@ import { MakeModelSelector } from './filter-components/MakeModelSelector';
 import { YearSelector } from './filter-components/YearSelector';
 import { ExteriorColorPicker } from './filter-components/ExteriorColorPicker';
 import { OptionCategory } from './filter-components/OptionCategory';
-import { ActiveFiltersList } from './filter-components/ActiveFiltersList';
 import { ActionButtons } from './filter-components/ActionButtons';
 
 // Lazy-load RangeSlider to reduce initial bundle size
@@ -25,13 +24,11 @@ interface CarFilterProps {
 
 const CarFilter: React.FC<CarFilterProps> = ({ onFilterChange }) => {
   const [showDetails, setShowDetails] = useState(false);
-  const [showAllFilters, setShowAllFilters] = useState(false);
 
   const {
     // State
     filters,
     selectedOptions,
-    activeFilters,
     makes,
     models,
     variants,
@@ -72,7 +69,6 @@ const CarFilter: React.FC<CarFilterProps> = ({ onFilterChange }) => {
     handleMileageChange,
     handlePowerChange,
     handleOptionChange,
-    removeFilter,
     handleSubmit,
     resetFilters
   } = useCarFilter({ useBrowserStorage: true });
@@ -80,10 +76,6 @@ const CarFilter: React.FC<CarFilterProps> = ({ onFilterChange }) => {
   // Event handlers
   const toggleDetails = useCallback(() => {
     setShowDetails(prev => !prev);
-  }, []);
-
-  const toggleShowAllFilters = useCallback(() => {
-    setShowAllFilters(prev => !prev);
   }, []);
 
   const handleFormSubmit = useCallback(() => {
@@ -97,15 +89,6 @@ const CarFilter: React.FC<CarFilterProps> = ({ onFilterChange }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md mb-6">
       <h2 className="text-xl font-bold mb-4">Gjej Makinën Tënde të Përsosur</h2>
-      
-      {/* Active Filters Section */}
-      <ActiveFiltersList
-        activeFilters={activeFilters}
-        showAllFilters={showAllFilters}
-        onToggleShowAll={toggleShowAllFilters}
-        onRemoveFilter={removeFilter}
-        onClearAll={handleReset}
-      />
       
       {/* Basic Search Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

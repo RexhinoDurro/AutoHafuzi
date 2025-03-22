@@ -10,7 +10,13 @@ const Footer = () => {
           {/* Company Info */}
           <div className="space-y-4">
             <Link to="/" className="block">
-              <img src={hafuzilogo} alt="Hafuzi Auto" className="h-12 w-auto"/>
+              <img 
+                src={hafuzilogo} 
+                alt="Hafuzi Auto" 
+                className="h-12 w-auto"
+                width="48"
+                height="48"
+              />
             </Link>
             <p className="text-gray-400 text-sm">
               Partneri juaj i besuar në përsosmërinë e automjeteve
@@ -62,7 +68,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Social Media */}
+          {/* Social Media - Fixed with accessible links */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-green-600">Na Ndiqni</h3>
             <div className="flex space-x-4">
@@ -71,6 +77,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Visit our Facebook page"
               >
                 <Facebook className="h-6 w-6" />
               </a>
@@ -79,6 +86,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Visit our Instagram page"
               >
                 <Instagram className="h-6 w-6" />
               </a>

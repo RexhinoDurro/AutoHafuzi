@@ -31,14 +31,19 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return 'preview' in image;
   };
 
-  // Helper function to get the correct image URL
-  const getImageUrl = (image: CarImage | TempImage): string => {
+  // Helper function to get the optimized image URL
+  const getImageUrl = (image: CarImage | TempImage, width = 800, height = 600): string => {
     if (isTempImage(image)) {
       return image.preview;
     }
     
     // Check if image.url is available from Cloudinary
-    if ('url' in image && image.url) {
+    if ('url' in image && image.url && image.url.includes('cloudinary')) {
+      // Add optimized transformations for Cloudinary
+      const parts = image.url.split('/upload/');
+      if (parts.length === 2) {
+        return `${parts[0]}/upload/w_${width},h_${height},c_fill,q_auto,f_auto/${parts[1]}`;
+      }
       return image.url;
     }
     
@@ -54,7 +59,12 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     }
     
     // Complete fallback
-    return `${baseUrl}/api/placeholder/800/600`;
+    return `${baseUrl}/api/placeholder/${width}/${height}`;
+  };
+
+  // Get thumbnail URL (smaller size for better performance)
+  const getThumbnailUrl = (image: CarImage | TempImage): string => {
+    return getImageUrl(image, 100, 100);
   };
 
   // Touch handlers for swipe functionality
@@ -116,6 +126,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         <img 
           src={imageErrors[selectedIndex] ? fallbackImageUrl : getImageUrl(images[selectedIndex])}
           alt={`Car view ${selectedIndex + 1}`} 
+          width="800"
+          height="600"
           className="w-full h-full object-cover"
           onError={() => {
             console.error(`Failed to load image: ${getImageUrl(images[selectedIndex])}`);
@@ -179,8 +191,11 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
               }}
             >
               <img 
-                src={imageErrors[index] ? thumbnailFallbackUrl : getImageUrl(image)}
+                src={imageErrors[index] ? thumbnailFallbackUrl : getThumbnailUrl(image)}
                 alt={`Thumbnail ${index + 1}`} 
+                width="100"
+                height="100"
+                loading="lazy" 
                 className="w-full h-full object-cover"
                 onError={() => {
                   // Set this thumbnail as errored

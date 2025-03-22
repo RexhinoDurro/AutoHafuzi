@@ -8,30 +8,42 @@ interface CarCardProps {
 }
 
 const CarCard = ({ car }: CarCardProps) => {
-  // Get the primary image or the first image if no primary is set
-  const getDisplayImage = () => {
-    if (car.images && car.images.length > 0) {
-      // First try to find the primary image
-      const primaryImage = car.images.find(img => img.is_primary);
-      
-      if (primaryImage) {
-        // Check if Cloudinary URL is available
-        if (primaryImage.url) {
-          return primaryImage.url;
-        }
-        return primaryImage.image;
-      }
-      
-      // If no primary image, use the first image
-      if (car.images[0].url) {
-        return car.images[0].url;
-      }
-      return car.images[0].image;
+  // Optimized function to get properly sized images with WebP/AVIF support
+  const getDisplayImage = (width = 400, height = 300) => {
+    if (!car.images || car.images.length === 0) {
+      return `${API_BASE_URL}/api/placeholder/${width}/${height}`;
     }
-    return "";
+    
+    // First try to find the primary image
+    const primaryImage = car.images.find(img => img.is_primary);
+    const imageToUse = primaryImage || car.images[0];
+    
+    // Check if Cloudinary URL is available
+    if (imageToUse.url && imageToUse.url.includes('cloudinary')) {
+      // Extract base URL and add responsive transformations
+      const parts = imageToUse.url.split('/upload/');
+      if (parts.length === 2) {
+        // Add optimized transformations:
+        // - w_{width} - Set width
+        // - h_{height} - Set height
+        // - c_fill - Crop to fill the dimensions
+        // - q_auto - Automatic quality optimization
+        // - f_auto - Automatic format selection (WebP for supported browsers)
+        return `${parts[0]}/upload/w_${width},h_${height},c_fill,q_auto,f_auto/${parts[1]}`;
+      }
+      return imageToUse.url;
+    }
+    
+    // Use regular URL if Cloudinary transformation isn't possible
+    if (imageToUse.url) {
+      return imageToUse.url;
+    }
+    
+    // Fallback to image path
+    return imageToUse.image.startsWith('http') 
+      ? imageToUse.image 
+      : `${API_BASE_URL}${imageToUse.image}`;
   };
-
-  const displayImage = getDisplayImage();
 
   // Format registration date from individual fields
   const getFormattedRegistration = () => {
@@ -44,13 +56,6 @@ const CarCard = ({ car }: CarCardProps) => {
   const fuelInfo = car.fuel_type || "N/A";
   const registrationInfo = getFormattedRegistration();
   
-  // Check if the image is already a full URL (Cloudinary or otherwise)
-  const getImageUrl = (imageUrl: string) => {
-    if (!imageUrl) return "";
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `${API_BASE_URL}${imageUrl}`;
-  };
-
   return (
     <Link 
       to={`/car/${car.id}`}
@@ -62,11 +67,21 @@ const CarCard = ({ car }: CarCardProps) => {
           <FavoriteButton carId={car.id} />
         </div>
         
-        {displayImage ? (
+        {/* Optimized image with proper dimensions for better CLS */}
+        {car.images && car.images.length > 0 ? (
           <img
-            src={getImageUrl(displayImage)}
+            src={getDisplayImage(400, 300)}
             alt={`${car.brand} ${car.model_name}`}
+            width="400"
+            height="300"
             className="w-full h-full object-cover rounded-t-sm"
+            loading="lazy"
+            srcSet={`
+              ${getDisplayImage(320, 240)} 320w,
+              ${getDisplayImage(640, 480)} 640w,
+              ${getDisplayImage(800, 600)} 800w
+            `}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             onError={(e) => {
               // Fallback to placeholder if image fails to load
               const target = e.target as HTMLImageElement;

@@ -1,13 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    
+    <!-- Add preconnect to important domains for faster resource loading -->
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Add meta description for better SEO -->
+    <meta name="description" content="Auto Hafuzi - Find your perfect car. Browse our selection of quality vehicles.">
+    
+    <!-- Add theme color for browser UI integration -->
+    <meta name="theme-color" content="#1f2937">
+    
+    <title>Auto Hafuzi</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Add a meaningful noscript message for users without JavaScript -->
+    <noscript>
+      <div style="text-align: center; padding: 20px; font-family: sans-serif;">
+        <h1>JavaScript is required</h1>
+        <p>Sorry, this website requires JavaScript to function properly. Please enable JavaScript in your browser settings.</p>
+      </div>
+    </noscript>
   </body>
 </html>
