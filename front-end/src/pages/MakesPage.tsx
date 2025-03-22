@@ -17,7 +17,7 @@ const MakesPage: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/auth/login');
+      navigate('/auth');
       return;
     }
     fetchMakes();
@@ -26,16 +26,16 @@ const MakesPage: React.FC = () => {
   const fetchMakes = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.MAKES, {
+      const response = await fetch(`${API_ENDPOINTS.MAKES}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to fetch makes');
       }
-
+  
       const data = await response.json();
       setMakes(data);
     } catch (error) {

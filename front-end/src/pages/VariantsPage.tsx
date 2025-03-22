@@ -78,16 +78,16 @@ const VariantsPage: React.FC = () => {
   const fetchVariants = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(modelId || ''), {
+      const response = await fetch(`${API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(modelId || '')}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
       });
-
+  
       if (!response.ok) {
         throw new Error('Failed to fetch variants');
       }
-
+  
       const data = await response.json();
       setVariants(data);
     } catch (error) {
@@ -96,7 +96,7 @@ const VariantsPage: React.FC = () => {
       setLoading(false);
     }
   };
-
+  
   const handleAddVariant = async (e: React.FormEvent) => {
     e.preventDefault();
     

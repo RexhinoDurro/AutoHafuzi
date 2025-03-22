@@ -23,7 +23,7 @@ const ModelsPage: React.FC = () => {
 
   useEffect(() => {
     if (!token) {
-      navigate('/auth/login');
+      navigate('/auth');
       return;
     }
     fetchMakeDetails();
@@ -59,11 +59,12 @@ const ModelsPage: React.FC = () => {
   const fetchModels = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || ''), {
+      const response = await fetch(`${API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || '')}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
       });
+  
 
       if (!response.ok) {
         throw new Error('Failed to fetch models');
