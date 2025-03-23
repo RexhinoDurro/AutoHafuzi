@@ -398,10 +398,9 @@ export const useCarForm = (id?: string) => {
       
       // The server expects PUT for updates, not PATCH
       const method = id ? 'PUT' : 'POST';
-      const endpoint = id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD;
-      console.log(`Submitting data to ${endpoint} using ${method}`);
+      console.log(`Submitting data to ${id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD} using ${method}`);
       
-      const response = await fetch(endpoint, {
+      const response = await fetch(id ? API_ENDPOINTS.CARS.UPDATE(id) : API_ENDPOINTS.CARS.ADD, {
         method: method,
         headers: { 
           Authorization: `Token ${token}`
