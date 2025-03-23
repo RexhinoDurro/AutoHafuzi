@@ -58,7 +58,7 @@ const CarCard = ({ car }: CarCardProps) => {
   
   return (
     <Link 
-      to={`/car/${car.id}`}
+      to={`/car/${car.slug}`}
       className="bg-white shadow overflow-hidden transition-transform hover:scale-105 cursor-pointer w-full mx-auto flex flex-col h-64 m-1 rounded-sm sm:h-80 sm:m-0.5 sm:shadow-lg sm:rounded-sm"
     >
       <div className="relative h-36 flex-[0.6] sm:h-44">

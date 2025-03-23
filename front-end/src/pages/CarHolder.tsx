@@ -46,8 +46,8 @@ const CarHolder: React.FC = () => {
     setIsFilterOpen(!isFilterOpen);
   };
 
-  const navigateToCarDetail = (carId: string | number) => {
-    window.location.href = `/car/${carId}`;
+  const navigateToCarDetail = (carSlug: string | number) => {
+    window.location.href = `/car/${carSlug}`;
   };
 
   // Helper function to get the proper image URL for a car
