@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "react-responsive-carousel": "^3.2.23"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.11"
   }
 }

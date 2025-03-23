@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getStoredAuth } from '../utils/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Eye, Users, Car as CarIcon} from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 // Define types for analytics data
 interface MostViewedCar {
@@ -33,7 +34,8 @@ const AnalyticsDashboard: React.FC = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/analytics/?days=${timeRange}`, {
+      // Use the correct API endpoint from config
+      const response = await fetch(`${API_ENDPOINTS.ANALYTICS}?days=${timeRange}`, {
         headers: {
           Authorization: `Token ${token}`,
         },

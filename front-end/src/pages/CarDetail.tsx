@@ -4,10 +4,15 @@ import CarImageCarousel from '../components/ImageGallery';
 import { Car } from '../types/car';
 import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye } from 'lucide-react';
 import FavoriteButton from '../components/FavouriteButton';
-import { trackCarView } from '../utils/userActivityService';
+import { 
+  trackCarView, 
+  shouldCountCarView, 
+  getLastViewTimestamp 
+} from '../utils/userActivityService';
 import RecommendedCars from '../components/RecommendedCars';
 import { API_ENDPOINTS } from '../config/api';
 import { useMediaQuery } from '../utils/useMediaQuery';
+import { shouldDisableViewTracking } from '../utils/navigation';
 
 // Interface for option data
 interface Option {
@@ -45,9 +50,41 @@ const CarDetail: React.FC = () => {
   // Add a state to track if we've done the initial fetch
   // This prevents multiple API calls on component rerenders
   const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const [viewTracked, setViewTracked] = useState<boolean | null>(null);
   
   // Add a media query hook to detect mobile screens
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // Check if tracking should be disabled based on navigation source
+  useEffect(() => {
+    if (!initialFetchDone && id) {
+      // Get referrer from location state or document.referrer
+      const stateReferrer = location.state?.from;
+      const docReferrer = document.referrer;
+      const currentReferrer = stateReferrer || 
+                             (docReferrer ? new URL(docReferrer).pathname : '/');
+      
+      setReferrer(currentReferrer);
+      
+      // Check if we should disable tracking based on referrer
+      const comingFromProtectedPath = shouldDisableViewTracking(currentReferrer);
+      const explicitlyDisabled = location.state?.doNotTrackView === true;
+      
+      // If tracking should be disabled but isn't explicitly disabled, update state
+      if (comingFromProtectedPath && !explicitlyDisabled) {
+        console.log(`[View Tracking] Auto-disabling tracking for car ${id} coming from ${currentReferrer}`);
+        navigate(location.pathname, {
+          state: {
+            ...location.state,
+            doNotTrackView: true,
+            originalReferrer: currentReferrer,
+            autoDisabled: true
+          },
+          replace: true // Replace current history entry to avoid back button issues
+        });
+      }
+    }
+  }, [id, location, navigate, initialFetchDone]);
 
   useEffect(() => {
     // Check if we have a referrer in sessionStorage, otherwise default to current referrer
@@ -101,7 +138,7 @@ const CarDetail: React.FC = () => {
     fetchData();
   }, []);
 
-  // Fetch car details
+  // Fetch car details with proper view tracking
   useEffect(() => {
     // Skip if we've already done the initial fetch or if id is missing
     if (initialFetchDone || !id) return;
@@ -109,38 +146,51 @@ const CarDetail: React.FC = () => {
     const fetchCarDetails = async () => {
       setLoading(true);
       try {
-        // Check for direct "do not track" flag from navigation state
-        const doNotTrackViewFromState = location.state && location.state.doNotTrackView === true;
+        // Start with the cooldown check from local storage
+        const cooldownPassed = shouldCountCarView(Number(id));
+        let shouldTrackView = cooldownPassed;
         
-        // Multiple checks for whether we should track this view
-        const comingFromFavorites = referrer === '/favorites' || 
-                                  (location.state && location.state.from === '/favorites');
+        // Get last view timestamp for logging
+        const lastViewTime = getLastViewTimestamp(Number(id));
+        const timeSinceLastView = lastViewTime ? Date.now() - lastViewTime : null;
         
-        const comingFromDashboard = referrer.includes('/auth/dashboard') || 
-                                   referrer.includes('/admin') ||
-                                   (location.state && location.state.from && 
-                                    (location.state.from.includes('/auth/dashboard') || 
-                                     location.state.from.includes('/admin')));
+        // Check for various conditions to disable tracking
+        const comingFromFavorites = referrer.includes('/favorites') || 
+                                  (location.state?.from && location.state.from.includes('/favorites'));
+        
+        const comingFromAdmin = referrer.includes('/auth') || 
+                              referrer.includes('/admin') ||
+                              (location.state?.from && 
+                               (location.state.from.includes('/auth') || 
+                                location.state.from.includes('/admin')));
         
         // Check if this is a page refresh
         const isRefresh = window.performance && 
           window.performance.navigation && 
           window.performance.navigation.type === 1;
         
-        // Don't count views if any of these conditions are true
-        const shouldTrackView = !comingFromFavorites && 
-                               !comingFromDashboard && 
-                               !isRefresh && 
-                               !doNotTrackViewFromState;
+        // Check if tracking is explicitly disabled in state
+        const explicitlyDisabled = location.state?.doNotTrackView === true;
         
-        console.log('View tracking decision:', {
-          comingFromFavorites,
-          comingFromDashboard,
-          isRefresh,
-          doNotTrackViewFromState,
-          shouldTrackView,
+        // Apply all conditions to determine final tracking decision
+        shouldTrackView = shouldTrackView && 
+                         !comingFromFavorites && 
+                         !comingFromAdmin && 
+                         !isRefresh && 
+                         !explicitlyDisabled;
+        
+        // Log the decision and reasons for debugging
+        console.log('[View Tracking] Decision:', {
+          carId: id,
+          cooldownPassed,
+          timeSinceLastView: timeSinceLastView ? `${Math.round(timeSinceLastView / 1000 / 60)} minutes` : 'never viewed',
           referrer,
-          stateFrom: location.state?.from
+          stateFrom: location.state?.from,
+          comingFromFavorites,
+          comingFromAdmin,
+          isRefresh,
+          explicitlyDisabled,
+          finalDecision: shouldTrackView ? 'TRACK' : 'DO NOT TRACK'
         });
         
         // Create headers with view tracking flag
@@ -153,7 +203,7 @@ const CarDetail: React.FC = () => {
         // Make the API request
         const response = await fetch(API_ENDPOINTS.CARS.GET(id), {
           method: 'GET',
-          credentials: 'include',
+          credentials: 'include', // Include cookies for session tracking
           headers: headers
         });
         
@@ -164,9 +214,16 @@ const CarDetail: React.FC = () => {
         const data = await response.json();
         setCar(data);
         
-        // Track this car view for recommendations, even if we don't update the view counter
+        // Track this car view for recommendations, respecting all rules
         if (data.id && data.brand && data.model_name) {
-          trackCarView(data.id, data.brand, data.model_name);
+          const wasTracked = trackCarView(data.id, data.brand, data.model_name);
+          setViewTracked(wasTracked);
+          console.log(`[View Tracking] Car ${data.id} (${data.brand} ${data.model_name}): ${wasTracked ? 'TRACKED' : 'NOT TRACKED'}`);
+          
+          // If the count didn't match between client and server, log a warning
+          if (wasTracked !== shouldTrackView) {
+            console.warn(`[View Tracking] Inconsistency: Client tracked=${wasTracked}, Server tracked=${shouldTrackView}`);
+          }
         }
         
       } catch (err) {
@@ -178,8 +235,8 @@ const CarDetail: React.FC = () => {
     };
   
     fetchCarDetails();
-  }, [id, referrer, initialFetchDone, location.state]);
-
+  }, [id, referrer, initialFetchDone, location.state, location]);
+  
   // Group options by category for display
   const categorizeOptions = (): OptionCategories => {
     const categories: OptionCategories = {
@@ -290,6 +347,13 @@ const CarDetail: React.FC = () => {
                   <Eye size={18} className="mr-1" />
                   <span>{car.view_count}</span>
                 </div>
+                
+                {/* Tracking Status - only show in development */}
+                {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
+                  <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    {viewTracked ? 'View Tracked' : 'View Not Tracked'}
+                  </div>
+                )}
                 
                 {/* Favorite Button */}
                 <FavoriteButton 
