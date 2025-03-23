@@ -14,19 +14,21 @@ from .views import (
 from .views import cloudinary_views
 
 urlpatterns = [
-    # Car endpoints
-    path('cars/', get_cars, name='get_cars'),
-    path('cars/<str:car_slug>/', get_car, name='get_car'),
+    # Car endpoints - specific patterns first
     path('cars/add/', add_car, name='add_car'),
     path('cars/update/<str:car_slug>/', update_car, name='update_car'),
     path('cars/delete/<str:car_slug>/', delete_car, name='delete_car'),
     
-    # Cloudinary image handling endpoints - ALL USING SLUGS
+    # Cloudinary image handling endpoints
     path('cars/<str:car_slug>/images/', cloudinary_views.add_car_images, name='add_car_images'),
     path('cars/images/<int:image_id>/', cloudinary_views.delete_car_image, name='delete_car_image'),
     path('cars/<str:car_slug>/images/<int:image_id>/primary/', cloudinary_views.set_primary_image, name='set_primary_image'),
     path('cars/<str:car_slug>/images/reorder/', cloudinary_views.reorder_car_images, name='reorder_car_images'),
     path('cars/<str:car_slug>/images/list/', cloudinary_views.get_car_images, name='get_car_images'),
+    
+    # More general car patterns last
+    path('cars/', get_cars, name='get_cars'),
+    path('cars/<str:car_slug>/', get_car, name='get_car'),
     
     # Placeholder image
     path('placeholder/<int:width>/<int:height>/', placeholder_image, name='placeholder_image'),
