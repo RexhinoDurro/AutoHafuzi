@@ -26,10 +26,10 @@ export const API_ENDPOINTS = {
   UPHOLSTERY: `${API_BASE_URL}/api/upholstery/`,
   CARS: {
     LIST: `${API_BASE_URL}/api/cars/`,
-    ADD: `${API_BASE_URL}/api/cars/`,  // Changed from /api/cars/add/
-    UPDATE: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/`,  // Changed from /api/cars/update/${slug}/
+    ADD: `${API_BASE_URL}/api/cars/add/`,  // Changed from /api/cars/
+    UPDATE: (slug: string | number) => `${API_BASE_URL}/api/cars/update/${slug}/`,  // Changed from /api/cars/${slug}/
     GET: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/`, 
-    DELETE: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/`,  // Changed from /api/cars/delete/${slug}/
+    DELETE: (slug: string | number) => `${API_BASE_URL}/api/cars/delete/${slug}/`,  // Changed from /api/cars/delete/${slug}/
     IMAGES: {
       UPLOAD: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/images/`,
       DELETE: (imageId: number) => `${API_BASE_URL}/api/cars/images/${imageId}/`,
