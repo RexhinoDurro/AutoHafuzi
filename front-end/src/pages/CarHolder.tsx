@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CarHolderFilter from '../components/CarHolderFilter';
 import { Car } from '../types/car';
 import { saveLastSearch } from '../utils/userActivityService';
@@ -34,6 +35,7 @@ interface FilterState {
 }
 
 const CarHolder: React.FC = () => {
+  const navigate = useNavigate();
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +49,11 @@ const CarHolder: React.FC = () => {
     setIsFilterOpen(!isFilterOpen);
   };
 
-  const navigateToCarDetail = (carSlug: string | number) => {
-    window.location.href = `/car/${carSlug}`;
+  const navigateToCarDetail = (carSlug: string) => {
+    // Using React Router's navigate function for better client-side routing
+    navigate(`/car/${carSlug}`, { 
+      state: { from: '/cars' } // Pass origin information for potential back navigation
+    });
   };
 
   // Helper function to get the proper image URL for a car
@@ -298,7 +303,7 @@ const CarHolder: React.FC = () => {
                 <div 
                   key={car.id} 
                   className="bg-white shadow border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition-all cursor-pointer"
-                  onClick={() => navigateToCarDetail(car.id)}
+                  onClick={() => navigateToCarDetail(car.slug)}
                 >
                   {/* New design based on the image */}
                   <div className="flex flex-col md:flex-row">
