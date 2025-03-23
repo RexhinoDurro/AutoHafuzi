@@ -1,10 +1,17 @@
-// scripts/generate-sitemap.js
+// scripts/generate-sitemap.cjs
 const fs = require('fs');
-const axios = require('axios');
-const { API_BASE_URL, API_ENDPOINTS } = require('../src/config/api');
 
-// Define your website base URL
+// Define your website base URL and API endpoints directly in this script
+// instead of importing from '../src/config/api'
+const API_BASE_URL = 'https://autohafuzi.onrender.com';
 const SITE_URL = 'https://autohafuzi.com';
+
+const API_ENDPOINTS = {
+  CARS: {
+    LIST: `${API_BASE_URL}/api/cars/`,
+  },
+  MAKES: `${API_BASE_URL}/api/makes/`,
+};
 
 // Define static routes with priorities and change frequencies
 const staticRoutes = [
@@ -84,7 +91,7 @@ const popularSearches = [
 ];
 
 // Generate sitemap XML
-async function generateSitemap() {
+function generateSitemap() {
   let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
   sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
   
@@ -115,50 +122,8 @@ async function generateSitemap() {
     sitemap += '  </url>\n';
   });
   
-  try {
-    // Fetch all cars to add dynamic car detail pages
-    const response = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.CARS.LIST}?limit=1000`);
-    const cars = response.data.results || [];
-    
-    // Add car detail pages
-    cars.forEach(car => {
-      sitemap += '  <url>\n';
-      // Use slug if available, otherwise use ID
-      sitemap += `    <loc>${SITE_URL}/car/${car.slug || car.id}</loc>\n`;
-      sitemap += '    <changefreq>weekly</changefreq>\n';
-      sitemap += '    <priority>0.8</priority>\n';
-      
-      // Add lastmod if we have created_at date
-      if (car.created_at) {
-        const date = new Date(car.created_at).toISOString().split('T')[0];
-        sitemap += `    <lastmod>${date}</lastmod>\n`;
-      }
-      
-      sitemap += '  </url>\n';
-    });
-  } catch (error) {
-    console.error('Error fetching cars for sitemap:', error);
-  }
-  
-  // Add makes and models if you have these endpoints
-  try {
-    const makesResponse = await axios.get(`${API_BASE_URL}${API_ENDPOINTS.MAKES}`);
-    const makes = makesResponse.data || [];
-    
-    // Add make pages
-    makes.forEach(make => {
-      sitemap += '  <url>\n';
-      sitemap += `    <loc>${SITE_URL}/cars?make=${make.id}</loc>\n`;
-      sitemap += '    <changefreq>weekly</changefreq>\n';
-      sitemap += '    <priority>0.7</priority>\n';
-      sitemap += '  </url>\n';
-      
-      // Optionally fetch and add model pages for each make
-      // This depends on your API structure and can be expanded
-    });
-  } catch (error) {
-    console.error('Error fetching makes for sitemap:', error);
-  }
+  // Note: We're skipping the API calls since they might not be accessible during the build
+  // Instead, we'll just generate a basic sitemap with static pages
   
   sitemap += '</urlset>';
   
