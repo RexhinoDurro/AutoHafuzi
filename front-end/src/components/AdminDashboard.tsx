@@ -5,7 +5,7 @@ import { getStoredAuth } from '../utils/auth';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { Eye } from 'lucide-react';
 import Sidebar from './Sidebar';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 
 const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -47,11 +47,14 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (car: Car) => {
     if (!window.confirm('Are you sure you want to delete this car?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cars/delete/${id}/`, {
+      // Use car.slug if available, otherwise fall back to car.id
+      const identifier = car.slug || car.id;
+      
+      const response = await fetch(API_ENDPOINTS.CARS.DELETE(identifier), {
         method: 'DELETE',
         headers: {
           Authorization: `Token ${token}`,
@@ -59,10 +62,16 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       });
 
       if (response.ok) {
-        setCars(cars.filter(car => car.id !== id));
+        setCars(cars.filter(c => c.id !== car.id));
+      } else {
+        // Handle error response
+        const errorText = await response.text();
+        console.error('Failed to delete car:', errorText);
+        alert(`Failed to delete car: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error deleting car:', error);
+      alert('Error deleting car. Please try again.');
     }
   };
 
@@ -101,6 +110,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  // Function to handle editing a car - use slug if available
+  const handleEdit = (car: Car) => {
+    const identifier = car.slug || car.id;
+    navigate(`/auth/edit-car/${identifier}`);
   };
 
   // Main content wrapper
@@ -199,13 +214,13 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                 <td className="px-6 py-4">{formatDate(car.created_at)}</td>
                 <td className="px-6 py-4 space-x-2">
                   <button
-                    onClick={() => navigate(`/auth/edit-car/${car.id}`)}
+                    onClick={() => handleEdit(car)}
                     className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(car.id)}
+                    onClick={() => handleDelete(car)}
                     className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                   >
                     Delete
