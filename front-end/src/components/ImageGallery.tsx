@@ -1,4 +1,4 @@
-// src/components/ImageCarousel.tsx
+// src/components/ImageGallery.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { CarImage } from '../types/car';
 import { API_BASE_URL } from '../config/api';
@@ -146,21 +146,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     };
   }, [goToNextImage, goToPrevImage]);
 
-  // Auto-advance functionality (can be toggled)
-  const [autoPlay, setAutoPlay] = useState(false);
-  
-  useEffect(() => {
-    let interval: number | undefined;
-    
-    if (autoPlay && images.length > 1) {
-      interval = window.setInterval(goToNextImage, 5000);
-    }
-    
-    return () => {
-      if (interval) window.clearInterval(interval);
-    };
-  }, [autoPlay, goToNextImage, images.length]);
-
   // Handle click on thumbnail
   const handleThumbnailClick = (index: number) => {
     if (index !== selectedIndex && !isTransitioning) {
@@ -169,8 +154,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
       setTimeout(() => setIsTransitioning(false), 300);
     }
   };
-
-  // Handle image error (for use with ResponsiveImage component)
 
   if (!images || images.length === 0) {
     return (
@@ -244,15 +227,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs md:text-sm">
           {selectedIndex + 1} / {images.length}
         </div>
-        
-        {/* Optional autoplay toggle button */}
-        <button
-          onClick={() => setAutoPlay(!autoPlay)}
-          className="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs flex items-center"
-          aria-label={autoPlay ? "Pause slideshow" : "Play slideshow"}
-        >
-          {autoPlay ? "■ Pause" : "▶ Play"}
-        </button>
       </div>
       
       {/* Thumbnails */}

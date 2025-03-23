@@ -1,75 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
-<!-- Replace the current head section in index.html with this optimized version -->
+<html lang="sq">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/assets/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- Canonical URL to prevent duplicate content issues -->
+  <!-- Favicon Implementation -->
+  <link rel="icon" type="image/svg+xml" href="/hafuzi.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  
+  <!-- SEO Meta Tags -->
+  <title>Auto Hafuzi - Makina cilësore për shitje në Shqipëri</title>
+  <meta name="description" content="Zgjidhni nga koleksioni ynë i makinave të përdorura cilësore. Marka të ndryshme, çmime konkurruese dhe shërbim i shkëlqyer." />
+  
+  <!-- Open Graph Tags for Social Media -->
+  <meta property="og:title" content="Auto Hafuzi - Makina për shitje" />
+  <meta property="og:description" content="Zgjidhni nga koleksioni ynë i makinave të përdorura cilësore në Shqipëri." />
+  <meta property="og:image" content="https://autohafuzi.com/og-image.jpg" />
+  <meta property="og:url" content="https://autohafuzi.com" />
+  <meta property="og:type" content="website" />
+  
+  <!-- Canonical URL -->
   <link rel="canonical" href="https://autohafuzi.com" />
   
-  <!-- Primary meta tags with targeted keywords -->
-  <title>Auto Hafuzi - Quality Cars for Sale in Albania | New & Used Vehicles</title>
-  <meta name="description" content="Find your perfect car at Auto Hafuzi. Browse our extensive selection of quality new and used vehicles in Albania with flexible financing options and expert service." />
-  <meta name="keywords" content="cars Albania, auto hafuzi, used cars, new cars, car dealership, vehicle sales, quality cars, car shop" />
+  <!-- Preconnect to external domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  
+  <!-- Verify site ownership (Add your Google verification code here) -->
+  <meta name="google-site-verification" content="your-verification-code" />
+  
+  <!-- Additional meta tags -->
+  <meta name="keywords" content="makina, mercedes, bmw, audi, diesel, petrol, cars, shitje, albania" />
   <meta name="author" content="Auto Hafuzi" />
+  <meta name="robots" content="index, follow" />
+</head>
+<body>
+  <div id="root"></div>
   
-  <!-- Resource hints for faster loading -->
-  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
-  <link rel="preload" href="/assets/logo.png" as="image" fetchpriority="high" />
-  <link rel="preload" href="/src/main.tsx" as="script" />
-  
-  <!-- Open Graph meta tags for better social sharing -->
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://autohafuzi.com" />
-  <meta property="og:title" content="Auto Hafuzi - Quality Cars in Albania" />
-  <meta property="og:description" content="Find your perfect car. Browse our selection of quality vehicles with competitive pricing and professional service." />
-  <meta property="og:image" content="https://autohafuzi.com/assets/og-image.jpg" />
-  
-  <!-- Twitter Card meta tags -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content="https://autohafuzi.com" />
-  <meta name="twitter:title" content="Auto Hafuzi - Quality Cars in Albania" />
-  <meta name="twitter:description" content="Find your perfect car. Browse our selection of quality vehicles with competitive pricing and professional service." />
-  <meta name="twitter:image" content="https://autohafuzi.com/assets/og-image.jpg" />
-  
-  <!-- Mobile web app capabilities -->
-  <meta name="theme-color" content="#1f2937" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  
-  <!-- Structured data for search engines (Schema.org) -->
+  <!-- Rich snippets for business information -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "AutoDealer",
       "name": "Auto Hafuzi",
-      "image": "https://autohafuzi.com/assets/logo.png",
-      "url": "https://autohafuzi.com",
-      "telephone": "+355699311111",
+      "image": "https://autohafuzi.com/logo.png",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "E762",
+        "streetAddress": "Fushë-Kruje, E762",
         "addressLocality": "Fushë Krujë",
-        "addressRegion": "Fushë-Kruje",
-        "addressCountry": "Albania"
+        "addressRegion": "Tiranë",
+        "postalCode": "1540",
+        "addressCountry": "AL"
       },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 41.4783,
-        "longitude": 19.7129
-      },
+      "telephone": "069 931 1111",
+      "email": "info@hafuziauto.ch",
+      "url": "https://autohafuzi.com",
       "openingHoursSpecification": [
         {
           "@type": "OpeningHoursSpecification",
-          "dayOfWeek": [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday"
-          ],
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
           "opens": "09:00",
           "closes": "18:00"
         },
@@ -80,215 +71,10 @@
           "closes": "16:00"
         }
       ],
-      "priceRange": "€€",
-      "description": "Auto Hafuzi is a leading car dealership in Albania offering quality new and used vehicles with expert service and competitive pricing."
+      "priceRange": "€€"
     }
   </script>
   
-  <!-- Critical CSS for immediate rendering -->
-  <style>
-    body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #f3f4f6;
-  color: #1f2937;
-  line-height: 1.5;
-}
-
-/* Layout */
-.container {
-  width: 100%;
-  padding-right: 1rem;
-  padding-left: 1rem;
-  margin-right: auto;
-  margin-left: auto;
-}
-
-/* Critical components */
-.navbar {
-  background-color: #000;
-  color: #fff;
-  padding: 0.5rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-
-.logo {
-  height: 3rem;
-  width: auto;
-}
-
-.banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
-.banner-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.banner-content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  color: white;
-  padding: 1rem;
-}
-
-/* Button styles */
-.btn {
-  display: inline-block;
-  font-weight: 500;
-  text-align: center;
-  vertical-align: middle;
-  cursor: pointer;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  transition: all 0.15s ease-in-out;
-}
-
-.btn-primary {
-  background-color: #10b981;
-  border-color: #10b981;
-  color: #fff;
-}
-
-.btn-primary:hover {
-  background-color: #059669;
-  border-color: #059669;
-}
-
-/* Loading spinner */
-.loading-spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top: 3px solid #10b981;
-  width: 2rem;
-  height: 2rem;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Helper/utility classes */
-.text-center { text-align: center; }
-.font-bold { font-weight: 700; }
-.mb-4 { margin-bottom: 1rem; }
-.p-4 { padding: 1rem; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-center { justify-content: center; }
-.w-full { width: 100%; }
-.h-auto { height: auto; }
-.relative { position: relative; }
-.absolute { position: absolute; }
-.rounded { border-radius: 0.25rem; }
-.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
-
-/* Basic responsive classes */
-@media (min-width: 640px) {
-  .container { max-width: 640px; }
-  .sm\\:flex { display: flex; }
-  .sm\\:text-left { text-align: left; }
-}
-
-@media (min-width: 768px) {
-  .container { max-width: 768px; }
-  .md\\:flex { display: flex; }
-  .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1024px) {
-  .container { max-width: 1024px; }
-  .lg\\:flex { display: flex; }
-  .lg\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1280px) {
-  .container { max-width: 1280px; }
-  .xl\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-  </style>
-  
-  <!-- Async analytics script -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX');
-  </script>
-  
-  <title>Auto Hafuzi - Quality Cars</title>
-</head>
-  <body>
-  <!-- Updated loading animation with styled text and rotation -->
-  <div id="initial-loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; z-index: 9999;">
-    <div style="display: flex; align-items: center;">
-      <div style="font-size: 32px; font-weight: bold; color: #6B7280;">Auto</div>
-      <div id="rotating-text" style="font-size: 32px; font-weight: bold; color: #10B981; margin-left: 8px; display: inline-block; transform-origin: center;">Hafuzi</div>
-    </div>
-  </div>
-    
-    <div id="root"></div>
-    
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Remove the initial loading screen once the app loads -->
-    <script>
-  // Rotation animation for the "Hafuzi" text
-  let rotationDegree = 0;
-  const rotatingText = document.getElementById('rotating-text');
-  
-  function rotateText() {
-    rotationDegree = (rotationDegree + 3) % 360; // Increment by 3 degrees
-    rotatingText.style.transform = `rotate(${rotationDegree}deg)`;
-    
-    if (rotationDegree < 360) {
-      requestAnimationFrame(rotateText);
-    } else {
-      // Reset and start again
-      rotationDegree = 0;
-      requestAnimationFrame(rotateText);
-    }
-  }
-  
-  // Start the rotation animation
-  requestAnimationFrame(rotateText);
-  
-  // Remove the loading screen once the app loads
-  window.addEventListener('load', function() {
-    const initialLoading = document.getElementById('initial-loading');
-    if (initialLoading) {
-      initialLoading.style.opacity = '0';
-      initialLoading.style.transition = 'opacity 0.5s ease';
-      setTimeout(() => {
-        initialLoading.remove();
-      }, 500);
-    }
-  });
-</script>
-    
-    <!-- Add a meaningful noscript message for users without JavaScript -->
-    <noscript>
-      <div style="text-align: center; padding: 20px; font-family: sans-serif;">
-        <h1>JavaScript is required</h1>
-        <p>Sorry, this website requires JavaScript to function properly. Please enable JavaScript in your browser settings.</p>
-      </div>
-    </noscript>
-  </body>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
 </html>

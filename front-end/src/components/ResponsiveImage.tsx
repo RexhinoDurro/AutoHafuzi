@@ -94,8 +94,9 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
       onLoad={onLoad}
       style={{
         objectFit,
-        height: 'auto', // Allow proper ratio scaling
-        maxWidth: '100%' // Ensure it doesn't overflow container
+        maxWidth: '100%', // Ensure it doesn't overflow container
+        boxSizing: 'border-box', // Include padding and border in the element's dimensions
+        display: 'block', // Prevent default inline behavior which can cause spacing issues
       }}
     />
   );

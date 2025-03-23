@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Award, Car, Clock, Settings, Sparkles, Map, Phone, Mail, Shield } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
-import { useNavigate } from 'react-router-dom';
 
 const AboutPage = () => {
   const [companyDescription, setCompanyDescription] = useState('I shtyrë nga pasioni, i përkushtuar ndaj cilësisë. Ne kemi ndihmuar klientët të gjejnë automjetin e tyre të përsosur që nga viti 2010.');
@@ -101,7 +101,12 @@ const AboutPage = () => {
             Auto Hafuzi
           </h1>
           <p className="text-xl md:text-2xl text-white mb-8 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-            Partneri juaj i besuar në përsosmërinë e automjeteve
+            Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri
+          </p>
+          <p className="text-lg text-white mb-8 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
+            Që nga viti 2010, ne jemi përkushtuar ndaj sigurimit të makinave të cilësisë më të lartë për klientët tanë.
+            Me një përzgjedhje të gjerë të makinave nga markat më të mira si Mercedes, BMW, Audi dhe më shumë,
+            ne ofrojmë një përzgjedhje të pasur të automjeteve diesel dhe benzinë për çdo nevojë dhe buxhet.
           </p>
           <button 
             onClick={handleDiscoverClick}
@@ -142,6 +147,12 @@ const AboutPage = () => {
             <p className="text-xl text-white max-w-3xl mx-auto">
               {companyDescription}
             </p>
+            <p className="text-lg text-white max-w-3xl mx-auto mt-4">
+              Ne besojmë se çdo klient meriton një makinë që jo vetëm përputhet me nevojat e tyre praktike, por edhe me stilin e tyre personal. Me ekspertizën tonë në industrinë e automjeteve dhe njohjen e tregut shqiptar, ne jemi në gjendje t'ju ofrojmë makina të cilësisë së lartë me çmime konkurruese.
+            </p>
+            <p className="text-lg text-white max-w-3xl mx-auto mt-4">
+              Qasja jonë e personalizuar ndaj shërbimit të klientit siguron që secili klient të marrë vëmendjen dhe ndihmën e personalizuar që i nevojitet për të bërë një zgjedhje të informuar. Nga modelet Mercedes-Benz luksoze dhe SUV-të BMW te makinat kompakte ekonomike, ne kemi diçka për çdo shije dhe buxhet.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -149,19 +160,19 @@ const AboutPage = () => {
               { 
                 icon: <Users className="h-12 w-12 text-yellow-400" />, 
                 title: "Ekip Ekspert", 
-                description: "Ekipi ynë i dedikuar i specialistëve të automjeteve sjell vite përvojë dhe pasion për t'ju shërbyer më mirë.", 
+                description: "Ekipi ynë i dedikuar i specialistëve të automjeteve sjell vite përvojë dhe pasion për t'ju shërbyer më mirë. Ne jemi të përkushtuar për të gjetur makinën e përsosur që përputhet me nevojat tuaja specifike dhe buxhetin tuaj.", 
                 delay: 0 
               },
               { 
                 icon: <Car className="h-12 w-12 text-yellow-400" />, 
                 title: "Përzgjedhje Premium", 
-                description: "Çdo automjet në inventarin tonë është përzgjedhur me kujdes dhe inspektuar tërësisht për të siguruar cilësi.", 
+                description: "Çdo automjet në inventarin tonë është përzgjedhur me kujdes dhe inspektuar tërësisht për të siguruar cilësi. Ne ofrojmë një gamë të gjerë të makinave diesel dhe benzinë nga prodhuesit më të respektuar, duke përfshirë Mercedes, BMW, dhe Audi.", 
                 delay: 0.2 
               },
               { 
                 icon: <Award className="h-12 w-12 text-yellow-400" />, 
                 title: "Klienti në Rend të Parë", 
-                description: "Ne i japim prioritet kënaqësisë suaj dhe punojmë pa pushim për ta bërë përvojën tuaj të blerjes së makinës të jashtëzakonshme.", 
+                description: "Ne i japim prioritet kënaqësisë suaj dhe punojmë pa pushim për ta bërë përvojën tuaj të blerjes së makinës të jashtëzakonshme. Transparenca, ndershmëria dhe shërbimi i personalizuar janë themelet e filozofisë sonë të biznesit.", 
                 delay: 0.4 
               }
             ].map((item, index) => (
@@ -188,7 +199,10 @@ const AboutPage = () => {
             <h2 className="text-4xl font-bold mb-6 text-gray-900">Rrugëtimi Ynë</h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Nga fillime të thjeshta deri në bërjen një emër të besuar në industrinë e automobilave
+              Nga fillime të thjeshta deri në bërjen një emër të besuar në industrinë e automobilave në Shqipëri
+            </p>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
+              Rrugëtimi ynë është bazuar në vendosmërinë për të ofruar makinat më të mira për klientët tanë shqiptarë. Me një fokus të fuqishëm në cilësi dhe shërbim, ne kemi evoluar nga një biznes i vogël familjar në një nga tregtarët më të respektuar të makinave në vend.
             </p>
           </div>
 
@@ -198,10 +212,10 @@ const AboutPage = () => {
             
             {/* Timeline items */}
             {[
-              { year: "2010", title: "Themelimi", description: "Auto Hafuzi hapi dyert e saj me një koleksion të vogël të automjeteve premium." },
-              { year: "2015", title: "Zgjerimi", description: "Ne zgjeruam inventarin tonë dhe u zhvendosëm në një sallë ekspozimi më të madhe për t'i shërbyer më mirë bazës sonë gjithnjë në rritje të klientëve." },
-              { year: "2018", title: "Qendra e Shërbimit", description: "Lançuam qendrën tonë moderne të shërbimit për të ofruar shërbime gjithëpërfshirëse të mirëmbajtjes dhe riparimit." },
-              { year: "2023", title: "Transformimi Dixhital", description: "Përqafuam teknologjinë më të fundit për të përmirësuar përvojën e blerjes së makinave si online ashtu edhe personalisht." }
+              { year: "2010", title: "Themelimi", description: "Auto Hafuzi hapi dyert e saj me një koleksion të vogël të automjeteve premium, me fokus të veçantë në modelet diesel dhe benzinë të Mercedes-Benz." },
+              { year: "2015", title: "Zgjerimi", description: "Ne zgjeruam inventarin tonë dhe u zhvendosëm në një sallë ekspozimi më të madhe për t'i shërbyer më mirë bazës sonë gjithnjë në rritje të klientëve, duke përfshirë një gamë më të gjerë të markave dhe modeleve." },
+              { year: "2018", title: "Qendra e Shërbimit", description: "Lançuam qendrën tonë moderne të shërbimit për të ofruar shërbime gjithëpërfshirëse të mirëmbajtjes dhe riparimit për të gjitha markat kryesore të automjeteve, me specializim të veçantë në modelet gjermane." },
+              { year: "2023", title: "Transformimi Dixhital", description: "Përqafuam teknologjinë më të fundit për të përmirësuar përvojën e blerjes së makinave si online ashtu edhe personalisht, duke ofruar një proces të thjeshtë për të blerë makinën tuaj të ëndrrave." }
             ].map((item, index) => (
               <div 
                 key={index} 
@@ -233,14 +247,17 @@ const AboutPage = () => {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Zgjidhje gjithëpërfshirëse automobilistike të përshtatura për nevojat tuaja
             </p>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
+              Ne kuptojmë se blerja e një makine është një vendim i rëndësishëm. Prandaj, ofrojmë një gamë të gjerë shërbimesh për t'ju ndihmuar në çdo hap të rrugës, nga gjetja e makinës së përsosur deri te mirëmbajtja e saj për vitet në vijim. Ekspertiza jonë shtrihet në të gjitha markat kryesore, duke përfshirë Mercedes, BMW, Audi dhe shumë të tjera.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { icon: <Car className="h-12 w-12 text-white" />, title: "Shitja e Automjeteve", description: "Shfletoni përzgjedhjen tonë të gjerë të automjeteve të reja dhe të përdorura.", color: "bg-blue-600" },
-              { icon: <Settings className="h-12 w-12 text-white" />, title: "Mirëmbajtja", description: "Mbani automjetin tuaj në gjendje optimale me shërbimet tona eksperte të mirëmbajtjes.", color: "bg-green-600" },
-              { icon: <Clock className="h-12 w-12 text-white" />, title: "Financimi", description: "Opsione fleksibile financimi për ta bërë makinën tuaj të ëndrrave të përballueshme.", color: "bg-purple-600" },
-              { icon: <Sparkles className="h-12 w-12 text-white" />, title: "Detajimi", description: "Shërbime profesionale detajimi për ta bërë makinën tuaj të duket si e re.", color: "bg-red-600" }
+              { icon: <Car className="h-12 w-12 text-white" />, title: "Shitja e Automjeteve", description: "Shfletoni përzgjedhjen tonë të gjerë të automjeteve të reja dhe të përdorura nga markat më të besuara, duke përfshirë një gamë të plotë të modeleve diesel dhe benzinë për çdo nevojë.", color: "bg-blue-600" },
+              { icon: <Settings className="h-12 w-12 text-white" />, title: "Mirëmbajtja", description: "Mbani automjetin tuaj në gjendje optimale me shërbimet tona eksperte të mirëmbajtjes. Ekipi ynë i teknikëve të kualifikuar përdor pajisje dhe pjesë moderne për të siguruar performancën më të mirë të makinës suaj.", color: "bg-green-600" },
+              { icon: <Clock className="h-12 w-12 text-white" />, title: "Financimi", description: "Opsione fleksibile financimi për ta bërë makinën tuaj të ëndrrave të përballueshme. Ne punojmë me një rrjet të gjerë partnerësh financiarë për t'ju ofruar zgjidhjen më të përshtatshme financiare.", color: "bg-purple-600" },
+              { icon: <Sparkles className="h-12 w-12 text-white" />, title: "Detajimi", description: "Shërbime profesionale detajimi për ta bërë makinën tuaj të duket si e re. Ekipi ynë i specializuar përdor produkte dhe teknika të cilësisë së lartë për të rivendosur pamjen e brendshme dhe të jashtme të automjetit tuaj.", color: "bg-red-600" }
             ].map((service, index) => (
               <div 
                 key={index} 
@@ -275,13 +292,16 @@ const AboutPage = () => {
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['testimonials'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
             <h2 className="text-4xl font-bold mb-6 text-white">Çfarë Thonë Klientët Tanë</h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
+            <p className="text-xl text-white max-w-3xl mx-auto">
+              Dëgjoni direkt nga klientët tanë të kënaqur për përvojat e tyre me Auto Hafuzi. Këto histori të vërteta pasqyrojnë angazhimin tonë për ekselencë dhe kënaqësi të klientit.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: "Ahmed Kovačević", role: "Pronar Biznesi", quote: "Auto Hafuzi ofroi shërbim të jashtëzakonshëm gjatë gjithë udhëtimit tim të blerjes së makinës. Ekipi i tyre ishte i ditur dhe i durueshëm në ndihmën për të gjetur automjetin e përkryer për nevojat e mia." },
-              { name: "Maja Popović", role: "Inxhiniere Softueri", quote: "Kam mirëmbajtur makinën time në Auto Hafuzi për vite me radhë. Vëmendja e tyre ndaj detajeve dhe ekspertiza teknike e ka mbajtur automjetin tim në funksion perfekt." },
-              { name: "Emir Hodžić", role: "Doktor", quote: "Opsionet e financimit të ofruara nga Auto Hafuzi e bënë të mundur për mua të blej makinën e ëndrrave të mia. Procesi ishte i thjeshtë dhe transparent." }
+              { name: "Ahmed Kovačević", role: "Pronar Biznesi", quote: "Auto Hafuzi ofroi shërbim të jashtëzakonshëm gjatë gjithë udhëtimit tim të blerjes së makinës. Ekipi i tyre ishte i ditur dhe i durueshëm në ndihmën për të gjetur automjetin e përkryer për nevojat e mia. Mercedes-i im i ri diesel tejkalon të gjitha pritshmëritë e mia." },
+              { name: "Maja Popović", role: "Inxhiniere Softueri", quote: "Kam mirëmbajtur makinën time në Auto Hafuzi për vite me radhë. Vëmendja e tyre ndaj detajeve dhe ekspertiza teknike e ka mbajtur automjetin tim në funksion perfekt. Çdo herë që kam nevojë për servis për BMW-në time, e di se ku të shkoj." },
+              { name: "Emir Hodžić", role: "Doktor", quote: "Opsionet e financimit të ofruara nga Auto Hafuzi e bënë të mundur për mua të blej makinën e ëndrrave të mia. Procesi ishte i thjeshtë dhe transparent. Ekipi m'u përgjigj me durim të gjitha pyetjeve dhe më ndihmoi të zgjedh një Audi A6 të shkëlqyer me benzinë që i përshtatet nevojave të mia." }
             ].map((testimonial, index) => (
               <div 
                 key={index} 
@@ -318,16 +338,19 @@ const AboutPage = () => {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Ne dallojmë veten përmes përkushtimit ndaj përsosmërisë në çdo aspekt
             </p>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
+              Auto Hafuzi është bërë sinonim i cilësisë dhe besueshmërisë në industrinë e automjeteve në Shqipëri. Klientët na zgjedhin jo vetëm për përzgjedhjen tonë të automjeteve diesel dhe benzinë nga markat më të besuara, por edhe për vlerat tona thelbësore që udhëheqin çdo aspekt të biznesit tonë.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: <Shield className="h-10 w-10 text-blue-600" />, title: "Mbrojtje me Garanci", description: "Të gjitha automjetet tona vijnë me opsione gjithëpërfshirëse garancie për qetësinë tuaj." },
-              { icon: <Award className="h-10 w-10 text-blue-600" />, title: "Certifikuar për Cilësi", description: "Çdo automjet i nënshtrohet një inspektimi rigoroz 150-pikësh përpara se t'i bashkohet inventarit tonë." },
-              { icon: <Users className="h-10 w-10 text-blue-600" />, title: "Staf me Përvojë", description: "Ekipi ynë sjell dekada ekspertize automobilistike për t'ju shërbyer më mirë." },
-              { icon: <Settings className="h-10 w-10 text-blue-600" />, title: "Shërbim i Plotë", description: "Nga blerja tek mirëmbajtja, ne ofrojmë zgjidhje automobilistike të plota." },
-              { icon: <Sparkles className="h-10 w-10 text-blue-600" />, title: "Çmime Transparente", description: "Pa tarifa të fshehura apo surpriza - vetëm çmime të ndershme dhe të drejtpërdrejta." },
-              { icon: <Clock className="h-10 w-10 text-blue-600" />, title: "Financim Fleksibël", description: "Zgjidhje financiare të përshtatura që funksionojnë me buxhetin dhe rrethanat tuaja." }
+              { icon: <Shield className="h-10 w-10 text-blue-600" />, title: "Mbrojtje me Garanci", description: "Të gjitha automjetet tona vijnë me opsione gjithëpërfshirëse garancie për qetësinë tuaj. Ne besojmë në cilësinë e produkteve tona dhe jemi të gatshëm të qëndrojmë pas çdo makine që shesim." },
+              { icon: <Award className="h-10 w-10 text-blue-600" />, title: "Certifikuar për Cilësi", description: "Çdo automjet i nënshtrohet një inspektimi rigoroz 150-pikësh përpara se t'i bashkohet inventarit tonë. Ne kontrollojmë çdo aspekt të automjetit, nga performanca mekanike deri te kushtet estetike." },
+              { icon: <Users className="h-10 w-10 text-blue-600" />, title: "Staf me Përvojë", description: "Ekipi ynë sjell dekada ekspertize automobilistike për t'ju shërbyer më mirë. Specialistët tanë janë të trajnuar në modelet më të fundit dhe teknologjitë e markave kryesore si Mercedes, BMW dhe Audi." },
+              { icon: <Settings className="h-10 w-10 text-blue-600" />, title: "Shërbim i Plotë", description: "Nga blerja tek mirëmbajtja, ne ofrojmë zgjidhje automobilistike të plota. Qendra jonë e shërbimit mund të përmbushë të gjitha nevojat e mirëmbajtjes dhe riparimit të automjetit tuaj në një vend të vetëm." },
+              { icon: <Sparkles className="h-10 w-10 text-blue-600" />, title: "Çmime Transparente", description: "Pa tarifa të fshehura apo surpriza - vetëm çmime të ndershme dhe të drejtpërdrejta. Ne besojmë në transparencë të plotë dhe sigurohemi që të kuptoni saktësisht se për çfarë po paguani." },
+              { icon: <Clock className="h-10 w-10 text-blue-600" />, title: "Financim Fleksibël", description: "Zgjidhje financiare të përshtatura që funksionojnë me buxhetin dhe rrethanat tuaja. Partnerët tanë financiarë ofrojnë një gamë opsionesh për t'ju ndihmuar të zotëroni makinën e ëndrrave tuaja." }
             ].map((item, index) => (
               <div 
                 key={index} 
@@ -354,7 +377,10 @@ const AboutPage = () => {
             <h2 className="text-4xl font-bold mb-6 text-white">Na Kontaktoni</h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Vizitoni sallonin tonë ose kontaktoni me ne drejtpërdrejt
+              Vizitoni sallonin tonë ose kontaktoni me ne drejtpërdrejt për të eksploruar koleksionin tonë të Mercedes, BMW, Audi dhe markave të tjera të njohura
+            </p>
+            <p className="text-lg text-blue-100 max-w-3xl mx-auto mt-4">
+              Ekipi ynë është gjithmonë i gatshëm t'ju ndihmojë me pyetje rreth modeleve specifike, opsioneve të financimit, apo shërbimit të makinave diesel dhe benzinë. Ne kuptojmë se çdo klient është unik dhe përpiqemi të ofrojmë një përvojë të personalizuar që përputhet me nevojat tuaja specifike.
             </p>
           </div>
 
@@ -384,6 +410,100 @@ const AboutPage = () => {
               className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-3 px-8 rounded-full transition duration-300"
             >
               Na Kontaktoni Sot
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Enhanced Business Philosophy Section - NEW */}
+      <section id="philosophy" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Filozofia Jonë e Biznesit</h2>
+            <div className="w-24 h-1 bg-green-600 mx-auto mb-8"></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Në thelb të biznesit tonë qëndrojnë disa vlera thelbësore që udhëheqin çdo vendim dhe ndërveprim
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
+              <h3 className="text-2xl font-bold mb-4 text-gray-800">Misioni Ynë</h3>
+              <p className="text-gray-600 mb-4">
+                Misioni ynë është të transformojmë përvojën e blerjes së makinës në Shqipëri duke ofruar automjete të cilësisë më të lartë, shërbim të jashtëzakonshëm ndaj klientit dhe zgjidhje gjithëpërfshirëse automobilistike.
+              </p>
+              <p className="text-gray-600">
+                Ne synojmë të krijojmë marrëdhënie afatgjata me klientët tanë duke tejkaluar pritshmëritë e tyre dhe duke u kujdesur për automjetet e tyre gjatë gjithë ciklit të jetës. Qëllimi ynë është që çdo klient të largohet jo vetëm me makinën e përsosur, por edhe me një përvojë të paharrueshme.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
+              <h3 className="text-2xl font-bold mb-4 text-gray-800">Vizioni Ynë</h3>
+              <p className="text-gray-600 mb-4">
+                Ne aspirojmë të bëhemi partneri më i besuar i automjeteve në Shqipëri, i njohur për integritetin, cilësinë dhe shërbimin tonë të jashtëzakonshëm. 
+              </p>
+              <p className="text-gray-600">
+                Vizioni ynë është të vendosim një standard të ri në industrinë e automjeteve shqiptare, duke ofruar një përvojë të personalizuar dhe transparente që transformon përvceptimin e klientëve për blerjen e makinave. Ne synojmë të jemi pionierë në adoptimin e teknologjive të reja dhe praktikave të qëndrueshme që përfitojnë si klientët tanë ashtu edhe mjedisin.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Më shumë se shitës makinash, ne jemi këshilltarë të besuar që punojmë për të kuptuar nevojat tuaja unike dhe për të gjetur zgjidhjen më të mirë për ju. Kjo filozofi e thjeshtë por e fuqishme ka qenë themeli i suksesit tonë dhe do të vazhdojë të drejtojë rritjen tonë në vitet e ardhshme.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Enhanced Inventory Highlights Section - NEW */}
+      <section id="inventory-highlights" className="py-20 bg-gray-100">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Koleksioni Ynë</h2>
+            <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Eksploroni disa nga markat dhe modelet më të kërkuara në inventarin tonë
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                brand: "Mercedes-Benz",
+                description: "Nga sedanët elegantë C-Class dhe E-Class deri te SUV-të luksoze GLC dhe GLE, koleksioni ynë Mercedes ofron performancë gjermane dhe cilësi të padiskutueshme.",
+                popular: "Modelet më të popullarizuara: C220d, E350, GLC 300"
+              },
+              {
+                brand: "BMW",
+                description: "Përjetoni 'Kënaqësinë e Drejtimit të Makinës' me gamën tonë të zgjedhur të modeleve BMW, duke përfshirë serinë 3, serinë 5 dhe X-series SUV-të e njohura.",
+                popular: "Modelet më të popullarizuara: 320d, 520d, X5"
+              },
+              {
+                brand: "Audi",
+                description: "Kombinimi perfekt i teknologjisë, performancës dhe dizajnit, koleksioni ynë Audi përfshin modelet A4, A6 dhe SUV-të Q5, me teknologji dhe komoditet të shkëlqyer.",
+                popular: "Modelet më të popullarizuara: A4 TDI, A6 TFSI, Q5"
+              },
+              {
+                brand: "Marka të Tjera",
+                description: "Përzgjedhja jonë shtrihet përtej markave gjermane, duke përfshirë automjete të cilësisë së lartë nga Volkswagen, Toyota, Ford dhe shumë të tjera për të përmbushur çdo nevojë.",
+                popular: "Modelet më të popullarizuara: VW Golf, Toyota RAV4, Ford Focus"
+              }
+            ].map((item, index) => (
+              <div key={index} className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                <h3 className="text-xl font-bold mb-3 text-gray-800">{item.brand}</h3>
+                <p className="text-gray-600 mb-4">{item.description}</p>
+                <p className="text-sm text-blue-600 font-medium">{item.popular}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <button 
+              onClick={() => navigate('/cars')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition duration-300"
+            >
+              Shiko Koleksionin e Plotë
             </button>
           </div>
         </div>

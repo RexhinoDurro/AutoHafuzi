@@ -68,24 +68,27 @@ const CarCard = ({ car }: CarCardProps) => {
           <FavoriteButton carId={car.id} />
         </div>
         
-        {/* Replace the img tag with ResponsiveImage */}
-        {car.images && car.images.length > 0 ? (
-          <ResponsiveImage
-            src={getDisplayImage(400, 300)}
-            alt={`${car.brand} ${car.model_name}`}
-            width={400}
-            height={300}
-            className="w-full h-full object-cover rounded-t-sm"
-            lazy={true}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            placeholder={`${API_BASE_URL}/api/placeholder/400/300`}
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-t-sm">
-            <span className="text-gray-400 text-xs">No Image</span>
-          </div>
-        )}
+        {/* Image Container with fixed dimensions */}
+        <div className="w-full h-full overflow-hidden">
+          {car.images && car.images.length > 0 ? (
+            <ResponsiveImage
+              src={getDisplayImage(400, 300)}
+              alt={`${car.brand} ${car.model_name}`}
+              width={400}
+              height={300}
+              className="w-full h-full object-cover rounded-t-sm"
+              lazy={true}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              placeholder={`${API_BASE_URL}/api/placeholder/400/300`}
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-t-sm">
+              <span className="text-gray-400 text-xs">No Image</span>
+            </div>
+          )}
+        </div>
       </div>
+
       <div className="p-1.5 flex-[0.4] flex flex-col justify-between h-28 sm:p-2 sm:h-36">
         <h3 className="text-xs font-bold text-gray-700 truncate sm:text-base">
           {car.brand} {car.model_name} 
