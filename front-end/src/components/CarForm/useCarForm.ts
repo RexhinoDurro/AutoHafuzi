@@ -231,7 +231,9 @@ export const useCarForm = (id?: string) => {
         // Important: Map discussed_price (from backend) to discussedPrice (for frontend)
         discussedPrice: data.discussed_price || false,
         // Make sure we have option_ids
-        option_ids: data.options?.map((opt: any) => opt.id || opt) || []
+        option_ids: data.options?.map((opt: any) => opt.id || opt) || [],
+        // Save the slug
+        slug: data.slug || ''
       };
       
       setFormData(carData);
@@ -436,11 +438,15 @@ export const useCarForm = (id?: string) => {
       }
       
       const carData = await response.json();
-      const carId = id || carData.id;
+      console.log("Car creation/update response:", carData); // Debug log
       
-      // Step 2: Upload any temporary images
-      if (tempImages.length > 0 && carId) {
-        console.log(`Uploading ${tempImages.length} images for car ID: ${carId}`);
+      // IMPORTANT: Use the slug for image operations
+      const carSlug = carData.slug;
+      console.log("Using car slug for images:", carSlug);
+      
+      // Step 2: Upload any temporary images - USING SLUG INSTEAD OF ID
+      if (tempImages.length > 0 && carSlug) {
+        console.log(`Uploading ${tempImages.length} images for car slug: ${carSlug}`);
         
         const imageFormData = new FormData();
         tempImages.forEach((img, index) => {
@@ -448,7 +454,7 @@ export const useCarForm = (id?: string) => {
           imageFormData.append('images', img.file);
         });
         
-        const imageUploadUrl = API_ENDPOINTS.CARS.IMAGES.UPLOAD(carId);
+        const imageUploadUrl = API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug);
         console.log('Image upload URL:', imageUploadUrl);
         
         const imageResponse = await fetch(imageUploadUrl, {
@@ -471,7 +477,7 @@ export const useCarForm = (id?: string) => {
         }
         
         // After successful upload, fetch the updated car data to get the new images
-        const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carId), {
+        const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carSlug), {
           headers: { Authorization: `Token ${token}` },
         });
         
@@ -502,7 +508,8 @@ export const useCarForm = (id?: string) => {
             first_registration_month: updatedCar.first_registration_month || currentMonth,
             first_registration_year: updatedCar.first_registration_year || currentYear,
             discussedPrice: updatedCar.discussed_price || false,
-            option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || []
+            option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
+            slug: updatedCar.slug
           });
         }
         
@@ -554,7 +561,7 @@ export const useCarForm = (id?: string) => {
     fetchVariants,
     fetchUpholsteryTypes,
     nextTempId,
-    setTempImages,  // Add this
-    setNextTempId   // Add this
+    setTempImages,
+    setNextTempId
   };
 };
