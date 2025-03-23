@@ -1,21 +1,29 @@
+// Update src/types/car.ts to include slug in the Car interface
+
 export interface Car {
   id: number;
-  make: number;
-  model: number;
-  variant?: number;
+  slug: string; // Add slug property
   brand: string;
   model_name: string;
   variant_name?: string;
-  exterior_color?: number;
+  make: number | string;
+  model: number | string;
+  variant?: number | string;
+  first_registration_day?: number;
+  first_registration_month?: number;
+  first_registration_year?: number;
+  exterior_color?: string;
+  exterior_color_id?: number;
   exterior_color_name?: string;
   exterior_color_hex?: string;
-  interior_color?: number;
+  interior_color?: string;
+  interior_color_id?: number;
   interior_color_name?: string;
   interior_color_hex?: string;
-  upholstery?: number;  // New field for upholstery ID
-  upholstery_name?: string;  // New field for upholstery name
+  upholstery?: number;
+  upholstery_name?: string;
   price: number;
-  discussed_price?: boolean;
+  discussed_price: boolean;
   description: string;
   created_at: string;
   images: CarImage[];
@@ -25,9 +33,6 @@ export interface Car {
   seats: number;
   doors: number;
   mileage: number;
-  first_registration_day?: number;
-  first_registration_month?: number;
-  first_registration_year?: number;
   first_registration?: string;
   full_service_history: boolean;
   customs_paid: boolean;
@@ -39,8 +44,9 @@ export interface Car {
   weight: number;
   emission_class: string;
   fuel_type: string;
-  options: string[] | number[];
-  view_count: number; 
+  options: number[];
+  view_count: number;
+  url?: string; // URL property for direct linking
 }
 
 export interface CarImage {
@@ -160,4 +166,5 @@ export interface FormData {
   options: string[];
   option_ids?: number[];
   images: CarImage[];
+  slug?: string; // Added slug field
 }
