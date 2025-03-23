@@ -5,6 +5,7 @@ import { saveLastSearch } from '../utils/userActivityService';
 import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import { Filter, X, Calendar, Gauge, Fuel, Settings, Car as CarIcon } from 'lucide-react';
 import FavoriteButton from '../components/FavouriteButton';
+import ResponsiveImage from '../components/ResponsiveImage'; 
 
 interface FilterState {
   make?: string;
@@ -309,15 +310,13 @@ const CarHolder: React.FC = () => {
                       </div>
                       
                       {car.images && car.images.length > 0 ? (
-                        <img
+                        <ResponsiveImage
                           src={getCarImageUrl(car)}
                           alt={`${car.brand} ${car.model_name}`}
+                          width={800}
+                          height={600}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback to placeholder if image fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.src = `${API_BASE_URL}/api/placeholder/800/600`;
-                          }}
+                          placeholder={`${API_BASE_URL}/api/placeholder/800/600`}
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center bg-gray-200">

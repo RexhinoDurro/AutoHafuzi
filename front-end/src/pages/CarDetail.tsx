@@ -233,7 +233,11 @@ const CarDetail: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6">
           <div className="space-y-4 md:space-y-6">
             {/* Pass the isMobile flag to the carousel */}
-            <CarImageCarousel images={car.images} isMobile={isMobile} />
+            <CarImageCarousel 
+                  images={car.images || []} 
+                  isMobile={isMobile} 
+                  onImageChange={(index) => console.log(`Viewing image ${index + 1}`)}
+            />
             
             {/* Key Specifications Box - made more mobile-friendly */}
             <div className="bg-gray-100 p-3 md:p-4 rounded-lg">

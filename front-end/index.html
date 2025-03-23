@@ -1,60 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="dist/hafuzi.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- Resource hints for faster loading -->
-    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
-    <link rel="preload" href="/assets/logo-DLfMMOFV.png" as="image" fetchpriority="high">
-    <link rel="preload" href="/src/main.tsx" as="script">
+<!-- Replace the current head section in index.html with this optimized version -->
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Canonical URL to prevent duplicate content issues -->
+  <link rel="canonical" href="https://autohafuzi.com" />
+  
+  <!-- Primary meta tags with targeted keywords -->
+  <title>Auto Hafuzi - Quality Cars for Sale in Albania | New & Used Vehicles</title>
+  <meta name="description" content="Find your perfect car at Auto Hafuzi. Browse our extensive selection of quality new and used vehicles in Albania with flexible financing options and expert service." />
+  <meta name="keywords" content="cars Albania, auto hafuzi, used cars, new cars, car dealership, vehicle sales, quality cars, car shop" />
+  <meta name="author" content="Auto Hafuzi" />
+  
+  <!-- Resource hints for faster loading -->
+  <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+  <link rel="preload" href="/assets/logo.png" as="image" fetchpriority="high" />
+  <link rel="preload" href="/src/main.tsx" as="script" />
+  
+  <!-- Open Graph meta tags for better social sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://autohafuzi.com" />
+  <meta property="og:title" content="Auto Hafuzi - Quality Cars in Albania" />
+  <meta property="og:description" content="Find your perfect car. Browse our selection of quality vehicles with competitive pricing and professional service." />
+  <meta property="og:image" content="https://autohafuzi.com/assets/og-image.jpg" />
+  
+  <!-- Twitter Card meta tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://autohafuzi.com" />
+  <meta name="twitter:title" content="Auto Hafuzi - Quality Cars in Albania" />
+  <meta name="twitter:description" content="Find your perfect car. Browse our selection of quality vehicles with competitive pricing and professional service." />
+  <meta name="twitter:image" content="https://autohafuzi.com/assets/og-image.jpg" />
+  
+  <!-- Mobile web app capabilities -->
+  <meta name="theme-color" content="#1f2937" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  
+  <!-- Structured data for search engines (Schema.org) -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AutoDealer",
+      "name": "Auto Hafuzi",
+      "image": "https://autohafuzi.com/assets/logo.png",
+      "url": "https://autohafuzi.com",
+      "telephone": "+355699311111",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "E762",
+        "addressLocality": "Fushë Krujë",
+        "addressRegion": "Fushë-Kruje",
+        "addressCountry": "Albania"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 41.4783,
+        "longitude": 19.7129
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday"
+          ],
+          "opens": "09:00",
+          "closes": "18:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Saturday",
+          "opens": "10:00",
+          "closes": "16:00"
+        }
+      ],
+      "priceRange": "€€",
+      "description": "Auto Hafuzi is a leading car dealership in Albania offering quality new and used vehicles with expert service and competitive pricing."
+    }
+  </script>
+  
+  <!-- Critical CSS for immediate rendering -->
+  <style>
+    body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  line-height: 1.5;
+}
 
-    <!-- Critical CSS can be inlined here for faster rendering -->
-    <style>
-      /* Critical styles for immediate rendering */
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background-color: #f3f4f6;
-      }
-      .h-10 { height: 2.5rem; }
-      .h-12 { height: 3rem; }
-      .w-auto { width: auto; }
-      .bg-black { background-color: #000; }
-      .text-white { color: #fff; }
-      /* Add more critical styles as needed */
-    </style>
-    
-    <!-- SEO metadata -->
-    <meta name="description" content="Auto Hafuzi - Find your perfect car. Browse our selection of quality vehicles in Albania.">
-    <meta name="keywords" content="cars, auto, vehicles, Albania, buy car, used cars, new cars">
-    <meta name="author" content="Auto Hafuzi">
-    
-    <!-- Social media metadata -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://autohafuzi.com">
-    <meta property="og:title" content="Auto Hafuzi">
-    <meta property="og:description" content="Find your perfect car. Browse our selection of quality vehicles.">
-    <meta property="og:image" content="/assets/logo-DLfMMOFV.png">
-    
-    <!-- Twitter metadata -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://autohafuzi.com">
-    <meta name="twitter:title" content="Auto Hafuzi">
-    <meta name="twitter:description" content="Find your perfect car. Browse our selection of quality vehicles.">
-    <meta name="twitter:image" content="/assets/logo-DLfMMOFV.png">
-    
-    <!-- Mobile web app capabilities -->
-    <meta name="theme-color" content="#1f2937">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- DNS prefetch for additional performance boost -->
-    <link rel="dns-prefetch" href="https://res.cloudinary.com">
-    
-    <title>Auto Hafuzi - Quality Cars</title>
-  </head>
+/* Layout */
+.container {
+  width: 100%;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* Critical components */
+.navbar {
+  background-color: #000;
+  color: #fff;
+  padding: 0.5rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.logo {
+  height: 3rem;
+  width: auto;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.banner-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: white;
+  padding: 1rem;
+}
+
+/* Button styles */
+.btn {
+  display: inline-block;
+  font-weight: 500;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+  background-color: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid #10b981;
+  width: 2rem;
+  height: 2rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Helper/utility classes */
+.text-center { text-align: center; }
+.font-bold { font-weight: 700; }
+.mb-4 { margin-bottom: 1rem; }
+.p-4 { padding: 1rem; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.w-full { width: 100%; }
+.h-auto { height: auto; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.rounded { border-radius: 0.25rem; }
+.shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+
+/* Basic responsive classes */
+@media (min-width: 640px) {
+  .container { max-width: 640px; }
+  .sm\\:flex { display: flex; }
+  .sm\\:text-left { text-align: left; }
+}
+
+@media (min-width: 768px) {
+  .container { max-width: 768px; }
+  .md\\:flex { display: flex; }
+  .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .container { max-width: 1024px; }
+  .lg\\:flex { display: flex; }
+  .lg\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1280px) {
+  .container { max-width: 1280px; }
+  .xl\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+  </style>
+  
+  <!-- Async analytics script -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  
+  <title>Auto Hafuzi - Quality Cars</title>
+</head>
   <body>
   <!-- Updated loading animation with styled text and rotation -->
   <div id="initial-loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; z-index: 9999;">

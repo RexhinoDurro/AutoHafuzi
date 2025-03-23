@@ -2,6 +2,7 @@ import { Car } from "../types/car";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from "../config/api";
 import FavoriteButton from "./FavouriteButton";
+import ResponsiveImage from "./ResponsiveImage";
 
 interface CarCardProps {
   car: Car;
@@ -67,26 +68,17 @@ const CarCard = ({ car }: CarCardProps) => {
           <FavoriteButton carId={car.id} />
         </div>
         
-        {/* Optimized image with proper dimensions for better CLS */}
+        {/* Replace the img tag with ResponsiveImage */}
         {car.images && car.images.length > 0 ? (
-          <img
+          <ResponsiveImage
             src={getDisplayImage(400, 300)}
             alt={`${car.brand} ${car.model_name}`}
-            width="400"
-            height="300"
+            width={400}
+            height={300}
             className="w-full h-full object-cover rounded-t-sm"
-            loading="lazy"
-            srcSet={`
-              ${getDisplayImage(320, 240)} 320w,
-              ${getDisplayImage(640, 480)} 640w,
-              ${getDisplayImage(800, 600)} 800w
-            `}
+            lazy={true}
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            onError={(e) => {
-              // Fallback to placeholder if image fails to load
-              const target = e.target as HTMLImageElement;
-              target.src = `${API_BASE_URL}/api/placeholder/400/300`;
-            }}
+            placeholder={`${API_BASE_URL}/api/placeholder/400/300`}
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-t-sm">

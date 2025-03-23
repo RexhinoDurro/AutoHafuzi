@@ -42,6 +42,7 @@ const ContactMessages = lazy(() => import('./components/ContactMessages'));
 const MakesPage = lazy(() => import('./pages/MakesPage'));
 const ModelsPage = lazy(() => import('./pages/ModelsPage'));
 const VariantsPage = lazy(() => import('./pages/VariantsPage'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Create a layout component to reduce repetition
 import { ReactNode } from 'react';
@@ -279,6 +280,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="*" element={<NotFound />} />
+
         </Routes>
       </FavoritesProvider>
     </Router>

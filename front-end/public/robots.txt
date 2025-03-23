@@ -1,0 +1,13 @@
+# robots.txt for autohafuzi.com
+User-agent: *
+Allow: /
+
+# Private areas
+Disallow: /auth/
+Disallow: /admin/
+
+# Allow search engines to access the sitemap
+Sitemap: https://autohafuzi.com/sitemap.xml
+
+# Crawl delay to avoid overloading the server
+Crawl-delay: 1
