@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Canonical URL Redirect Script -->
+    <script>
+      (function() {
+        const canonicalDomain = 'https://autohafuzi-fe.onrender.com';
+        const currentUrl = window.location.href;
+        
+        // Check if we're on the www subdomain
+        if (currentUrl.startsWith('https://www.autohafuzi-fe.onrender.com')) {
+          // Replace www with the bare domain
+          const redirectUrl = currentUrl.replace('https://www.autohafuzi-fe.onrender.com', canonicalDomain);
+          window.location.replace(redirectUrl);
+        }
+        
+        // If you have other domains that should redirect to the canonical one, add them here
+        if (currentUrl.startsWith('https://autohafuzi.onrender.com')) {
+          // Replace the backend domain with frontend domain
+          const redirectUrl = currentUrl.replace('https://autohafuzi.onrender.com', canonicalDomain);
+          window.location.replace(redirectUrl);
+        }
+      })();
+    </script>
+
     <!-- Favicon Implementation -->
     <link rel="icon" type="image/svg+xml" href="/hafuzilogo.ico" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -32,9 +54,9 @@
     />
     <meta
       property="og:image"
-      content="https://www.autohafuzi-fe.onrender.com/og-image.jpg"
+      content="https://autohafuzi-fe.onrender.com/og-image.jpg"
     />
-    <meta property="og:url" content="https://www.autohafuzi-fe.onrender.com" />
+    <meta property="og:url" content="https://autohafuzi-fe.onrender.com" />
     <meta property="og:type" content="website" />
 
     <!-- Canonical URL - ensuring consistent domain usage -->
@@ -53,7 +75,7 @@
     <meta name="robots" content="index, follow" />
 
     <!-- Alternate language versions if applicable -->
-    <!-- <link rel="alternate" hreflang="en" href="https://www.autohafuzi-fe.onrender.com/en/" /> -->
+    <!-- <link rel="alternate" hreflang="en" href="https://autohafuzi-fe.onrender.com/en/" /> -->
   </head>
   <body>
     <div id="root"></div>
@@ -64,7 +86,7 @@
         "@context": "https://schema.org",
         "@type": "AutoDealer",
         "name": "Auto Hafuzi",
-        "image": "https://www.autohafuzi-fe.onrender.com/logo.png",
+        "image": "https://autohafuzi-fe.onrender.com/logo.png",
         "address": {
           "@type": "PostalAddress",
           "streetAddress": "Fushë-Kruje, E762",
@@ -75,7 +97,7 @@
         },
         "telephone": "069 931 1111",
         "email": "info@hafuziauto.ch",
-        "url": "https://www.autohafuzi-fe.onrender.com",
+        "url": "https://autohafuzi-fe.onrender.com",
         "openingHoursSpecification": [
           {
             "@type": "OpeningHoursSpecification",

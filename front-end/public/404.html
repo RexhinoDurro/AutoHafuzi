@@ -1,0 +1,147 @@
+// Create a 404.html file in your public directory
+
+// 1. First, copy your NotFound component content to a static HTML file
+// Create a file at public/404.html
+
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - Faqja nuk u gjet | Auto Hafuzi</title>
+  
+  <!-- Include your favicon -->
+  <link rel="icon" type="image/svg+xml" href="/hafuzilogo.ico" />
+  
+  <!-- Add meta tags for SEO -->
+  <meta name="description" content="Faqja që po kërkoni nuk ekziston. Kthehuni në faqen kryesore të Auto Hafuzi." />
+  <meta name="robots" content="noindex, follow" />
+  
+  <!-- Include your CSS -->
+  <link rel="stylesheet" href="/assets/index.css" />
+  
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: rgb(249, 250, 251);
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .not-found-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .not-found-card {
+      max-width: 28rem;
+      width: 100%;
+      background-color: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .not-found-header {
+      background-color: black;
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .not-found-content {
+      padding: 1.5rem;
+    }
+    .logo-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .logo {
+      height: 5rem;
+      width: auto;
+    }
+    .error-message {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background-color: #2563eb;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+    }
+    .btn-secondary {
+      background-color: #10b981;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #059669;
+    }
+    .btn-outline {
+      border: 1px solid #d1d5db;
+      color: #4b5563;
+    }
+    .btn-outline:hover {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+<body>
+  <div class="not-found-container">
+    <div class="not-found-card">
+      <div class="not-found-header">
+        <h1 style="font-size: 1.875rem; margin: 0;">404</h1>
+        <p style="font-size: 1.25rem; margin: 0;">Faqja nuk u gjet</p>
+      </div>
+      
+      <div class="not-found-content">
+        <div class="logo-container">
+          <img src="/assets/logo.png" alt="Auto Hafuzi" class="logo" />
+        </div>
+        
+        <p class="error-message">
+          Na vjen keq, por faqja që po kërkoni nuk ekziston ose mund të jetë zhvendosur.
+        </p>
+        
+        <div class="action-buttons">
+          <a href="/" class="btn btn-primary">
+            <span>Kthehu në faqen kryesore</span>
+          </a>
+          
+          <a href="/cars" class="btn btn-secondary">
+            <span>Shfleto makinat tona</span>
+          </a>
+          
+          <a href="/contact" class="btn btn-outline">
+            <span>Na kontaktoni për ndihmë</span>
+          </a>
+          
+          <button onclick="window.history.back()" class="btn btn-outline">
+            <span>Kthehu në faqen e mëparshme</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
