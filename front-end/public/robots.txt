@@ -7,7 +7,7 @@ Disallow: /auth/
 Disallow: /admin/
 
 # Allow search engines to access the sitemap
-Sitemap: https://autohafuzi.com/sitemap.xml
+Sitemap: https://autohafuzi-fe.onrender.com/sitemap.xml
 
 # Crawl delay to avoid overloading the server
 Crawl-delay: 1

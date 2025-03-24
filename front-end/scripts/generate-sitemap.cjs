@@ -4,7 +4,7 @@ const fs = require('fs');
 // Define your website base URL and API endpoints directly in this script
 // instead of importing from '../src/config/api'
 const API_BASE_URL = 'https://autohafuzi.onrender.com';
-const SITE_URL = 'https://autohafuzi.com';
+const SITE_URL = 'https://autohafuzi-fe.onrender.com';
 
 const API_ENDPOINTS = {
   CARS: {
