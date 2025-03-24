@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, CarIcon, Home, Users, Menu, X, Heart } from 'lucide-react';
+import { Phone, CarIcon, Home, Search, Menu, X, Heart } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useFavorites } from '../context/FavouritesContext';
 
@@ -33,9 +33,9 @@ const Navbar = () => {
                 <span className="font-medium">Kryefaqja</span>
               </Link>
 
-              <Link to="/about" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
-                <Users className="h-5 w-5" />
-                <span className="font-medium">Rreth Nesh</span>
+              <Link to="/search" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+                <Search className="h-5 w-5" />
+                <span className="font-medium">Kërko Makinë</span>
               </Link>
 
               <Link to="/cars" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
@@ -105,19 +105,11 @@ const Navbar = () => {
             <span>Kryefaqja</span>
           </Link>
           <Link 
-            to="/about" 
+            to="/search" 
             onClick={toggleMenu} 
             className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
           >
-            <Users className="h-5 w-5" />
-            <span>Rreth Nesh</span>
-          </Link>
-          <Link 
-            to="/cars" 
-            onClick={toggleMenu} 
-            className="text-white text-xl hover:text-gray-300 transition-colors flex items-center space-x-2"
-          >
-            <CarIcon className="h-5 w-5" />
+            <Search className="h-5 w-5" />
             <span>Makina në Shitje</span>
           </Link>
           <Link 

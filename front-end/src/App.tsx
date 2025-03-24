@@ -17,16 +17,17 @@ const LoadingSpinner = () => (
 // Preload critical routes
 const preloadRoutes = () => {
   // Start preloading the most common routes
-  import('./pages/Home');
+  import('./pages/About'); // About page now serves as Home
+  import('./pages/Home'); // Original Home page now serves as CarSearch
   import('./pages/CarHolder');
   import('./pages/CarDetail');
 };
 
 // Lazy load all page components
-const Home = lazy(() => import('./pages/Home'));
+const Home = lazy(() => import('./pages/About')); // About page content becomes main Home page
+const CarSearch = lazy(() => import('./pages/Home')); // Original Home page renamed to CarSearch
 const CarHolder = lazy(() => import('./pages/CarHolder'));
 const CarDetail = lazy(() => import('./pages/CarDetail'));
-const AboutPage = lazy(() => import('./pages/About'));
 const FavoritesPage = lazy(() => import('./pages/FavouritesPage'));
 const ContactPage = lazy(() => import('./pages/Contact'));
 
@@ -97,6 +98,15 @@ function App() {
           />
           
           <Route
+            path="/search"
+            element={
+              <MainLayout>
+                <CarSearch />
+              </MainLayout>
+            }
+          />
+          
+          <Route
             path="/cars"
             element={
               <MainLayout>
@@ -110,15 +120,6 @@ function App() {
             element={
               <MainLayout>
                 <CarDetail />
-              </MainLayout>
-            }
-          />
-          
-          <Route
-            path="/about/"
-            element={
-              <MainLayout>
-                <AboutPage />
               </MainLayout>
             }
           />
