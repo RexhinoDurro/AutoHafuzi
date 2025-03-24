@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-sitemap": "node scripts/seo-sitemap.cjs"
+    "seo-sitemap": "node scripts/seo-sitemap.cjs"
   },
 
   "dependencies": {
