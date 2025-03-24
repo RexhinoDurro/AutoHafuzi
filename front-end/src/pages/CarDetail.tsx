@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CarImageCarousel from '../components/ImageGallery';
 import { Car } from '../types/car';
-import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye } from 'lucide-react';
+import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye, Phone, Mail } from 'lucide-react';
 import FavoriteButton from '../components/FavouriteButton';
 import { 
   trackCarView, 
@@ -13,6 +13,7 @@ import RecommendedCars from '../components/RecommendedCars';
 import { API_ENDPOINTS } from '../config/api';
 import { useMediaQuery } from '../utils/useMediaQuery';
 import { shouldDisableViewTracking } from '../utils/navigation';
+import Breadcrumbs from '../components/Breadcrumbs';
 
 // Interface for option data
 interface Option {
@@ -137,6 +138,66 @@ const CarDetail: React.FC = () => {
 
     fetchData();
   }, []);
+
+  // Add structured data to the page
+  useEffect(() => {
+    if (car) {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify({
+        "@context": "https://schema.org/",
+        "@type": "Vehicle",
+        "name": `${car.brand} ${car.model_name} ${car.variant_name || ''}`,
+        "brand": {
+          "@type": "Brand",
+          "name": car.brand
+        },
+        "model": car.model_name,
+        "vehicleEngine": {
+          "@type": "EngineSpecification",
+          "enginePower": {
+            "@type": "QuantitativeValue",
+            "value": car.power,
+            "unitCode": "KWT"
+          },
+          "fuelType": car.fuel_type
+        },
+        "mileageFromOdometer": {
+          "@type": "QuantitativeValue",
+          "value": car.mileage,
+          "unitCode": "KMT"
+        },
+        "color": car.exterior_color_name,
+        "numberOfDoors": car.doors,
+        "vehicleTransmission": car.gearbox,
+        "description": car.description.substring(0, 200),
+        "offers": {
+          "@type": "Offer",
+          "price": car.price,
+          "priceCurrency": "EUR",
+          "availability": "https://schema.org/InStock"
+        }
+      });
+      
+      // First remove any existing script to avoid duplicates
+      const existingScript = document.getElementById('car-structured-data');
+      if (existingScript) {
+        existingScript.remove();
+      }
+      
+      // Add ID for easier removal later
+      script.id = 'car-structured-data';
+      document.head.appendChild(script);
+      
+      // Clean up when component unmounts
+      return () => {
+        const scriptToRemove = document.getElementById('car-structured-data');
+        if (scriptToRemove) {
+          scriptToRemove.remove();
+        }
+      };
+    }
+  }, [car]);
 
   // Fetch car details with proper view tracking
   useEffect(() => {
@@ -276,8 +337,21 @@ const CarDetail: React.FC = () => {
   // Get categorized options
   const optionsByCategory = categorizeOptions();
   
+  // Generate car title for display and metadata
+  document.title = `${car.brand} ${car.model_name} ${car.variant_name || ''} | Auto Hafuzi`;
+  
+
+  
+  
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Add structured data for this specific car */}
+      {/* Structured data needs to be added to the page via useEffect as we can't directly render script tags */}
+      <div id="structured-data-container"></div>
+      
+      {/* Add breadcrumb navigation */}
+      <Breadcrumbs carTitle={`${car.brand} ${car.model_name} ${car.variant_name || ''}`} />
+      
       <button
         onClick={handleBackClick}
         className="mb-6 text-blue-600 hover:text-blue-800"
@@ -329,6 +403,7 @@ const CarDetail: React.FC = () => {
           </div>
           
           <div className="space-y-4">
+            {/* Add H1 tag for better SEO */}
             <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
             
             {/* Price with favorite button and view counter */}
@@ -559,12 +634,33 @@ const CarDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Add recommendations section at the bottom */}
-      {car && (
-        <div className="mt-6 md:mt-12">
-          <RecommendedCars excludeCarIds={[Number(id)]} />
+      {/* Contact section for this specific car - Added for better conversion */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6 p-6">
+        <h3 className="text-lg md:text-xl font-semibold mb-4">Të interesuar për këtë makinë?</h3>
+        <p className="mb-4">Kontaktoni me ne për më shumë informacion ose për të rezervuar një provë.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a 
+            href={`tel:069 931 1111`} 
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Phone size={20} />
+            <span>Na telefononi: 069 931 1111</span>
+          </a>
+          <a 
+            href={`mailto:info@hafuziauto.ch?subject=Interes për ${car.brand} ${car.model_name} ${car.variant_name || ''}&body=Përshëndetje, jam i interesuar për makinën ${car.brand} ${car.model_name} me ID: ${car.id}. Ju lutem më kontaktoni me informacione të mëtejshme.`} 
+            className="flex items-center justify-center gap-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Mail size={20} />
+            <span>Dërgoni email: info@hafuziauto.ch</span>
+          </a>
         </div>
-      )}
+      </div>
+
+      {/* Related cars section - Added for better internal linking and SEO */}
+      <div className="mt-12">
+        <h3 className="text-2xl font-bold mb-6">Makina të Ngjashme</h3>
+        <RecommendedCars excludeCarIds={[Number(id)]} />
+      </div>
     </div>
   );
 };

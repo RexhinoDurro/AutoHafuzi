@@ -264,6 +264,7 @@ const Home = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-0 sm:p-6">
+      <h1 className="text-3xl font-bold mb-6">Gjeni Makinën </h1>
       {/* Main Car Filter */}
       <CarFilter onFilterChange={handleFilterSubmit} />
       
