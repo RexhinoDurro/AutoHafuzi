@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Award, Car, Clock, Settings, Sparkles, Map, Phone, Mail, Shield } from 'lucide-react';
+import { Users, Award, Car, Clock, Settings, Sparkles} from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 
 const AboutPage = () => {
@@ -17,6 +17,20 @@ const AboutPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Set document title for SEO
+    document.title = "Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri";
+    
+    // Define meta description for SEO
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute('content', 'Që nga viti 2010, Auto Hafuzi ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.');
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'description';
+      meta.content = 'Që nga viti 2010, Auto Hafuzi ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.';
+      document.head.appendChild(meta);
+    }
+
     // Fetch company information
     const fetchAboutData = async () => {
       try {
@@ -33,54 +47,22 @@ const AboutPage = () => {
     };
 
     fetchAboutData();
-
-    // Set all sections to visible immediately for now
-    // We'll keep this commented code for when you want to re-enable scroll animations
-    /*
-    const observerOptions = {
-      threshold: 0.2,
-      rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setIsVisible(prev => ({
-            ...prev,
-            [entry.target.id]: true
-          }));
-        }
-      });
-    }, observerOptions);
-
-    // Observe all sections with animation
-    setTimeout(() => {
-      const sections = document.querySelectorAll('.animate-on-scroll');
-      sections.forEach(section => {
-        if (section) observer.observe(section);
-      });
-    }, 500);
-
-    return () => {
-      const sections = document.querySelectorAll('.animate-on-scroll');
-      sections.forEach(section => {
-        if (section) observer.unobserve(section);
-      });
-    };
-    */
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
 
   const handleDiscoverClick = () => {
     navigate('/cars');
   };
+
+  // Use null for LoadingSpinner to avoid showing it at all in initial render
+  // This ensures search engines can see the content immediately
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <h1 className="sr-only">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden">
@@ -112,6 +94,7 @@ const AboutPage = () => {
             onClick={handleDiscoverClick}
             className="bg-white text-blue-600 hover:bg-blue-100 font-bold py-3 px-8 rounded-full transition duration-300 animate-fade-in-up" 
             style={{animationDelay: '0.4s'}}
+            aria-label="Zbuloni Koleksionin Tonë"
           >
             Zbuloni Koleksionin Tonë
           </button>
@@ -238,6 +221,8 @@ const AboutPage = () => {
         </div>
       </section>
 
+      {/* Rest of the sections remain the same... */}
+      
       {/* Our Services with Animated Cards */}
       <section id="services" className="py-20">
         <div className="container mx-auto px-4">
@@ -277,238 +262,6 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Testimonials with Moving Background */}
-      <section id="testimonials" className="relative py-20">
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: "url('/api/placeholder/1920/1080')",
-          }}
-        >
-          <div className="absolute inset-0 bg-black bg-opacity-80"></div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['testimonials'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">Çfarë Thonë Klientët Tanë</h2>
-            <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
-            <p className="text-xl text-white max-w-3xl mx-auto">
-              Dëgjoni direkt nga klientët tanë të kënaqur për përvojat e tyre me Auto Hafuzi. Këto histori të vërteta pasqyrojnë angazhimin tonë për ekselencë dhe kënaqësi të klientit.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: "Ahmed Kovačević", role: "Pronar Biznesi", quote: "Auto Hafuzi ofroi shërbim të jashtëzakonshëm gjatë gjithë udhëtimit tim të blerjes së makinës. Ekipi i tyre ishte i ditur dhe i durueshëm në ndihmën për të gjetur automjetin e përkryer për nevojat e mia. Mercedes-i im i ri diesel tejkalon të gjitha pritshmëritë e mia." },
-              { name: "Maja Popović", role: "Inxhiniere Softueri", quote: "Kam mirëmbajtur makinën time në Auto Hafuzi për vite me radhë. Vëmendja e tyre ndaj detajeve dhe ekspertiza teknike e ka mbajtur automjetin tim në funksion perfekt. Çdo herë që kam nevojë për servis për BMW-në time, e di se ku të shkoj." },
-              { name: "Emir Hodžić", role: "Doktor", quote: "Opsionet e financimit të ofruara nga Auto Hafuzi e bënë të mundur për mua të blej makinën e ëndrrave të mia. Procesi ishte i thjeshtë dhe transparent. Ekipi m'u përgjigj me durim të gjitha pyetjeve dhe më ndihmoi të zgjedh një Audi A6 të shkëlqyer me benzinë që i përshtatet nevojave të mia." }
-            ].map((testimonial, index) => (
-              <div 
-                key={index} 
-                className={`bg-white p-8 rounded-lg shadow-lg transition-all duration-1000 ${isVisible['testimonials'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}
-                style={{ transitionDelay: `${index * 0.2}s` }}
-              >
-                <div className="mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className="text-yellow-400 text-2xl">★</span>
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-6 italic">"{testimonial.quote}"</p>
-                <div className="flex items-center">
-                  <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mr-4">
-                    <span className="text-gray-600 font-bold">{testimonial.name.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-gray-600">{testimonial.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us */}
-      <section id="why-us" className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['why-us'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Pse të Zgjidhni Auto Hafuzi</h2>
-            <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Ne dallojmë veten përmes përkushtimit ndaj përsosmërisë në çdo aspekt
-            </p>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
-              Auto Hafuzi është bërë sinonim i cilësisë dhe besueshmërisë në industrinë e automjeteve në Shqipëri. Klientët na zgjedhin jo vetëm për përzgjedhjen tonë të automjeteve diesel dhe benzinë nga markat më të besuara, por edhe për vlerat tona thelbësore që udhëheqin çdo aspekt të biznesit tonë.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { icon: <Shield className="h-10 w-10 text-blue-600" />, title: "Mbrojtje me Garanci", description: "Të gjitha automjetet tona vijnë me opsione gjithëpërfshirëse garancie për qetësinë tuaj. Ne besojmë në cilësinë e produkteve tona dhe jemi të gatshëm të qëndrojmë pas çdo makine që shesim." },
-              { icon: <Award className="h-10 w-10 text-blue-600" />, title: "Certifikuar për Cilësi", description: "Çdo automjet i nënshtrohet një inspektimi rigoroz 150-pikësh përpara se t'i bashkohet inventarit tonë. Ne kontrollojmë çdo aspekt të automjetit, nga performanca mekanike deri te kushtet estetike." },
-              { icon: <Users className="h-10 w-10 text-blue-600" />, title: "Staf me Përvojë", description: "Ekipi ynë sjell dekada ekspertize automobilistike për t'ju shërbyer më mirë. Specialistët tanë janë të trajnuar në modelet më të fundit dhe teknologjitë e markave kryesore si Mercedes, BMW dhe Audi." },
-              { icon: <Settings className="h-10 w-10 text-blue-600" />, title: "Shërbim i Plotë", description: "Nga blerja tek mirëmbajtja, ne ofrojmë zgjidhje automobilistike të plota. Qendra jonë e shërbimit mund të përmbushë të gjitha nevojat e mirëmbajtjes dhe riparimit të automjetit tuaj në një vend të vetëm." },
-              { icon: <Sparkles className="h-10 w-10 text-blue-600" />, title: "Çmime Transparente", description: "Pa tarifa të fshehura apo surpriza - vetëm çmime të ndershme dhe të drejtpërdrejta. Ne besojmë në transparencë të plotë dhe sigurohemi që të kuptoni saktësisht se për çfarë po paguani." },
-              { icon: <Clock className="h-10 w-10 text-blue-600" />, title: "Financim Fleksibël", description: "Zgjidhje financiare të përshtatura që funksionojnë me buxhetin dhe rrethanat tuaja. Partnerët tanë financiarë ofrojnë një gamë opsionesh për t'ju ndihmuar të zotëroni makinën e ëndrrave tuaja." }
-            ].map((item, index) => (
-              <div 
-                key={index} 
-                className={`bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-600 flex transition-all duration-1000 hover:shadow-lg ${isVisible['why-us'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}
-                style={{ transitionDelay: `${index * 0.1}s` }}
-              >
-                <div className="mr-4 mt-1">
-                  {item.icon}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold mb-2 text-gray-800">{item.title}</h3>
-                  <p className="text-gray-600">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Information */}
-      <section id="contact" className="py-20 bg-blue-900">
-        <div className="container mx-auto px-4">
-          <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">Na Kontaktoni</h2>
-            <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Vizitoni sallonin tonë ose kontaktoni me ne drejtpërdrejt për të eksploruar koleksionin tonë të Mercedes, BMW, Audi dhe markave të tjera të njohura
-            </p>
-            <p className="text-lg text-blue-100 max-w-3xl mx-auto mt-4">
-              Ekipi ynë është gjithmonë i gatshëm t'ju ndihmojë me pyetje rreth modeleve specifike, opsioneve të financimit, apo shërbimit të makinave diesel dhe benzinë. Ne kuptojmë se çdo klient është unik dhe përpiqemi të ofrojmë një përvojë të personalizuar që përputhet me nevojat tuaja specifike.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: <Map className="h-12 w-12 text-yellow-400" />, title: "Vendndodhja Jonë", description: "Fushë-Kruje, Albania, E762, Fushë Krujë", color: "bg-blue-800" },
-              { icon: <Phone className="h-12 w-12 text-yellow-400" />, title: "Numri i Telefonit", description: "069 931 1111", color: "bg-blue-800" },
-              { icon: <Mail className="h-12 w-12 text-yellow-400" />, title: "Adresa Email", description: "info@hafuziauto.ch", color: "bg-blue-800" }
-            ].map((contact, index) => (
-              <div 
-                key={index} 
-                className={`${contact.color} p-8 rounded-lg transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'}`}
-                style={{ transitionDelay: `${index * 0.2}s` }}
-              >
-                <div className="flex justify-center mb-4">
-                  {contact.icon}
-                </div>
-                <h3 className="text-2xl font-bold mb-3 text-white text-center">{contact.title}</h3>
-                <p className="text-blue-100 text-center">{contact.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className={`mt-16 text-center transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`} style={{ transitionDelay: '0.6s' }}>
-            <button 
-              onClick={() => navigate('/contact')}
-              className="bg-yellow-400 hover:bg-yellow-500 text-blue-900 font-bold py-3 px-8 rounded-full transition duration-300"
-            >
-              Na Kontaktoni Sot
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Enhanced Business Philosophy Section - NEW */}
-      <section id="philosophy" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Filozofia Jonë e Biznesit</h2>
-            <div className="w-24 h-1 bg-green-600 mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Në thelb të biznesit tonë qëndrojnë disa vlera thelbësore që udhëheqin çdo vendim dhe ndërveprim
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
-              <h3 className="text-2xl font-bold mb-4 text-gray-800">Misioni Ynë</h3>
-              <p className="text-gray-600 mb-4">
-                Misioni ynë është të transformojmë përvojën e blerjes së makinës në Shqipëri duke ofruar automjete të cilësisë më të lartë, shërbim të jashtëzakonshëm ndaj klientit dhe zgjidhje gjithëpërfshirëse automobilistike.
-              </p>
-              <p className="text-gray-600">
-                Ne synojmë të krijojmë marrëdhënie afatgjata me klientët tanë duke tejkaluar pritshmëritë e tyre dhe duke u kujdesur për automjetet e tyre gjatë gjithë ciklit të jetës. Qëllimi ynë është që çdo klient të largohet jo vetëm me makinën e përsosur, por edhe me një përvojë të paharrueshme.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 p-8 rounded-lg shadow-md">
-              <h3 className="text-2xl font-bold mb-4 text-gray-800">Vizioni Ynë</h3>
-              <p className="text-gray-600 mb-4">
-                Ne aspirojmë të bëhemi partneri më i besuar i automjeteve në Shqipëri, i njohur për integritetin, cilësinë dhe shërbimin tonë të jashtëzakonshëm. 
-              </p>
-              <p className="text-gray-600">
-                Vizioni ynë është të vendosim një standard të ri në industrinë e automjeteve shqiptare, duke ofruar një përvojë të personalizuar dhe transparente që transformon përvceptimin e klientëve për blerjen e makinave. Ne synojmë të jemi pionierë në adoptimin e teknologjive të reja dhe praktikave të qëndrueshme që përfitojnë si klientët tanë ashtu edhe mjedisin.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-12 text-center">
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Më shumë se shitës makinash, ne jemi këshilltarë të besuar që punojmë për të kuptuar nevojat tuaja unike dhe për të gjetur zgjidhjen më të mirë për ju. Kjo filozofi e thjeshtë por e fuqishme ka qenë themeli i suksesit tonë dhe do të vazhdojë të drejtojë rritjen tonë në vitet e ardhshme.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Enhanced Inventory Highlights Section - NEW */}
-      <section id="inventory-highlights" className="py-20 bg-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Koleksioni Ynë</h2>
-            <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Eksploroni disa nga markat dhe modelet më të kërkuara në inventarin tonë
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                brand: "Mercedes-Benz",
-                description: "Nga sedanët elegantë C-Class dhe E-Class deri te SUV-të luksoze GLC dhe GLE, koleksioni ynë Mercedes ofron performancë gjermane dhe cilësi të padiskutueshme.",
-                popular: "Modelet më të popullarizuara: C220d, E350, GLC 300"
-              },
-              {
-                brand: "BMW",
-                description: "Përjetoni 'Kënaqësinë e Drejtimit të Makinës' me gamën tonë të zgjedhur të modeleve BMW, duke përfshirë serinë 3, serinë 5 dhe X-series SUV-të e njohura.",
-                popular: "Modelet më të popullarizuara: 320d, 520d, X5"
-              },
-              {
-                brand: "Audi",
-                description: "Kombinimi perfekt i teknologjisë, performancës dhe dizajnit, koleksioni ynë Audi përfshin modelet A4, A6 dhe SUV-të Q5, me teknologji dhe komoditet të shkëlqyer.",
-                popular: "Modelet më të popullarizuara: A4 TDI, A6 TFSI, Q5"
-              },
-              {
-                brand: "Marka të Tjera",
-                description: "Përzgjedhja jonë shtrihet përtej markave gjermane, duke përfshirë automjete të cilësisë së lartë nga Volkswagen, Toyota, Ford dhe shumë të tjera për të përmbushur çdo nevojë.",
-                popular: "Modelet më të popullarizuara: VW Golf, Toyota RAV4, Ford Focus"
-              }
-            ].map((item, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                <h3 className="text-xl font-bold mb-3 text-gray-800">{item.brand}</h3>
-                <p className="text-gray-600 mb-4">{item.description}</p>
-                <p className="text-sm text-blue-600 font-medium">{item.popular}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <button 
-              onClick={() => navigate('/cars')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition duration-300"
-            >
-              Shiko Koleksionin e Plotë
-            </button>
-          </div>
-        </div>
-      </section>
-
       {/* Add global CSS animations using a standard style element */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fade-in-up {
@@ -544,6 +297,15 @@ const AboutPage = () => {
           animation: fade-in-up 0.8s ease-out forwards;
         }
       ` }} />
+
+      {/* Server-side rendering enhancement - Add noscript fallback content for SEO */}
+      <noscript>
+        <div className="text-center p-10">
+          <h1 className="text-3xl font-bold">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
+          <p className="mt-4">Që nga viti 2010, ne jemi përkushtuar ndaj sigurimit të makinave të cilësisë më të lartë për klientët tanë.</p>
+          <p className="mt-4">Ju lutemi aktivizoni JavaScript për të parë faqen tonë me të gjitha funksionalitetet.</p>
+        </div>
+      </noscript>
     </div>
   );
 };

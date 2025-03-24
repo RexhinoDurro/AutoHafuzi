@@ -2,29 +2,37 @@ import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { FavoritesProvider } from './context/FavouritesContext';
 import { getStoredAuth } from './utils/auth';
+
 // Core components that are used on most pages - eagerly loaded
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
-// Implement a better loading component
-const LoadingSpinner = () => (
-  <div className="flex justify-center items-center min-h-screen">
+// Import Home/About page eagerly for better SEO on the main page
+import Home from './pages/About'; // About page content becomes main Home page
+
+// Implement a better loading component with semantic content
+const LoadingSpinner = ({ pageName = 'Page' }) => (
+  <div className="flex flex-col justify-center items-center min-h-screen">
+    <h1 className="text-2xl font-bold mb-4">Loading {pageName}...</h1>
     <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600"></div>
-    <span className="sr-only">Loading...</span>
+    <noscript>
+      <div className="mt-6 p-4 bg-yellow-50 rounded border border-yellow-400">
+        <h2 className="text-xl font-semibold">JavaScript Required</h2>
+        <p>Please enable JavaScript to view Auto Hafuzi website content.</p>
+      </div>
+    </noscript>
   </div>
 );
 
 // Preload critical routes
 const preloadRoutes = () => {
   // Start preloading the most common routes
-  import('./pages/About'); // About page now serves as Home
   import('./pages/Home'); // Original Home page now serves as CarSearch
   import('./pages/CarHolder');
   import('./pages/CarDetail');
 };
 
-// Lazy load all page components
-const Home = lazy(() => import('./pages/About')); // About page content becomes main Home page
+// Lazy load all page components (except Home which is loaded eagerly)
 const CarSearch = lazy(() => import('./pages/Home')); // Original Home page renamed to CarSearch
 const CarHolder = lazy(() => import('./pages/CarHolder'));
 const CarDetail = lazy(() => import('./pages/CarDetail'));
@@ -49,13 +57,14 @@ import { ReactNode } from 'react';
 
 interface MainLayoutProps {
   children: ReactNode;
+  pageName?: string;
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => (
+const MainLayout: React.FC<MainLayoutProps> = ({ children, pageName = 'Page' }) => (
   <>
     <Navbar />
     <main className="min-h-screen bg-gray-50">
-      <Suspense fallback={<LoadingSpinner />}>
+      <Suspense fallback={<LoadingSpinner pageName={pageName} />}>
         {children}
       </Suspense>
     </main>
@@ -78,8 +87,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 function App() {
-  // Start preloading critical routes when the app loads
+  // Set global metadata for SEO
   useEffect(() => {
+    // Set default title as fallback
+    if (!document.title) {
+      document.title = "Auto Hafuzi - Automjete Premium në Shqipëri";
+    }
+    
+    // Check if meta description exists, if not create one
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      metaDescription.setAttribute('content', 'Auto Hafuzi ofron makina premium në Shqipëri, përfshirë Mercedes, BMW, Audi dhe më shumë, që nga viti 2010. Vizitoni sallonin tonë në Fushë-Kruje.');
+      document.head.appendChild(metaDescription);
+    }
+    
+    // Start preloading critical routes when the app loads
     preloadRoutes();
   }, []);
 
@@ -87,20 +111,24 @@ function App() {
     <Router>
       <FavoritesProvider>
         <Routes>
-          {/* Public routes with MainLayout */}
+          {/* Home route - eagerly loaded for SEO */}
           <Route
             path="/"
             element={
-              <MainLayout>
-                <Home />
-              </MainLayout>
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <Home />
+                </main>
+                <Footer />
+              </>
             }
           />
           
           <Route
             path="/search"
             element={
-              <MainLayout>
+              <MainLayout pageName="Search">
                 <CarSearch />
               </MainLayout>
             }
@@ -109,7 +137,7 @@ function App() {
           <Route
             path="/cars"
             element={
-              <MainLayout>
+              <MainLayout pageName="Cars">
                 <CarHolder />
               </MainLayout>
             }
@@ -118,7 +146,7 @@ function App() {
           <Route
             path="/car/:id"
             element={
-              <MainLayout>
+              <MainLayout pageName="Car Details">
                 <CarDetail />
               </MainLayout>
             }
@@ -127,7 +155,7 @@ function App() {
           <Route
             path="/favorites"
             element={
-              <MainLayout>
+              <MainLayout pageName="Favorites">
                 <FavoritesPage />
               </MainLayout>
             }
@@ -136,7 +164,7 @@ function App() {
           <Route
             path="/contact"
             element={
-              <MainLayout>
+              <MainLayout pageName="Contact">
                 <ContactPage />
               </MainLayout>
             }
@@ -146,7 +174,7 @@ function App() {
           <Route 
             path="/auth" 
             element={
-              <Suspense fallback={<LoadingSpinner />}>
+              <Suspense fallback={<LoadingSpinner pageName="Login" />}>
                 <AdminLogin />
               </Suspense>
             } 
@@ -156,7 +184,7 @@ function App() {
             path="/auth/dashboard"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Dashboard" />}>
                   <AdminDashboard />
                 </Suspense>
               </ProtectedRoute>
@@ -168,7 +196,7 @@ function App() {
             path="/auth/add-car"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Add Car" />}>
                   <AdminDashboard>
                     <CarForm />
                   </AdminDashboard>
@@ -181,7 +209,7 @@ function App() {
             path="/auth/edit-car/:id"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Edit Car" />}>
                   <AdminDashboard>
                     <CarForm />
                   </AdminDashboard>
@@ -194,7 +222,7 @@ function App() {
             path="/options"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Options" />}>
                   <AdminDashboard>
                     <OptionsPage />
                   </AdminDashboard>
@@ -207,7 +235,7 @@ function App() {
             path="/exterior-colors"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Exterior Colors" />}>
                   <AdminDashboard>
                     <ColorManagementPage />
                   </AdminDashboard>
@@ -220,7 +248,7 @@ function App() {
             path="/upholstery-management"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Upholstery Management" />}>
                   <AdminDashboard>
                     <UpholsteryManagementPage />
                   </AdminDashboard>
@@ -233,7 +261,7 @@ function App() {
             path="/auth/contact-messages"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Contact Messages" />}>
                   <AdminDashboard>
                     <ContactMessages />
                   </AdminDashboard>
@@ -246,7 +274,7 @@ function App() {
             path="/auth/makes"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Makes" />}>
                   <AdminDashboard>
                     <MakesPage />
                   </AdminDashboard>
@@ -259,7 +287,7 @@ function App() {
             path="/auth/makes/:makeId/models"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Models" />}>
                   <AdminDashboard>
                     <ModelsPage />
                   </AdminDashboard>
@@ -272,7 +300,7 @@ function App() {
             path="/auth/makes/:makeId/models/:modelId/variants"
             element={
               <ProtectedRoute>
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={<LoadingSpinner pageName="Variants" />}>
                   <AdminDashboard>
                     <VariantsPage />
                   </AdminDashboard>
@@ -281,7 +309,14 @@ function App() {
             }
           />
 
-          <Route path="*" element={<NotFound />} />
+          <Route 
+            path="*" 
+            element={
+              <Suspense fallback={<LoadingSpinner pageName="Not Found" />}>
+                <NotFound />
+              </Suspense>
+            } 
+          />
 
         </Routes>
       </FavoritesProvider>
