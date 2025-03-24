@@ -1,85 +1,109 @@
 <!DOCTYPE html>
 <html lang="sq">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <!-- Favicon Implementation -->
-  <link rel="icon" type="image/svg+xml" href="/hafuzi.ico" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-  
-  <!-- SEO Meta Tags -->
-  <meta name="google-site-verification" content="BOROGHWTC-nTzPFvu_PbvWnV7IOj3d_Ch5D8H0pcVF8" />
-  <title>Auto Hafuzi - Makina Cilësore për Shitje në Shqipëri | Mercedes, BMW, Audi</title>
-  <meta name="description" content="Zgjidhni nga koleksioni ynë i zgjedhur i makinave të përdorura cilësore duke përfshirë Mercedes, BMW dhe Audi. Ofrojmë garanci, çmime konkurruese dhe shërbim të shkëlqyer klienti në Shqipëri." />
-  
-  <!-- Open Graph Tags for Social Media - updated with consistent domain -->
-  <meta property="og:title" content="Auto Hafuzi - Makina për Shitje në Shqipëri" />
-  <meta property="og:description" content="Zgjidhni nga koleksioni ynë i zgjedhur i makinave të përdorura cilësore në Shqipëri. Mercedes, BMW, Audi dhe më shumë." />
-  <meta property="og:image" content="https://www.autohafuzi-fe.onrender.com/og-image.jpg" />
-  <meta property="og:url" content="https://www.autohafuzi-fe.onrender.com" />
-  <meta property="og:type" content="website" />
-  
-  <!-- Canonical URL - ensuring consistent domain usage -->
-  <link rel="canonical" href="https://autohafuzi-fe.onrender.com" />
-  
-  <!-- Preconnect to external domains -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  
-  <!-- Additional meta tags -->
-  <meta name="keywords" content="makina, mercedes, bmw, audi, diesel, petrol, cars, shitje, albania, makina te perdorura, makina cilësore" />
-  <meta name="author" content="Auto Hafuzi" />
-  <meta name="robots" content="index, follow" />
-  
-  <!-- Alternate language versions if applicable -->
-  <!-- <link rel="alternate" hreflang="en" href="https://www.autohafuzi-fe.onrender.com/en/" /> -->
-</head>
-<body>
-  <div id="root"></div>
-  
-  <!-- Rich snippets for business information using structured data -->
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "AutoDealer",
-      "name": "Auto Hafuzi",
-      "image": "https://www.autohafuzi-fe.onrender.com/logo.png",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Fushë-Kruje, E762",
-        "addressLocality": "Fushë Krujë",
-        "addressRegion": "Tiranë",
-        "postalCode": "1540",
-        "addressCountry": "AL"
-      },
-      "telephone": "069 931 1111",
-      "email": "info@hafuziauto.ch",
-      "url": "https://www.autohafuzi-fe.onrender.com",
-      "openingHoursSpecification": [
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-          "opens": "09:00",
-          "closes": "18:00"
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicon Implementation -->
+    <link rel="icon" type="image/svg+xml" href="/hafuzilogo.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+
+    <!-- SEO Meta Tags -->
+    <meta
+      name="google-site-verification"
+      content="BOROGHWTC-nTzPFvu_PbvWnV7IOj3d_Ch5D8H0pcVF8"
+    />
+    <title>Auto Hafuzi - Makinat më Cilësore për Shitje në Shqipëri</title>
+    <meta
+      name="description"
+      content="Zgjidhni nga koleksioni ynë i zgjedhur i makinave të përdorura cilësore duke përfshirë Mercedes, BMW dhe Audi. Ofrojmë garanci, çmime konkurruese dhe shërbim të shkëlqyer klienti në Shqipëri."
+    />
+
+    <!-- Open Graph Tags for Social Media - updated with consistent domain -->
+    <meta
+      property="og:title"
+      content="Auto Hafuzi - Makina për Shitje në Shqipëri"
+    />
+    <meta
+      property="og:description"
+      content="Zgjidhni nga koleksioni ynë i zgjedhur i makinave të përdorura cilësore në Shqipëri. Mercedes, BMW, Audi dhe më shumë."
+    />
+    <meta
+      property="og:image"
+      content="https://www.autohafuzi-fe.onrender.com/og-image.jpg"
+    />
+    <meta property="og:url" content="https://www.autohafuzi-fe.onrender.com" />
+    <meta property="og:type" content="website" />
+
+    <!-- Canonical URL - ensuring consistent domain usage -->
+    <link rel="canonical" href="https://autohafuzi-fe.onrender.com" />
+
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Additional meta tags -->
+    <meta
+      name="keywords"
+      content="makina, mercedes, bmw, audi, diesel, petrol, cars, shitje, albania, makina te perdorura, makina cilësore"
+    />
+    <meta name="author" content="Auto Hafuzi" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Alternate language versions if applicable -->
+    <!-- <link rel="alternate" hreflang="en" href="https://www.autohafuzi-fe.onrender.com/en/" /> -->
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Rich snippets for business information using structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "AutoDealer",
+        "name": "Auto Hafuzi",
+        "image": "https://www.autohafuzi-fe.onrender.com/logo.png",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Fushë-Kruje, E762",
+          "addressLocality": "Fushë Krujë",
+          "addressRegion": "Tiranë",
+          "postalCode": "1540",
+          "addressCountry": "AL"
         },
-        {
-          "@type": "OpeningHoursSpecification",
-          "dayOfWeek": "Saturday",
-          "opens": "10:00",
-          "closes": "16:00"
-        }
-      ],
-      "priceRange": "€€",
-      "sameAs": [
-        "https://www.facebook.com/autohafuzi/",
-        "https://www.instagram.com/autohafuzi"
-      ]
-    }
-  </script>
-  
-  <script type="module" src="/src/main.tsx"></script>
-</body>
+        "telephone": "069 931 1111",
+        "email": "info@hafuziauto.ch",
+        "url": "https://www.autohafuzi-fe.onrender.com",
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday"
+            ],
+            "opens": "09:00",
+            "closes": "18:00"
+          },
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": "Saturday",
+            "opens": "10:00",
+            "closes": "16:00"
+          }
+        ],
+        "priceRange": "€€",
+        "sameAs": [
+          "https://www.facebook.com/autohafuzi/",
+          "https://www.instagram.com/autohafuzi"
+        ]
+      }
+    </script>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
