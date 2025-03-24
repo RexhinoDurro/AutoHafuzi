@@ -1,11 +1,13 @@
-// Updated create-gzipped-sitemap.js
+// front-end/scripts/create-sitemap.js
 const fs = require('fs');
 const zlib = require('zlib');
 
 // Set the primary domain consistently for all SEO-related files
 const PRIMARY_DOMAIN = 'https://autohafuzi-fe.onrender.com';
 
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+// Create the XML sitemap content
+const generateSitemap = () => {
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${PRIMARY_DOMAIN}/</loc>
@@ -74,12 +76,63 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
   </url>
 </urlset>`;
 
-// Save uncompressed version
-fs.writeFileSync('public/sitemap.xml', sitemap);
-console.log('Created sitemap.xml');
+  return sitemap;
+};
 
-// Create gzipped version
-const compressed = zlib.gzipSync(sitemap);
-fs.writeFileSync('public/sitemap.xml.gz', compressed);
-console.log('Created sitemap.xml.gz');
+// Create the robots.txt content with proper sitemap references
+const generateRobotsTxt = () => {
+  return `# robots.txt for autohafuzi.com
+User-agent: *
+Allow: /
 
+# Private areas
+Disallow: /auth/
+Disallow: /admin/
+
+# Allow search engines to access the sitemap
+Sitemap: ${PRIMARY_DOMAIN}/sitemap.xml
+Sitemap: ${PRIMARY_DOMAIN}/sitemap.xml.gz
+
+# Crawl delay to avoid overloading the server
+Crawl-delay: 1
+`;
+};
+
+// Make sure the public directory exists
+const ensurePublicDir = () => {
+  if (!fs.existsSync('public')) {
+    fs.mkdirSync('public');
+  }
+};
+
+// Generate and save the sitemap files
+const createSitemaps = () => {
+  try {
+    ensurePublicDir();
+    
+    // Generate sitemap content
+    const sitemap = generateSitemap();
+    
+    // Save uncompressed version
+    fs.writeFileSync('public/sitemap.xml', sitemap);
+    console.log('Created sitemap.xml');
+    
+    // Create gzipped version
+    const compressed = zlib.gzipSync(sitemap);
+    fs.writeFileSync('public/sitemap.xml.gz', compressed);
+    console.log('Created sitemap.xml.gz');
+    
+    // Create robots.txt
+    const robotsTxt = generateRobotsTxt();
+    fs.writeFileSync('public/robots.txt', robotsTxt);
+    console.log('Created robots.txt');
+    
+    console.log('Sitemap generation completed successfully!');
+  } catch (error) {
+    console.error('Error generating sitemap:', error);
+    process.exit(1);
+  }
+};
+
+// Run the sitemap generator
+createSitemaps();

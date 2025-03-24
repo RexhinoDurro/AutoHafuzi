@@ -33,7 +33,7 @@ const Navbar = () => {
                 <span className="font-medium">Kryefaqja</span>
               </Link>
 
-              <Link to="/cars" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
+              <Link to="/search" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <CarIcon className="h-5 w-5" />
                 <span className="font-medium">Makina në Shitje</span>
               </Link>
