@@ -8,6 +8,7 @@ import { Filter, X, Calendar, Gauge, Fuel, Settings, Car as CarIcon } from 'luci
 import FavoriteButton from '../components/FavouriteButton';
 import ResponsiveImage from '../components/ResponsiveImage';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { getCanonicalUrl, updateCanonicalLink } from '../utils/canonicalUrl';
 
 interface FilterState {
   make?: string;
@@ -100,6 +101,43 @@ const CarHolder: React.FC = () => {
       : `${API_BASE_URL}${firstImage.image}`;
   };
 
+  // Create a function to set canonical URL based on filters
+  const setCanonicalUrl = (queryParams: URLSearchParams) => {
+    // For search results with many parameters, it's often best to use a clean canonical URL
+    // to avoid duplicate content issues with slightly different filter combinations
+    
+    // Basic strategy: 
+    // 1. For simple filter combinations (make, model, fuel_type), include them in canonical
+    // 2. For complex filter combinations, use the base /cars URL as canonical
+    
+    let canonicalPath = '/cars';
+    const canonicalParams: Record<string, string> = {};
+    
+    // Extract important parameters directly from the provided queryParams
+    const make = queryParams.get('make');
+    const model = queryParams.get('model');
+    const fuelType = queryParams.get('fuel_type');
+    const page = queryParams.get('page');
+    const sort = queryParams.get('sort');
+    
+    // Include only the most important filters in canonical URL
+    if (make) canonicalParams.make = make;
+    if (model) canonicalParams.model = model;
+    if (fuelType) canonicalParams.fuel_type = fuelType;
+    
+    // If we have sorting that's not the default, include it
+    if (sort && sort !== 'best_results') canonicalParams.sort = sort;
+    
+    // Only include page param if not the first page
+    if (page && parseInt(page) > 1) canonicalParams.page = page;
+    
+    // Get the canonical URL from the utility
+    const canonicalUrl = getCanonicalUrl(canonicalPath, canonicalParams);
+    
+    // Update the canonical link
+    updateCanonicalLink(canonicalUrl);
+  };
+
   const fetchCars = async (filters = {}, page = 1, sort = sortBy) => {
     setLoading(true);
     setError(null);
@@ -145,6 +183,9 @@ const CarHolder: React.FC = () => {
       
       // Update document title and meta tags directly
       updatePageMetadata();
+      
+      // Set canonical URL
+      setCanonicalUrl(queryParams);
     } catch (error) {
       console.error('Error fetching cars:', error);
       setError('Failed to load cars. Please try again.');
@@ -177,62 +218,6 @@ const CarHolder: React.FC = () => {
       top: document.getElementById('car-listing-top')?.offsetTop || 0,
       behavior: 'smooth'
     });
-  };
-
-  // Fetch makes and models for name resolution
-  useEffect(() => {
-    const fetchMakesAndModels = async () => {
-      try {
-        // Fetch makes
-        const makesResponse = await fetch(API_ENDPOINTS.MAKES);
-        if (makesResponse.ok) {
-          const makesData = await makesResponse.json();
-          const namesMap: Record<string, string> = {};
-          makesData.forEach((make: any) => {
-            namesMap[make.id.toString()] = make.name;
-          });
-          setMakeNames(namesMap);
-        }
-      } catch (error) {
-        console.error('Error fetching makes for SEO:', error);
-      }
-    };
-    
-    fetchMakesAndModels();
-  }, []);
-
-  // Generate pagination numbers
-  const getPaginationNumbers = () => {
-    const pages = [];
-    
-    // Always include first page
-    pages.push(1);
-    
-    // Calculate range to show around current page
-    let start = Math.max(2, currentPage - 1);
-    let end = Math.min(totalPages - 1, currentPage + 1);
-    
-    // Add ellipsis after first page if needed
-    if (start > 2) {
-      pages.push('...');
-    }
-    
-    // Add pages around current page
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    
-    // Add ellipsis before last page if needed
-    if (end < totalPages - 1) {
-      pages.push('...');
-    }
-    
-    // Add last page if there's more than one page
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-    
-    return pages;
   };
 
   // Generate page title and description based on filters
@@ -300,15 +285,6 @@ const CarHolder: React.FC = () => {
     updateOrCreateMetaTag('og:description', description);
     updateOrCreateMetaTag('og:type', 'website');
     updateOrCreateMetaTag('og:url', window.location.href);
-    
-    // Update canonical link
-    let canonicalLink = document.querySelector('link[rel="canonical"]');
-    if (!canonicalLink) {
-      canonicalLink = document.createElement('link');
-      canonicalLink.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonicalLink);
-    }
-    canonicalLink.setAttribute('href', window.location.href);
   };
   
   // Helper function to update or create meta tags
@@ -321,6 +297,28 @@ const CarHolder: React.FC = () => {
     }
     metaTag.setAttribute('content', content);
   };
+
+  // Fetch makes and models for name resolution
+  useEffect(() => {
+    const fetchMakesAndModels = async () => {
+      try {
+        // Fetch makes
+        const makesResponse = await fetch(API_ENDPOINTS.MAKES);
+        if (makesResponse.ok) {
+          const makesData = await makesResponse.json();
+          const namesMap: Record<string, string> = {};
+          makesData.forEach((make: any) => {
+            namesMap[make.id.toString()] = make.name;
+          });
+          setMakeNames(namesMap);
+        }
+      } catch (error) {
+        console.error('Error fetching makes for SEO:', error);
+      }
+    };
+    
+    fetchMakesAndModels();
+  }, []);
 
   // Initial data fetch and metadata update
   useEffect(() => {
@@ -356,8 +354,54 @@ const CarHolder: React.FC = () => {
   useEffect(() => {
     if (Object.keys(makeNames).length > 0) {
       updatePageMetadata();
+      
+      // Add setCanonicalUrl call here to ensure canonical is set after metadata
+      const queryParams = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+      queryParams.append('sort', sortBy);
+      queryParams.append('page', currentPage.toString());
+      
+      setCanonicalUrl(queryParams);
     }
-  }, [currentFilters, makeNames]);
+  }, [currentFilters, makeNames, sortBy, currentPage]);
+
+  // Generate pagination numbers
+  const getPaginationNumbers = () => {
+    const pages = [];
+    
+    // Always include first page
+    pages.push(1);
+    
+    // Calculate range to show around current page
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+    
+    // Add ellipsis after first page if needed
+    if (start > 2) {
+      pages.push('...');
+    }
+    
+    // Add pages around current page
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    // Add ellipsis before last page if needed
+    if (end < totalPages - 1) {
+      pages.push('...');
+    }
+    
+    // Add last page if there's more than one page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
 
   return (
     <div className="min-h-screen container mx-auto px-4 py-8 max-w-7xl">

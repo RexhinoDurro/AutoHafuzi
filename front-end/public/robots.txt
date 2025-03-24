@@ -1,4 +1,4 @@
-# robots.txt for autohafuzi.com
+const robotsTxt = `# robots.txt for autohafuzi.com
 User-agent: *
 Allow: /
 
@@ -7,7 +7,12 @@ Disallow: /auth/
 Disallow: /admin/
 
 # Allow search engines to access the sitemap
-Sitemap: https://autohafuzi-fe.onrender.com/sitemap.xml
+Sitemap: ${PRIMARY_DOMAIN}/sitemap.xml
+Sitemap: ${PRIMARY_DOMAIN}/sitemap.xml.gz
 
 # Crawl delay to avoid overloading the server
 Crawl-delay: 1
+`;
+
+fs.writeFileSync('public/robots.txt', robotsTxt);
+console.log('Updated robots.txt');

@@ -14,6 +14,7 @@ import { API_ENDPOINTS } from '../config/api';
 import { useMediaQuery } from '../utils/useMediaQuery';
 import { shouldDisableViewTracking } from '../utils/navigation';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { getCanonicalUrl, updateCanonicalLink } from '../utils/canonicalUrl';
 
 // Interface for option data
 interface Option {
@@ -139,7 +140,7 @@ const CarDetail: React.FC = () => {
     fetchData();
   }, []);
 
-  // Update page metadata directly (previously handled by Helmet)
+  // Update canonical URL and other page metadata
   const updatePageMetadata = () => {
     if (!car) return;
     
@@ -163,16 +164,17 @@ const CarDetail: React.FC = () => {
     updateOrCreateMetaTag('og:title', pageTitle);
     updateOrCreateMetaTag('og:description', metaDescription);
     updateOrCreateMetaTag('og:type', 'website');
-    updateOrCreateMetaTag('og:url', window.location.href);
+    
+    // Set canonical URL using the utility function
+    // Use the slug if available, otherwise use the ID
+    const canonicalPath = `/car/${car.slug || id}`;
+    const canonicalUrl = getCanonicalUrl(canonicalPath);
+    
+    // Update og:url to match canonical
+    updateOrCreateMetaTag('og:url', canonicalUrl);
     
     // Update canonical link
-    let canonicalLink = document.querySelector('link[rel="canonical"]');
-    if (!canonicalLink) {
-      canonicalLink = document.createElement('link');
-      canonicalLink.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonicalLink);
-    }
-    canonicalLink.setAttribute('href', window.location.href);
+    updateCanonicalLink(canonicalUrl);
   };
   
   // Helper function to update or create meta tags
@@ -262,7 +264,7 @@ const CarDetail: React.FC = () => {
         const data = await response.json();
         setCar(data);
         
-        // Update page metadata
+        // Update page metadata including canonical URL
         updatePageMetadata();
         
         // Add structured data
@@ -329,7 +331,8 @@ const CarDetail: React.FC = () => {
         "price": car.price,
         "priceCurrency": "EUR",
         "availability": "https://schema.org/InStock"
-      }
+      },
+      "url": getCanonicalUrl(`/car/${car.slug || id}`)
     });
     
     // First remove any existing script to avoid duplicates
