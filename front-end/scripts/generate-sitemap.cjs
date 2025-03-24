@@ -1,148 +1,101 @@
-// scripts/generate-sitemap.cjs
+// scripts/fixed-sitemap.cjs
 const fs = require('fs');
 const path = require('path');
 
-// Define your website base URL and API endpoints
-const API_BASE_URL = 'https://autohafuzi.onrender.com';
+// Define your website base URL
 const SITE_URL = 'https://autohafuzi-fe.onrender.com';
 
-const API_ENDPOINTS = {
-  CARS: {
-    LIST: `${API_BASE_URL}/api/cars/`,
-  },
-  MAKES: `${API_BASE_URL}/api/makes/`,
-};
-
-// Define static routes with priorities and change frequencies
+// Static routes with priorities and change frequencies
 const staticRoutes = [
-  {
-    url: '/',
-    priority: '1.0',
-    changefreq: 'daily'
-  },
-  {
-    url: '/cars',
-    priority: '0.9',
-    changefreq: 'daily'
-  },
-  {
-    url: '/about',
-    priority: '0.8',
-    changefreq: 'monthly'
-  },
-  {
-    url: '/contact',
-    priority: '0.8',
-    changefreq: 'monthly'
-  },
-  {
-    url: '/favorites',
-    priority: '0.7',
-    changefreq: 'weekly'
-  }
+  { url: '/', priority: '1.0', changefreq: 'daily' },
+  { url: '/cars', priority: '0.9', changefreq: 'daily' },
+  { url: '/about', priority: '0.8', changefreq: 'monthly' },
+  { url: '/contact', priority: '0.8', changefreq: 'monthly' },
+  { url: '/favorites', priority: '0.7', changefreq: 'weekly' }
 ];
 
-// Define important category pages
+// Category pages
 const categoryPages = [
-  {
-    url: '/cars?make=1', // Assuming make=1 is a popular make like Mercedes
-    priority: '0.8',
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?fuel_type=Diesel',
-    priority: '0.8', 
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?fuel_type=Petrol',
-    priority: '0.8',
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?make=2', // Assuming make=2 is another popular make like BMW
-    priority: '0.8',
-    changefreq: 'weekly'
-  }
+  { url: '/cars?make=1', priority: '0.8', changefreq: 'weekly' },
+  { url: '/cars?fuel_type=Diesel', priority: '0.8', changefreq: 'weekly' },
+  { url: '/cars?fuel_type=Petrol', priority: '0.8', changefreq: 'weekly' },
+  { url: '/cars?make=2', priority: '0.8', changefreq: 'weekly' }
 ];
 
-// Define popular search combinations
+// Popular searches
 const popularSearches = [
-  {
-    url: '/cars?make=6&model=12', // Example: specific make and model combination
-    priority: '0.7',
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?make=1&body_type=SUV', // Example: SUVs from a specific make
-    priority: '0.7',
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?max_price=20000', // Cars under €20,000
-    priority: '0.7',
-    changefreq: 'weekly'
-  },
-  {
-    url: '/cars?min_year=2020', // Cars from 2020 and newer
-    priority: '0.7',
-    changefreq: 'weekly'
-  }
+  { url: '/cars?make=6&model=12', priority: '0.7', changefreq: 'weekly' },
+  { url: '/cars?make=1&body_type=SUV', priority: '0.7', changefreq: 'weekly' },
+  { url: '/cars?max_price=20000', priority: '0.7', changefreq: 'weekly' },
+  { url: '/cars?min_year=2020', priority: '0.7', changefreq: 'weekly' }
 ];
 
 // Generate sitemap XML
 function generateSitemap() {
+  // Start with XML declaration
   let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
   sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
   
-  // Add static routes
+  // Function to add a URL entry
+  const addUrl = (url, changefreq, priority) => {
+    sitemap += '  <url>\n';
+    // Make sure to encode ampersands and other special characters
+    const encodedUrl = url.replace(/&/g, '&amp;');
+    sitemap += `    <loc>${SITE_URL}${encodedUrl}</loc>\n`;
+    sitemap += `    <changefreq>${changefreq}</changefreq>\n`;
+    sitemap += `    <priority>${priority}</priority>\n`;
+    sitemap += '  </url>\n';
+  };
+  
+  // Add all routes
   staticRoutes.forEach(route => {
-    sitemap += '  <url>\n';
-    sitemap += `    <loc>${SITE_URL}${route.url}</loc>\n`;
-    sitemap += `    <changefreq>${route.changefreq}</changefreq>\n`;
-    sitemap += `    <priority>${route.priority}</priority>\n`;
-    sitemap += '  </url>\n';
+    addUrl(route.url, route.changefreq, route.priority);
   });
   
-  // Add category pages
   categoryPages.forEach(page => {
-    sitemap += '  <url>\n';
-    sitemap += `    <loc>${SITE_URL}${page.url}</loc>\n`;
-    sitemap += `    <changefreq>${page.changefreq}</changefreq>\n`;
-    sitemap += `    <priority>${page.priority}</priority>\n`;
-    sitemap += '  </url>\n';
+    addUrl(page.url, page.changefreq, page.priority);
   });
   
-  // Add popular search combinations
   popularSearches.forEach(search => {
-    sitemap += '  <url>\n';
-    sitemap += `    <loc>${SITE_URL}${search.url}</loc>\n`;
-    sitemap += `    <changefreq>${search.changefreq}</changefreq>\n`;
-    sitemap += `    <priority>${search.priority}</priority>\n`;
-    sitemap += '  </url>\n';
+    addUrl(search.url, search.changefreq, search.priority);
   });
   
+  // Close the sitemap
   sitemap += '</urlset>';
   
-  // Write sitemap to public directory for dev/testing
-  fs.writeFileSync('public/sitemap.xml', sitemap);
-  console.log('Sitemap generated in public/sitemap.xml');
-  
-  // Also write to the dist directory for production build
-  const distDir = path.join(__dirname, '..', 'dist');
-  if (fs.existsSync(distDir)) {
-    fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap);
-    console.log('Sitemap also generated in dist/sitemap.xml');
-  } else {
-    console.log('Dist directory not found. This is normal if running before the build.');
-  }
-  
-  // Update robots.txt in both locations
-  updateRobotsTxt();
+  // Write to files
+  writeFiles(sitemap);
 }
 
-// Update robots.txt to reference the sitemap
-function updateRobotsTxt() {
+// Write files to both public and dist directories
+function writeFiles(sitemap) {
+  // Write sitemap to public directory
+  try {
+    fs.writeFileSync('public/sitemap.xml', sitemap);
+    console.log('✅ Sitemap generated in public/sitemap.xml');
+  } catch (error) {
+    console.error('❌ Error writing to public/sitemap.xml:', error);
+  }
+  
+  // Write to dist directory if it exists
+  const distDir = path.join(__dirname, '..', 'dist');
+  if (fs.existsSync(distDir)) {
+    try {
+      fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap);
+      console.log('✅ Sitemap generated in dist/sitemap.xml');
+    } catch (error) {
+      console.error('❌ Error writing to dist/sitemap.xml:', error);
+    }
+  } else {
+    console.log('ℹ️ Dist directory not found. This is normal if running before build.');
+  }
+  
+  // Generate robots.txt
+  generateRobotsTxt();
+}
+
+// Generate robots.txt
+function generateRobotsTxt() {
   const robotsTxt = `# robots.txt for autohafuzi.com
 User-agent: *
 Allow: /
@@ -159,14 +112,22 @@ Crawl-delay: 1
 `;
 
   // Write to public directory
-  fs.writeFileSync('public/robots.txt', robotsTxt);
-  console.log('robots.txt updated in public/robots.txt');
+  try {
+    fs.writeFileSync('public/robots.txt', robotsTxt);
+    console.log('✅ robots.txt updated in public/robots.txt');
+  } catch (error) {
+    console.error('❌ Error writing to public/robots.txt:', error);
+  }
   
-  // Also write to dist directory if it exists
+  // Write to dist directory if it exists
   const distDir = path.join(__dirname, '..', 'dist');
   if (fs.existsSync(distDir)) {
-    fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt);
-    console.log('robots.txt also updated in dist/robots.txt');
+    try {
+      fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt);
+      console.log('✅ robots.txt updated in dist/robots.txt');
+    } catch (error) {
+      console.error('❌ Error writing to dist/robots.txt:', error);
+    }
   }
 }
 
