@@ -27,7 +27,6 @@ const FavoritesPage: React.FC = () => {
         const carPromises = favorites.map(id => 
           fetch(API_ENDPOINTS.CARS.GET(id.toString()), {
             headers: {
-              // Set the headers to explicitly indicate this is NOT a view to track
               'X-View-Tracking': 'false'
             }
           })
@@ -54,20 +53,6 @@ const FavoritesPage: React.FC = () => {
     clearAllFavorites();
   };
 
-  // Enhanced navigation function with clear source tracking
-  const handleCarClick = (car: Car) => {
-    // Store the source in sessionStorage with a clear identifier
-    sessionStorage.setItem('carDetailReferrer', '/favorites');
-    
-    // Also include the info in the navigation state for immediate reference
-    navigate(`/car/${car.id}`, { 
-      state: { 
-        from: '/favorites',
-        doNotTrackView: true // Add an explicit flag
-      }
-    });
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 min-h-screen pb-24">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -90,8 +75,12 @@ const FavoritesPage: React.FC = () => {
           {favoritesCars.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-16">
               {favoritesCars.map((car: Car) => (
-                <div key={car.id} onClick={() => handleCarClick(car)} className="cursor-pointer transition-transform hover:scale-102 hover:shadow-lg">
-                  <CarCard car={car} />
+                <div key={car.id} className="transition-transform hover:scale-102 hover:shadow-lg">
+                  <CarCard 
+                    car={car} 
+                    showFavoriteButton={true}
+                    isFromFavorites={true}
+                  />
                 </div>
               ))}
             </div>
