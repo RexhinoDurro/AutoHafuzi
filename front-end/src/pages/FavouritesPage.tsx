@@ -1,3 +1,4 @@
+// front-end/src/pages/FavouritesPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useFavorites } from '../context/FavouritesContext';
 import CarCard from '../components/CarCard';
@@ -5,12 +6,43 @@ import { Car } from '../types/car';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 
+interface StoredFavorite {
+  id: number;
+  slug: string;
+}
+
 const FavoritesPage: React.FC = () => {
   const { favorites, favoritesCars, setFavoritesCars, clearAllFavorites } = useFavorites();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [storedFavorites, setStoredFavorites] = useState<StoredFavorite[]>([]);
   const navigate = useNavigate();
 
+  // Load the stored favorites with slugs
+  useEffect(() => {
+    const loadStoredFavorites = () => {
+      try {
+        const favsJson = localStorage.getItem('car_favorites_with_slugs');
+        if (favsJson) {
+          const parsed = JSON.parse(favsJson);
+          if (Array.isArray(parsed)) {
+            setStoredFavorites(parsed);
+            return;
+          }
+        }
+        
+        // If no stored favorites with slugs, create an empty array
+        setStoredFavorites(favorites.map(id => ({ id, slug: id.toString() })));
+      } catch (error) {
+        console.error('Error loading stored favorites:', error);
+        setStoredFavorites([]);
+      }
+    };
+    
+    loadStoredFavorites();
+  }, [favorites]);
+
+  // Fetch the favorite cars using slugs when available
   useEffect(() => {
     const fetchFavoriteCars = async () => {
       if (favorites.length === 0) {
@@ -23,21 +55,71 @@ const FavoritesPage: React.FC = () => {
       setError(null);
 
       try {
-        // Fetch each favorite car by ID
-        const carPromises = favorites.map(id => 
-          fetch(API_ENDPOINTS.CARS.GET(id.toString()), {
+        // Map favorites to stored favorites to get slugs
+        const favsToFetch = favorites.map(id => {
+          const stored = storedFavorites.find(sf => sf.id === id);
+          return { id, slug: stored?.slug || id.toString() };
+        });
+        
+        // Fetch each favorite car by slug (or ID as fallback)
+        const carPromises = favsToFetch.map(fav => 
+          fetch(API_ENDPOINTS.CARS.GET(fav.slug), {
             headers: {
-              'X-View-Tracking': 'false'
+              'X-View-Tracking': 'false' // Don't track views when viewing favorites
             }
           })
             .then(res => {
-              if (!res.ok) throw new Error(`Failed to fetch car with ID ${id}`);
+              if (!res.ok) {
+                // If slug doesn't work, try with ID as fallback
+                if (fav.slug !== fav.id.toString()) {
+                  console.log(`Slug ${fav.slug} not found, trying with ID ${fav.id}`);
+                  return fetch(API_ENDPOINTS.CARS.GET(fav.id.toString()), {
+                    headers: { 'X-View-Tracking': 'false' }
+                  });
+                }
+                throw new Error(`Failed to fetch car with ID/slug ${fav.id}/${fav.slug}`);
+              }
+              return res;
+            })
+            .then(res => {
+              if (!res.ok) throw new Error(`Failed to fetch car`);
               return res.json();
+            })
+            .then(data => {
+              // Store the slug for future use
+              if (data.slug && data.id) {
+                // Update the stored slug if it's different
+                const stored = storedFavorites.find(sf => sf.id === data.id);
+                if (!stored || stored.slug !== data.slug) {
+                  setStoredFavorites(prev => {
+                    const newFavs = prev.filter(sf => sf.id !== data.id);
+                    newFavs.push({ id: data.id, slug: data.slug });
+                    
+                    // Update localStorage
+                    try {
+                      localStorage.setItem('car_favorites_with_slugs', JSON.stringify(newFavs));
+                    } catch (error) {
+                      console.error('Error saving favorites with slugs:', error);
+                    }
+                    
+                    return newFavs;
+                  });
+                }
+              }
+              return data;
+            })
+            .catch(error => {
+              console.error('Error fetching individual car:', error);
+              return null; // Return null for failed car fetches
             })
         );
 
         const carsData = await Promise.all(carPromises);
-        setFavoritesCars(carsData);
+        
+        // Filter out any null values (failed fetches)
+        const validCars = carsData.filter(car => car !== null);
+        
+        setFavoritesCars(validCars);
       } catch (error) {
         console.error('Error fetching favorite cars:', error);
         setError('Dështoi në marrjen e makinave të preferuara. Ju lutemi provoni përsëri më vonë.');
@@ -46,11 +128,18 @@ const FavoritesPage: React.FC = () => {
       }
     };
 
-    fetchFavoriteCars();
-  }, [favorites, setFavoritesCars]);
+    if (storedFavorites.length > 0) {
+      fetchFavoriteCars();
+    } else {
+      setLoading(false);
+    }
+  }, [favorites, setFavoritesCars, storedFavorites]);
 
   const handleClearFavorites = () => {
+    // Clear both favorites and stored favorites
     clearAllFavorites();
+    setStoredFavorites([]);
+    localStorage.removeItem('car_favorites_with_slugs');
   };
 
   return (

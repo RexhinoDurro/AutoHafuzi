@@ -1,15 +1,18 @@
+// front-end/src/components/FavouriteButton.tsx
 import React from 'react';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '../context/FavouritesContext';
 
 interface FavoriteButtonProps {
   carId: number;
+  carSlug?: string;
   size?: number;
   className?: string;
 }
 
 const FavoriteButton: React.FC<FavoriteButtonProps> = ({ 
   carId, 
+  carSlug,
   size = 24, 
   className = "" 
 }) => {
@@ -23,7 +26,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
     if (isFav) {
       removeFavorite(carId);
     } else {
-      addFavorite(carId);
+      addFavorite(carId, carSlug);
     }
   };
 

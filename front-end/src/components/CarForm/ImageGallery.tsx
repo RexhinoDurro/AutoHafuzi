@@ -1,11 +1,9 @@
+// src/components/CarForm/ImageGallery.tsx
 import React from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
-
-interface TempImage {
-  id: number;
-  preview: string;
-}
+import { getCloudinaryUrl } from '../../utils/imageService';
+import { TempImage } from './useCarFormImageUpload';
 
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
@@ -29,19 +27,36 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   
   // Helper to get the correct image URL
   const getImageUrl = (image: CarImage | TempImage): string => {
+    // First, handle temporary images
     if (isTempImage(image)) {
       return image.preview;
     }
     
     // For Cloudinary-stored images - this is the primary way now
     if ('url' in image && image.url) {
+      // Apply Cloudinary optimizations for better loading
+      if (image.url.includes('cloudinary.com')) {
+        return getCloudinaryUrl(image.url, 800, 600, 'auto');
+      }
       return image.url;
     }
     
-    // Fallback for direct URLs (shouldn't be needed with Cloudinary)
-    if (image.image && typeof image.image === 'string' && 
-        (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
-      return image.image;
+    // Handle images with direct paths
+    if ('image' in image && image.image) {
+      if (typeof image.image === 'string') {
+        // Apply Cloudinary optimizations
+        if (image.image.includes('cloudinary.com')) {
+          return getCloudinaryUrl(image.image, 800, 600, 'auto');
+        }
+        
+        // Handle direct URLs
+        if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
+          return image.image;
+        }
+        
+        // Handle relative paths
+        return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+      }
     }
     
     // Last resort fallback - rarely needed with Cloudinary
@@ -54,7 +69,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         <div key={image.id} className="relative">
           <img 
             src={getImageUrl(image)}
-            alt="Car" 
+            alt={isTempImage(image) ? "Preview" : "Car"} 
             className="w-full h-48 object-cover rounded"
             onError={(e) => {
               console.error(`Failed to load image: ${getImageUrl(image)}`);
@@ -65,12 +80,22 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             <button
               onClick={() => onDeleteImage(image.id)}
               className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+              type="button"
+              aria-label="Delete image"
             >
               ×
             </button>
+          )}
+          {/* Display "preview" badge for temporary images */}
+          {isTempImage(image) && (
+            <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+              Preview
+            </div>
           )}
         </div>
       ))}
     </div>
   );
 };
+
+export default ImageGallery;

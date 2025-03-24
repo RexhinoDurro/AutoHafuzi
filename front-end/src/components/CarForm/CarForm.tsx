@@ -1,9 +1,10 @@
+// src/components/CarForm/CarForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
 import { API_BASE_URL } from '../../config/api';
-import { CarImage, TempImage, ExteriorColor, InteriorColor } from '../../types/car';
+import { ExteriorColor, InteriorColor } from '../../types/car';
 import {
   BODY_TYPES,
   DRIVETRAINS,
@@ -12,7 +13,6 @@ import {
   EMISSION_CLASSES,
 } from './constants';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 10;
 
@@ -36,9 +36,7 @@ const CarForm = () => {
     handleImageDelete,
     tempImages,
     fetchVariants,
-    nextTempId,
-    setTempImages,
-    setNextTempId
+    handleImageUpload: hookHandleImageUpload
   } = useCarForm(id);
 
   // State for form validation errors
@@ -58,13 +56,11 @@ const CarForm = () => {
   const [isColorsLoading, setIsColorsLoading] = useState<boolean>(false);
 
   const optionCategories = {
-    COMFORT: 'Comfort & Convenience',
-    ENTERTAINMENT: 'Entertainment & Media',
-    SAFETY: 'Safety & Security',
-    EXTRAS: 'Extras'
+    'COMFORT': 'Rehatia & Komoditeti',
+    'ENTERTAINMENT': 'Argëtimi & Media',
+    'SAFETY': 'Siguria & Mbrojtja',
+    'EXTRAS': 'Ekstra'
   };
-
-  // Helper function to get correct image URL for any image type
 
   // Add this useEffect at the top level to prevent continuous refreshes
   useEffect(() => {
@@ -123,57 +119,12 @@ const CarForm = () => {
     return parseFloat(formattedMileage.replace(/,/g, '')) || 0;
   };
 
-  const validateImages = (files: FileList, currentImages: (CarImage | TempImage)[]): string | null => {
-    const currentImagesLength = currentImages.length;
-    if (files.length + currentImagesLength > MAX_IMAGES) {
-      return `Maximum ${MAX_IMAGES} images allowed`;
-    }
-  
-    for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        return 'Image size should not exceed 5MB';
-      }
-      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        return 'Only JPEG, PNG and WebP images are allowed';
-      }
-    }
-    return null;
-  };
-
+  // Use the image upload handler from the hook
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-  
-    const currentImages = [...(formData.images || []), ...tempImages];
-    const error = validateImages(files, currentImages);
-    if (error) {
-      alert(error);
-      e.target.value = '';
-      return;
+    if (e.target.files && e.target.files.length > 0) {
+      // Use the hook's handler which includes validation and compression
+      hookHandleImageUpload(e);
     }
-  
-    // Create temporary image previews for display before upload
-    let currentTempId = nextTempId;
-    const newTempImages = Array.from(files).map(file => {
-      const imageId = currentTempId;
-      currentTempId -= 1;
-      
-      // Create object URL for preview
-      const preview = URL.createObjectURL(file);
-      
-      return {
-        id: imageId,
-        file,
-        preview
-      };
-    });
-    
-    // Fix: Use explicit type for the prev parameter
-    setTempImages((prev: TempImage[]) => [...prev, ...newTempImages]);
-    setNextTempId(currentTempId);
-    
-    // Reset input value
-    e.target.value = '';
   };
 
   // Fetch exterior and interior colors
@@ -240,9 +191,8 @@ const CarForm = () => {
     fetchOptions();
     fetchColors();
   }, []);
-  
-  // Handle option selection changes
 
+  // Validate dates
   const validateDates = () => {
     // Create date objects, ensuring we use UTC to avoid timezone issues
     const today = new Date();
@@ -1106,6 +1056,6 @@ const CarForm = () => {
     </form>
     </div>
   );
-}
+};
 
 export default CarForm;

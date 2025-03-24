@@ -1,13 +1,10 @@
+// src/components/CarForm/useCarForm.ts
 import { useState, useEffect, useCallback } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
-
-interface TempImage {
-  id: number;
-  file: File;
-  preview: string;
-}
+import { useCarFormImageUpload} from './useCarFormImageUpload';
+import { getCloudinaryUrl } from '../../utils/imageService';
 
 const parseNumericValue = (value: string | number | null | undefined, defaultValue: number): number => {
   if (value === null || value === undefined || value === '') {
@@ -30,14 +27,25 @@ export const useCarForm = (id?: string) => {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [newOption, setNewOption] = useState<string>('');
-  const [tempImages, setTempImages] = useState<TempImage[]>([]);
-  const [nextTempId, setNextTempId] = useState(-1);
-
+  
   // Get current date for defaults
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
   const currentDay = currentDate.getDate();
+
+  // Integrate image upload functionality
+  const {
+    tempImages,
+    nextTempId,
+    isUploading,
+    uploadError,
+    handleImageUpload,
+    handleImageDelete,
+    setTempImages,
+    setNextTempId,
+    uploadTempImages
+  } = useCarFormImageUpload();
 
   const [formData, setFormData] = useState<CarFormData>({
     make_id: undefined,
@@ -206,6 +214,8 @@ export const useCarForm = (id?: string) => {
           ...img,
           // If URL is available but image is not, set image to URL for backward compatibility
           image: img.image || img.url || '',
+          // Optimize Cloudinary URLs if present
+          url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
         }));
       }
       
@@ -248,54 +258,8 @@ export const useCarForm = (id?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [id, token, fetchVariants, currentDay, currentMonth, currentYear]);
+  }, [id, token, fetchVariants, currentDay, currentMonth, currentYear, formData]);
 
-  const handleImagesUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
-    let currentTempId = nextTempId;
-    const newTempImages = Array.from(e.target.files).map(file => {
-      const imageId = currentTempId;
-      currentTempId -= 1;
-      return {
-        id: imageId,
-        file,
-        preview: URL.createObjectURL(file)
-      };
-    });
-    
-    setTempImages(prev => [...prev, ...newTempImages]);
-    setNextTempId(currentTempId);
-    e.target.value = '';
-  }, [nextTempId]);
-
-  const handleImageDelete = useCallback(async (imageId: number) => {
-    if (imageId < 0) {
-      setTempImages(prev => prev.filter(img => img.id !== imageId));
-      return;
-    }
-    try {
-      const response = await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
-        method: 'DELETE',
-        headers: { Authorization: `Token ${token}` },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete image: ${response.status}`);
-      }
-      
-      // Update the formData to remove the deleted image
-      setFormData(prevData => ({
-        ...prevData,
-        images: prevData.images.filter(img => img.id !== imageId)
-      }));
-      
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error deleting image');
-    }
-  }, [token]);
-
-  // Rest of the code remains the same
   // Improved form data preparation for submission to handle all fields properly
   const prepareFormDataForSubmission = useCallback((data: CarFormData) => {
     if (!data) {
@@ -444,77 +408,57 @@ export const useCarForm = (id?: string) => {
       const carSlug = carData.slug;
       console.log("Using car slug for images:", carSlug);
       
-      // Step 2: Upload any temporary images - USING SLUG INSTEAD OF ID
+      // Step 2: Upload any temporary images using the enhanced image upload
       if (tempImages.length > 0 && carSlug) {
-        console.log(`Uploading ${tempImages.length} images for car slug: ${carSlug}`);
+        console.log(`Uploading ${tempImages.length} compressed images for car slug: ${carSlug}`);
         
-        const imageFormData = new FormData();
-        tempImages.forEach((img, index) => {
-          console.log(`Appending image ${index + 1}:`, img.file.name, img.file.type, img.file.size);
-          imageFormData.append('images', img.file);
-        });
-        
-        const imageUploadUrl = API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug);
-        console.log('Image upload URL:', imageUploadUrl);
-        
-        const imageResponse = await fetch(imageUploadUrl, {
-          method: 'POST',
-          headers: { Authorization: `Token ${token}` },
-          // Don't set Content-Type here, let the browser set it with the boundary
-          body: imageFormData,
-        });
-        
-        if (!imageResponse.ok) {
-          let errorMessage = `Image upload failed with status: ${imageResponse.status}`;
-          try {
-            const imageErrorData = await imageResponse.json();
-            console.error('Image upload error:', imageErrorData);
-            errorMessage = `Failed to upload images: ${JSON.stringify(imageErrorData)}`;
-          } catch (e) {
-            console.error('Failed to parse error response:', e);
-          }
-          throw new Error(errorMessage);
-        }
-        
-        // After successful upload, fetch the updated car data to get the new images
-        const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carSlug), {
-          headers: { Authorization: `Token ${token}` },
-        });
-        
-        if (updatedCarResponse.ok) {
-          const updatedCar = await updatedCarResponse.json();
-          // Make sure to process the images with Cloudinary URLs
-          if (updatedCar.images && updatedCar.images.length > 0) {
-            updatedCar.images = updatedCar.images.map((img: any) => ({
-              ...img,
-              image: img.image || img.url || '',
-            }));
-          }
+        try {
+          // Use the uploadTempImages function from useCarFormImageUpload
+          const uploadedImages = await uploadTempImages(carSlug);
+          console.log("Successfully uploaded images:", uploadedImages);
           
-          setFormData({
-            ...updatedCar,
-            make: updatedCar.make_id?.toString() || '',
-            model: updatedCar.model_id?.toString() || '',
-            variant: updatedCar.variant_id?.toString() || '',
-            exterior_color_id: updatedCar.exterior_color_id,
-            exterior_color_name: updatedCar.exterior_color_name || '',
-            exterior_color_hex: updatedCar.exterior_color_hex || '',
-            interior_color_id: updatedCar.interior_color_id,
-            interior_color_name: updatedCar.interior_color_name || '',
-            interior_color_hex: updatedCar.interior_color_hex || '',
-            upholstery_id: updatedCar.upholstery,  // This is the field that was causing the error
-            upholstery_name: updatedCar.upholstery_name || '',
-            first_registration_day: updatedCar.first_registration_day || currentDay,
-            first_registration_month: updatedCar.first_registration_month || currentMonth,
-            first_registration_year: updatedCar.first_registration_year || currentYear,
-            discussedPrice: updatedCar.discussed_price || false,
-            option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
-            slug: updatedCar.slug
+          // After successful upload, fetch the updated car data to get the new images
+          const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carSlug), {
+            headers: { Authorization: `Token ${token}` },
           });
+          
+          if (updatedCarResponse.ok) {
+            const updatedCar = await updatedCarResponse.json();
+            // Make sure to process the images with Cloudinary URLs
+            if (updatedCar.images && updatedCar.images.length > 0) {
+              updatedCar.images = updatedCar.images.map((img: any) => ({
+                ...img,
+                image: img.image || img.url || '',
+                // Optimize Cloudinary URLs
+                url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
+              }));
+            }
+            
+            setFormData({
+              ...updatedCar,
+              make: updatedCar.make_id?.toString() || '',
+              model: updatedCar.model_id?.toString() || '',
+              variant: updatedCar.variant_id?.toString() || '',
+              exterior_color_id: updatedCar.exterior_color_id,
+              exterior_color_name: updatedCar.exterior_color_name || '',
+              exterior_color_hex: updatedCar.exterior_color_hex || '',
+              interior_color_id: updatedCar.interior_color_id,
+              interior_color_name: updatedCar.interior_color_name || '',
+              interior_color_hex: updatedCar.interior_color_hex || '',
+              upholstery_id: updatedCar.upholstery,  // This is the field that was causing the error
+              upholstery_name: updatedCar.upholstery_name || '',
+              first_registration_day: updatedCar.first_registration_day || currentDay,
+              first_registration_month: updatedCar.first_registration_month || currentMonth,
+              first_registration_year: updatedCar.first_registration_year || currentYear,
+              discussedPrice: updatedCar.discussed_price || false,
+              option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
+              slug: updatedCar.slug
+            });
+          }
+        } catch (imageError) {
+          console.error("Error uploading images:", imageError);
+          // Allow the submission to succeed even if image upload fails
         }
-        
-        // Clear temporary images after successful upload
-        setTempImages([]);
       }
       
       return true; // Return success
@@ -525,7 +469,7 @@ export const useCarForm = (id?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, id, prepareFormDataForSubmission, tempImages, token, currentDay, currentMonth, currentYear]);
+  }, [formData, id, prepareFormDataForSubmission, tempImages, token, uploadTempImages, currentDay, currentMonth, currentYear]);
 
   // Add initial setup effect - ONLY runs on mount
   useEffect(() => {
@@ -555,13 +499,22 @@ export const useCarForm = (id?: string) => {
     newOption, 
     setNewOption, 
     tempImages, 
-    handleImagesUpload, 
+    handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        handleImageUpload(e.target.files);
+        // Reset the input value after handling the files
+        e.target.value = '';
+      }
+    },
     handleImageDelete, 
     handleSubmit,
     fetchVariants,
     fetchUpholsteryTypes,
     nextTempId,
     setTempImages,
-    setNextTempId
+    setNextTempId,
+    // Additional image-related properties
+    isUploading,
+    uploadError
   };
 };
