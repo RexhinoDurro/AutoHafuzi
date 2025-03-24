@@ -5,7 +5,7 @@
  * The primary domain for the website.
  * This should be the same domain used in the sitemap and robots.txt
  */
-export const PRIMARY_DOMAIN = 'https://www.autohafuzi.com';
+export const PRIMARY_DOMAIN = 'https://www.autohafuzi-fe.onrender.com';
 
 /**
  * Generates a canonical URL for the current page
