@@ -1,8 +1,8 @@
 // scripts/generate-sitemap.cjs
 const fs = require('fs');
+const path = require('path');
 
-// Define your website base URL and API endpoints directly in this script
-// instead of importing from '../src/config/api'
+// Define your website base URL and API endpoints
 const API_BASE_URL = 'https://autohafuzi.onrender.com';
 const SITE_URL = 'https://autohafuzi-fe.onrender.com';
 
@@ -122,16 +122,22 @@ function generateSitemap() {
     sitemap += '  </url>\n';
   });
   
-  // Note: We're skipping the API calls since they might not be accessible during the build
-  // Instead, we'll just generate a basic sitemap with static pages
-  
   sitemap += '</urlset>';
   
-  // Write sitemap to file
+  // Write sitemap to public directory for dev/testing
   fs.writeFileSync('public/sitemap.xml', sitemap);
-  console.log('Sitemap generated successfully!');
+  console.log('Sitemap generated in public/sitemap.xml');
   
-  // Also update robots.txt to reference the sitemap
+  // Also write to the dist directory for production build
+  const distDir = path.join(__dirname, '..', 'dist');
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemap);
+    console.log('Sitemap also generated in dist/sitemap.xml');
+  } else {
+    console.log('Dist directory not found. This is normal if running before the build.');
+  }
+  
+  // Update robots.txt in both locations
   updateRobotsTxt();
 }
 
@@ -152,8 +158,16 @@ Sitemap: ${SITE_URL}/sitemap.xml
 Crawl-delay: 1
 `;
 
+  // Write to public directory
   fs.writeFileSync('public/robots.txt', robotsTxt);
-  console.log('robots.txt updated successfully!');
+  console.log('robots.txt updated in public/robots.txt');
+  
+  // Also write to dist directory if it exists
+  const distDir = path.join(__dirname, '..', 'dist');
+  if (fs.existsSync(distDir)) {
+    fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt);
+    console.log('robots.txt also updated in dist/robots.txt');
+  }
 }
 
 // Run the script
