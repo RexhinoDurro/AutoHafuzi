@@ -139,65 +139,52 @@ const CarDetail: React.FC = () => {
     fetchData();
   }, []);
 
-  // Add structured data to the page
-  useEffect(() => {
-    if (car) {
-      const script = document.createElement('script');
-      script.type = 'application/ld+json';
-      script.textContent = JSON.stringify({
-        "@context": "https://schema.org/",
-        "@type": "Vehicle",
-        "name": `${car.brand} ${car.model_name} ${car.variant_name || ''}`,
-        "brand": {
-          "@type": "Brand",
-          "name": car.brand
-        },
-        "model": car.model_name,
-        "vehicleEngine": {
-          "@type": "EngineSpecification",
-          "enginePower": {
-            "@type": "QuantitativeValue",
-            "value": car.power,
-            "unitCode": "KWT"
-          },
-          "fuelType": car.fuel_type
-        },
-        "mileageFromOdometer": {
-          "@type": "QuantitativeValue",
-          "value": car.mileage,
-          "unitCode": "KMT"
-        },
-        "color": car.exterior_color_name,
-        "numberOfDoors": car.doors,
-        "vehicleTransmission": car.gearbox,
-        "description": car.description.substring(0, 200),
-        "offers": {
-          "@type": "Offer",
-          "price": car.price,
-          "priceCurrency": "EUR",
-          "availability": "https://schema.org/InStock"
-        }
-      });
-      
-      // First remove any existing script to avoid duplicates
-      const existingScript = document.getElementById('car-structured-data');
-      if (existingScript) {
-        existingScript.remove();
-      }
-      
-      // Add ID for easier removal later
-      script.id = 'car-structured-data';
-      document.head.appendChild(script);
-      
-      // Clean up when component unmounts
-      return () => {
-        const scriptToRemove = document.getElementById('car-structured-data');
-        if (scriptToRemove) {
-          scriptToRemove.remove();
-        }
-      };
+  // Update page metadata directly (previously handled by Helmet)
+  const updatePageMetadata = () => {
+    if (!car) return;
+    
+    const carTitle = `${car.brand} ${car.model_name} ${car.variant_name || ''}`;
+    const pageTitle = `${carTitle} | Auto Hafuzi`;
+    
+    // Update document title
+    document.title = pageTitle;
+    
+    // Create or update meta description
+    const metaDescription = `${carTitle} - ${car.fuel_type}, ${car.mileage.toLocaleString()} km, ${car.first_registration_year}. Oferta ekskluzive nga Auto Hafuzi.`;
+    let metaDescTag = document.querySelector('meta[name="description"]');
+    if (!metaDescTag) {
+      metaDescTag = document.createElement('meta');
+      metaDescTag.setAttribute('name', 'description');
+      document.head.appendChild(metaDescTag);
     }
-  }, [car]);
+    metaDescTag.setAttribute('content', metaDescription);
+    
+    // Update Open Graph tags
+    updateOrCreateMetaTag('og:title', pageTitle);
+    updateOrCreateMetaTag('og:description', metaDescription);
+    updateOrCreateMetaTag('og:type', 'website');
+    updateOrCreateMetaTag('og:url', window.location.href);
+    
+    // Update canonical link
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', window.location.href);
+  };
+  
+  // Helper function to update or create meta tags
+  const updateOrCreateMetaTag = (property: string, content: string) => {
+    let metaTag = document.querySelector(`meta[property="${property}"]`);
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.setAttribute('property', property);
+      document.head.appendChild(metaTag);
+    }
+    metaTag.setAttribute('content', content);
+  };
 
   // Fetch car details with proper view tracking
   useEffect(() => {
@@ -275,6 +262,12 @@ const CarDetail: React.FC = () => {
         const data = await response.json();
         setCar(data);
         
+        // Update page metadata
+        updatePageMetadata();
+        
+        // Add structured data
+        addStructuredData(data);
+        
         // Track this car view for recommendations, respecting all rules
         if (data.id && data.brand && data.model_name) {
           const wasTracked = trackCarView(data.id, data.brand, data.model_name);
@@ -297,6 +290,68 @@ const CarDetail: React.FC = () => {
   
     fetchCarDetails();
   }, [id, referrer, initialFetchDone, location.state, location]);
+  
+  // Add structured data to the page
+  const addStructuredData = (car: Car) => {
+    if (!car) return;
+    
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org/",
+      "@type": "Vehicle",
+      "name": `${car.brand} ${car.model_name} ${car.variant_name || ''}`,
+      "brand": {
+        "@type": "Brand",
+        "name": car.brand
+      },
+      "model": car.model_name,
+      "vehicleEngine": {
+        "@type": "EngineSpecification",
+        "enginePower": {
+          "@type": "QuantitativeValue",
+          "value": car.power,
+          "unitCode": "KWT"
+        },
+        "fuelType": car.fuel_type
+      },
+      "mileageFromOdometer": {
+        "@type": "QuantitativeValue",
+        "value": car.mileage,
+        "unitCode": "KMT"
+      },
+      "color": car.exterior_color_name,
+      "numberOfDoors": car.doors,
+      "vehicleTransmission": car.gearbox,
+      "description": car.description.substring(0, 200),
+      "offers": {
+        "@type": "Offer",
+        "price": car.price,
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock"
+      }
+    });
+    
+    // First remove any existing script to avoid duplicates
+    const existingScript = document.getElementById('car-structured-data');
+    if (existingScript) {
+      existingScript.remove();
+    }
+    
+    // Add ID for easier removal later
+    script.id = 'car-structured-data';
+    document.head.appendChild(script);
+  };
+  
+  // Clean up structured data when component unmounts
+  useEffect(() => {
+    return () => {
+      const scriptToRemove = document.getElementById('car-structured-data');
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
+    };
+  }, []);
   
   // Group options by category for display
   const categorizeOptions = (): OptionCategories => {
@@ -337,16 +392,8 @@ const CarDetail: React.FC = () => {
   // Get categorized options
   const optionsByCategory = categorizeOptions();
   
-  // Generate car title for display and metadata
-  document.title = `${car.brand} ${car.model_name} ${car.variant_name || ''} | Auto Hafuzi`;
-  
-
-  
-  
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Add structured data for this specific car */}
-      {/* Structured data needs to be added to the page via useEffect as we can't directly render script tags */}
       <div id="structured-data-container"></div>
       
       {/* Add breadcrumb navigation */}

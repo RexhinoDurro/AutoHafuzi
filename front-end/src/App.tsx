@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { FavoritesProvider } from './context/FavouritesContext';
 import { getStoredAuth } from './utils/auth';
-import HelmetProvider from 'react-helmet';
 // Core components that are used on most pages - eagerly loaded
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -84,210 +83,208 @@ function App() {
   }, []);
 
   return (
-    <HelmetProvider>
-      <Router>
-        <FavoritesProvider>
-          <Routes>
-            {/* Public routes with MainLayout */}
-            <Route
-              path="/"
-              element={
-                <MainLayout>
-                  <Home />
-                </MainLayout>
-              }
-            />
-            
-            <Route
-              path="/cars"
-              element={
-                <MainLayout>
-                  <CarHolder />
-                </MainLayout>
-              }
-            />
-            
-            <Route
-              path="/car/:id"
-              element={
-                <MainLayout>
-                  <CarDetail />
-                </MainLayout>
-              }
-            />
-            
-            <Route
-              path="/about/"
-              element={
-                <MainLayout>
-                  <AboutPage />
-                </MainLayout>
-              }
-            />
-            
-            <Route
-              path="/favorites"
-              element={
-                <MainLayout>
-                  <FavoritesPage />
-                </MainLayout>
-              }
-            />
-            
-            <Route
-              path="/contact"
-              element={
-                <MainLayout>
-                  <ContactPage />
-                </MainLayout>
-              }
-            />
-            
-            {/* Auth routes */}
-            <Route 
-              path="/auth" 
-              element={
+    <Router>
+      <FavoritesProvider>
+        <Routes>
+          {/* Public routes with MainLayout */}
+          <Route
+            path="/"
+            element={
+              <MainLayout>
+                <Home />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/cars"
+            element={
+              <MainLayout>
+                <CarHolder />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/car/:id"
+            element={
+              <MainLayout>
+                <CarDetail />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/about/"
+            element={
+              <MainLayout>
+                <AboutPage />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/favorites"
+            element={
+              <MainLayout>
+                <FavoritesPage />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/contact"
+            element={
+              <MainLayout>
+                <ContactPage />
+              </MainLayout>
+            }
+          />
+          
+          {/* Auth routes */}
+          <Route 
+            path="/auth" 
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <AdminLogin />
+              </Suspense>
+            } 
+          />
+
+          <Route
+            path="/auth/dashboard"
+            element={
+              <ProtectedRoute>
                 <Suspense fallback={<LoadingSpinner />}>
-                  <AdminLogin />
+                  <AdminDashboard />
                 </Suspense>
-              } 
-            />
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/auth/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard />
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
+          {/* Admin routes using the AdminDashboard as layout */}
+          <Route
+            path="/auth/add-car"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <CarForm />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Admin routes using the AdminDashboard as layout */}
-            <Route
-              path="/auth/add-car"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <CarForm />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/auth/edit-car/:id"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <CarForm />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/options"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <OptionsPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/auth/edit-car/:id"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <CarForm />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/options"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <OptionsPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/exterior-colors"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <ColorManagementPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/upholstery-management"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <UpholsteryManagementPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/exterior-colors"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <ColorManagementPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/upholstery-management"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <UpholsteryManagementPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/auth/contact-messages"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <ContactMessages />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/auth/makes"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <MakesPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/auth/makes/:makeId/models"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <ModelsPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/auth/makes/:makeId/models/:modelId/variants"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AdminDashboard>
+                    <VariantsPage />
+                  </AdminDashboard>
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/auth/contact-messages"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <ContactMessages />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/auth/makes"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <MakesPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/auth/makes/:makeId/models"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <ModelsPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/auth/makes/:makeId/models/:modelId/variants"
-              element={
-                <ProtectedRoute>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <AdminDashboard>
-                      <VariantsPage />
-                    </AdminDashboard>
-                  </Suspense>
-                </ProtectedRoute>
-              }
-            />
+          <Route path="*" element={<NotFound />} />
 
-            <Route path="*" element={<NotFound />} />
-
-          </Routes>
-        </FavoritesProvider>
-      </Router>
-    </HelmetProvider>
+        </Routes>
+      </FavoritesProvider>
+    </Router>
   );
 }
 

@@ -8,7 +8,6 @@ import { Filter, X, Calendar, Gauge, Fuel, Settings, Car as CarIcon } from 'luci
 import FavoriteButton from '../components/FavouriteButton';
 import ResponsiveImage from '../components/ResponsiveImage';
 import Breadcrumbs from '../components/Breadcrumbs';
-import { Helmet } from 'react-helmet';
 
 interface FilterState {
   make?: string;
@@ -50,6 +49,8 @@ const CarHolder: React.FC = () => {
   
   // For SEO page title and description based on filters
   const [currentFilters, setCurrentFilters] = useState<FilterState>({});
+  const [makeNames, setMakeNames] = useState<Record<string, string>>({});
+  const [modelNames] = useState<Record<string, string>>({});
 
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -141,6 +142,9 @@ const CarHolder: React.FC = () => {
       const newUrl = new URL(window.location.href);
       newUrl.search = queryParams.toString();
       window.history.pushState({ path: newUrl.href }, '', newUrl.href);
+      
+      // Update document title and meta tags directly
+      updatePageMetadata();
     } catch (error) {
       console.error('Error fetching cars:', error);
       setError('Failed to load cars. Please try again.');
@@ -174,6 +178,28 @@ const CarHolder: React.FC = () => {
       behavior: 'smooth'
     });
   };
+
+  // Fetch makes and models for name resolution
+  useEffect(() => {
+    const fetchMakesAndModels = async () => {
+      try {
+        // Fetch makes
+        const makesResponse = await fetch(API_ENDPOINTS.MAKES);
+        if (makesResponse.ok) {
+          const makesData = await makesResponse.json();
+          const namesMap: Record<string, string> = {};
+          makesData.forEach((make: any) => {
+            namesMap[make.id.toString()] = make.name;
+          });
+          setMakeNames(namesMap);
+        }
+      } catch (error) {
+        console.error('Error fetching makes for SEO:', error);
+      }
+    };
+    
+    fetchMakesAndModels();
+  }, []);
 
   // Generate pagination numbers
   const getPaginationNumbers = () => {
@@ -213,15 +239,13 @@ const CarHolder: React.FC = () => {
   const generateSeoTitle = (): string => {
     let title = "Makina për Shitje | Auto Hafuzi";
     
-    if (currentFilters.make) {
-      // Find make name from the ID
-      const makeName = ""; // You'll need to implement this lookup
-      title = `${makeName || currentFilters.make} Makina për Shitje | Auto Hafuzi`;
+    if (currentFilters.make && makeNames[currentFilters.make]) {
+      const makeName = makeNames[currentFilters.make];
+      title = `${makeName} Makina për Shitje | Auto Hafuzi`;
       
-      if (currentFilters.model) {
-        // Find model name from the ID
-        const modelName = ""; // You'll need to implement this lookup
-        title = `${makeName || currentFilters.make} ${modelName || currentFilters.model} për Shitje | Auto Hafuzi`;
+      if (currentFilters.model && modelNames[currentFilters.model]) {
+        const modelName = modelNames[currentFilters.model];
+        title = `${makeName} ${modelName} për Shitje | Auto Hafuzi`;
       }
     }
     
@@ -237,8 +261,12 @@ const CarHolder: React.FC = () => {
     
     // Add filter-specific details
     const filterDetails = [];
-    if (currentFilters.make) filterDetails.push(`markë ${currentFilters.make}`);
-    if (currentFilters.model) filterDetails.push(`model ${currentFilters.model}`);
+    if (currentFilters.make && makeNames[currentFilters.make]) {
+      filterDetails.push(`markë ${makeNames[currentFilters.make]}`);
+    }
+    if (currentFilters.model && modelNames[currentFilters.model]) {
+      filterDetails.push(`model ${modelNames[currentFilters.model]}`);
+    }
     if (currentFilters.fuel_type) filterDetails.push(`karburant ${currentFilters.fuel_type}`);
     if (currentFilters.min_price) filterDetails.push(`çmim nga €${currentFilters.min_price}`);
     if (currentFilters.first_registration_from) filterDetails.push(`vit nga ${currentFilters.first_registration_from}`);
@@ -250,6 +278,51 @@ const CarHolder: React.FC = () => {
     return description;
   };
 
+  // Update page metadata directly without using Helmet
+  const updatePageMetadata = () => {
+    const title = generateSeoTitle();
+    const description = generateSeoDescription();
+    
+    // Update document title
+    document.title = title;
+    
+    // Update meta description
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', description);
+    
+    // Update Open Graph tags
+    updateOrCreateMetaTag('og:title', title);
+    updateOrCreateMetaTag('og:description', description);
+    updateOrCreateMetaTag('og:type', 'website');
+    updateOrCreateMetaTag('og:url', window.location.href);
+    
+    // Update canonical link
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', window.location.href);
+  };
+  
+  // Helper function to update or create meta tags
+  const updateOrCreateMetaTag = (property: string, content: string) => {
+    let metaTag = document.querySelector(`meta[property="${property}"]`);
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.setAttribute('property', property);
+      document.head.appendChild(metaTag);
+    }
+    metaTag.setAttribute('content', content);
+  };
+
+  // Initial data fetch and metadata update
   useEffect(() => {
     // Read URL params for initial filters
     const urlSearchParams = new URLSearchParams(window.location.search);
@@ -278,290 +351,283 @@ const CarHolder: React.FC = () => {
       paramsObject.page ? parseInt(paramsObject.page, 10) : 1, 
       paramsObject.sort || 'best_results');
   }, []);
+  
+  // Update metadata when filters or makes change
+  useEffect(() => {
+    if (Object.keys(makeNames).length > 0) {
+      updatePageMetadata();
+    }
+  }, [currentFilters, makeNames]);
 
   return (
-    <>
-      {/* SEO Metadata */}
-      <Helmet>
-        <title>{generateSeoTitle()}</title>
-        <meta name="description" content={generateSeoDescription()} />
-        {/* Extra metadata for rich search results */}
-        <meta property="og:title" content={generateSeoTitle()} />
-        <meta property="og:description" content={generateSeoDescription()} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={window.location.href} />
-        <link rel="canonical" href={window.location.href} />
-      </Helmet>
+    <div className="min-h-screen container mx-auto px-4 py-8 max-w-7xl">
+      {/* Add breadcrumbs */}
+      <Breadcrumbs />
     
-      <div className="min-h-screen container mx-auto px-4 py-8 max-w-7xl">
-        {/* Add breadcrumbs */}
-        <Breadcrumbs />
-      
-        {/* Mobile Filter Button */}
-        <div className="md:hidden fixed bottom-4 right-4 z-30">
+      {/* Mobile Filter Button */}
+      <div className="md:hidden fixed bottom-4 right-4 z-30">
+        <button 
+          onClick={toggleFilter}
+          className="bg-blue-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+          aria-label="Ndrysho Filtrat"
+        >
+          <Filter className="h-6 w-6" />
+        </button>
+      </div>
+
+      {/* Mobile Filter Panel */}
+      <div 
+        className={`fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isFilterOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-xl font-bold">Filtrat</h2>
           <button 
             onClick={toggleFilter}
-            className="bg-blue-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
-            aria-label="Ndrysho Filtrat"
+            className="text-gray-500 hover:text-gray-700"
           >
-            <Filter className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
+        <div className="p-4 overflow-y-auto h-[calc(100%-60px)]">
+          <CarHolderFilter onFilterChange={handleFilterChange} />
+        </div>
+      </div>
 
-        {/* Mobile Filter Panel */}
-        <div 
-          className={`fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out md:hidden ${
-            isFilterOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <div className="flex justify-between items-center p-4 border-b">
-            <h2 className="text-xl font-bold">Filtrat</h2>
-            <button 
-              onClick={toggleFilter}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-          <div className="p-4 overflow-y-auto h-[calc(100%-60px)]">
-            <CarHolderFilter onFilterChange={handleFilterChange} />
-          </div>
+      {/* Desktop and Mobile layout */}
+      <div className="flex flex-col md:flex-row">
+        {/* Filter section - hidden on mobile, visible on desktop */}
+        <div className="hidden md:block w-72 mr-8">
+          <CarHolderFilter onFilterChange={handleFilterChange} />
         </div>
 
-        {/* Desktop and Mobile layout */}
-        <div className="flex flex-col md:flex-row">
-          {/* Filter section - hidden on mobile, visible on desktop */}
-          <div className="hidden md:block w-72 mr-8">
-            <CarHolderFilter onFilterChange={handleFilterChange} />
-          </div>
-
-          {/* Car listing section */}
-          <div className="flex-grow w-full">
-            <div id="car-listing-top" className="flex justify-between items-center mb-6 flex-wrap">
-              {/* Add SEO-friendly H1 heading */}
-              <h1 className="text-2xl md:text-3xl font-bold mb-2 md:mb-0">
-                {totalCars > 0 ? `${totalCars} Makina për Shitje` : 'Makina për Shitje'}
-              </h1>
-              
-              {/* Sorting dropdown */}
-              <div className="flex items-center">
-                <label htmlFor="sortCars" className="mr-2 text-gray-700">Rendit:</label>
-                <select
-                  id="sortCars"
-                  value={sortBy}
-                  onChange={handleSortChange}
-                  className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="best_results">Përputhja më e mirë</option>
-                  <option value="price_asc">Çmimi: Nga më i ulëti</option>
-                  <option value="price_desc">Çmimi: Nga më i larti</option>
-                  <option value="year_desc">Regjistrimi: Nga më i riu</option>
-                  <option value="year_asc">Regjistrimi: Nga më i vjetri</option>
-                  <option value="mileage_asc">Kilometrazhi: Nga më i ulëti</option>
-                  <option value="mileage_desc">Kilometrazhi: Nga më i larti</option>
-                </select>
-              </div>
-            </div>
+        {/* Car listing section */}
+        <div className="flex-grow w-full">
+          <div id="car-listing-top" className="flex justify-between items-center mb-6 flex-wrap">
+            {/* Add SEO-friendly H1 heading */}
+            <h1 className="text-2xl md:text-3xl font-bold mb-2 md:mb-0">
+              {totalCars > 0 ? `${totalCars} Makina për Shitje` : 'Makina për Shitje'}
+            </h1>
             
-            {loading && <p className="text-center text-gray-500 py-8">Duke ngarkuar makinat...</p>}
-            {error && <p className="text-center text-red-500 py-8">{error}</p>}
+            {/* Sorting dropdown */}
+            <div className="flex items-center">
+              <label htmlFor="sortCars" className="mr-2 text-gray-700">Rendit:</label>
+              <select
+                id="sortCars"
+                value={sortBy}
+                onChange={handleSortChange}
+                className="border border-gray-300 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="best_results">Përputhja më e mirë</option>
+                <option value="price_asc">Çmimi: Nga më i ulëti</option>
+                <option value="price_desc">Çmimi: Nga më i larti</option>
+                <option value="year_desc">Regjistrimi: Nga më i riu</option>
+                <option value="year_asc">Regjistrimi: Nga më i vjetri</option>
+                <option value="mileage_asc">Kilometrazhi: Nga më i ulëti</option>
+                <option value="mileage_desc">Kilometrazhi: Nga më i larti</option>
+              </select>
+            </div>
+          </div>
+          
+          {loading && <p className="text-center text-gray-500 py-8">Duke ngarkuar makinat...</p>}
+          {error && <p className="text-center text-red-500 py-8">{error}</p>}
 
-            <div className="space-y-4">
-              {cars.length > 0 ? (
-                cars.map((car) => (
-                  <div 
-                    key={car.id} 
-                    className="bg-white shadow border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => navigateToCarDetail(car.slug)}
-                  >
-                    {/* New design based on the image */}
-                    <div className="flex flex-col md:flex-row">
-                      {/* Left: Image and position counter */}
-                      <div className="relative md:w-64 h-48">
-                        {/* Favorite button for mobile - above image gallery */}
-                        <div className="absolute top-2 right-2 z-10 md:hidden">
-                          <FavoriteButton carId={car.id} size={20} />
+          <div className="space-y-4">
+            {cars.length > 0 ? (
+              cars.map((car) => (
+                <div 
+                  key={car.id} 
+                  className="bg-white shadow border border-gray-200 rounded-md overflow-hidden hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => navigateToCarDetail(car.slug)}
+                >
+                  {/* New design based on the image */}
+                  <div className="flex flex-col md:flex-row">
+                    {/* Left: Image and position counter */}
+                    <div className="relative md:w-64 h-48">
+                      {/* Favorite button for mobile - above image gallery */}
+                      <div className="absolute top-2 right-2 z-10 md:hidden">
+                        <FavoriteButton carId={car.id} size={20} />
+                      </div>
+                      
+                      {car.images && car.images.length > 0 ? (
+                        <ResponsiveImage
+                          src={getCarImageUrl(car)}
+                          alt={`${car.brand} ${car.model_name}`}
+                          width={800}
+                          height={600}
+                          className="w-full h-full object-cover"
+                          placeholder={`${API_BASE_URL}/api/placeholder/800/600`}
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-gray-200">
+                          <p className="text-gray-500">Pa imazh</p>
                         </div>
-                        
-                        {car.images && car.images.length > 0 ? (
-                          <ResponsiveImage
-                            src={getCarImageUrl(car)}
-                            alt={`${car.brand} ${car.model_name}`}
-                            width={800}
-                            height={600}
-                            className="w-full h-full object-cover"
-                            placeholder={`${API_BASE_URL}/api/placeholder/800/600`}
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center bg-gray-200">
-                            <p className="text-gray-500">Pa imazh</p>
+                      )}
+                      
+                      {/* Image counter badge */}
+                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                        1 / {car.images?.length || 1}
+                      </div>
+                      
+                      {/* Dealer logo or badges */}
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {car.full_service_history && (
+                          <div className="bg-white p-1 rounded shadow-sm">
+                            <img src="/service-history-badge.png" alt="Historia e Shërbimit" className="h-6 w-6" />
                           </div>
                         )}
-                        
-                        {/* Image counter badge */}
-                        <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                          1 / {car.images?.length || 1}
+                      </div>
+                    </div>
+                    
+                    {/* Right: Car details */}
+                    <div className="p-4 flex flex-col justify-between flex-grow">
+                      {/* Title and price */}
+                      <div>
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+                          {/* Use h2 for car titles in the listing for better SEO hierarchy */}
+                          <h2 className="text-lg font-bold text-gray-800">
+                            {car.brand} {car.model_name}
+                            {car.variant_name && (
+                              <span className="ml-1 font-normal text-gray-600">
+                                {car.variant_name}
+                              </span>
+                            )}
+                          </h2>
+                          <div className="text-xl font-bold text-gray-800">
+                            {car.discussed_price ? 
+                              "I diskutueshem" : 
+                              `€ ${car.price === 0 ? 'POA' : Number(car.price).toLocaleString()}`
+                            }
+                          </div>
                         </div>
                         
-                        {/* Dealer logo or badges */}
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          {car.full_service_history && (
-                            <div className="bg-white p-1 rounded shadow-sm">
-                              <img src="/service-history-badge.png" alt="Historia e Shërbimit" className="h-6 w-6" />
-                            </div>
-                          )}
+                        {/* Key specs in a grid */}
+                        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            <span>{car.first_registration_month}/{car.first_registration_year}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Gauge className="h-4 w-4 mr-1" />
+                            <span>{car.mileage.toLocaleString()} km</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Fuel className="h-4 w-4 mr-1" />
+                            <span>{car.fuel_type}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Settings className="h-4 w-4 mr-1" />
+                            <span>{car.gearbox}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <CarIcon className="h-4 w-4 mr-1" />
+                            <span>{car.body_type}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>{car.power} kW ({Math.round(car.power * 1.36)} hp)</span>
+                          </div>
                         </div>
                       </div>
                       
-                      {/* Right: Car details */}
-                      <div className="p-4 flex flex-col justify-between flex-grow">
-                        {/* Title and price */}
-                        <div>
-                          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
-                            {/* Use h2 for car titles in the listing for better SEO hierarchy */}
-                            <h2 className="text-lg font-bold text-gray-800">
-                              {car.brand} {car.model_name}
-                              {car.variant_name && (
-                                <span className="ml-1 font-normal text-gray-600">
-                                  {car.variant_name}
-                                </span>
-                              )}
-                            </h2>
-                            <div className="text-xl font-bold text-gray-800">
-                              {car.discussed_price ? 
-                                "I diskutueshem" : 
-                                `€ ${car.price === 0 ? 'POA' : Number(car.price).toLocaleString()}`
-                              }
-                            </div>
-                          </div>
-                          
-                          {/* Key specs in a grid */}
-                          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              <span>{car.first_registration_month}/{car.first_registration_year}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Gauge className="h-4 w-4 mr-1" />
-                              <span>{car.mileage.toLocaleString()} km</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Fuel className="h-4 w-4 mr-1" />
-                              <span>{car.fuel_type}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Settings className="h-4 w-4 mr-1" />
-                              <span>{car.gearbox}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <CarIcon className="h-4 w-4 mr-1" />
-                              <span>{car.body_type}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              <span>{car.power} kW ({Math.round(car.power * 1.36)} hp)</span>
-                            </div>
-                          </div>
+                      {/* Created date info */}
+                      <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
+                        <div className="text-sm text-gray-600">
+                          <span className="mr-1">Shtuar më</span>
+                          <span className="text-gray-800">{new Date(car.created_at).toLocaleDateString()}</span>
                         </div>
-                        
-                        {/* Created date info */}
-                        <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
-                          <div className="text-sm text-gray-600">
-                            <span className="mr-1">Shtuar më</span>
-                            <span className="text-gray-800">{new Date(car.created_at).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <FavoriteButton carId={car.id} size={16} className="mr-3" />
-                            <button className="text-sm text-blue-600 hover:text-blue-800">
-                              + Shfaq më shumë
-                            </button>
-                          </div>
+                        <div className="flex items-center">
+                          <FavoriteButton carId={car.id} size={16} className="mr-3" />
+                          <button className="text-sm text-blue-600 hover:text-blue-800">
+                            + Shfaq më shumë
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                !loading && <p className="text-center text-gray-500 py-8">Nuk u gjetën makina.</p>
-              )}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
-                <nav className="inline-flex items-center bg-white rounded-lg shadow-md overflow-x-auto" aria-label="Pagination">
-                  {/* Previous page button */}
-                  <button 
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className={`px-3 md:px-4 py-2 rounded-l-lg border-r ${
-                      currentPage === 1 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-blue-600 hover:bg-blue-50'
-                    }`}
-                    aria-label="Faqja e mëparshme"
-                  >
-                    &laquo;
-                  </button>
-                  
-                  {/* Page numbers */}
-                  {getPaginationNumbers().map((page, index) => (
-                    <React.Fragment key={index}>
-                      {page === '...' ? (
-                        <span className="px-3 md:px-4 py-2 border-r text-gray-500">...</span>
-                      ) : (
-                        <button
-                          onClick={() => typeof page === 'number' && handlePageChange(page)}
-                          className={`px-3 md:px-4 py-2 border-r ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'text-blue-600 hover:bg-blue-50'
-                          }`}
-                          aria-current={currentPage === page ? 'page' : undefined}
-                        >
-                          {page}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  
-                  {/* Next page button */}
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className={`px-3 md:px-4 py-2 rounded-r-lg ${
-                      currentPage === totalPages
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-blue-600 hover:bg-blue-50'
-                    }`}
-                    aria-label="Faqja tjetër"
-                  >
-                    &raquo;
-                  </button>
-                </nav>
-              </div>
+                </div>
+              ))
+            ) : (
+              !loading && <p className="text-center text-gray-500 py-8">Nuk u gjetën makina.</p>
             )}
-            
-            {/* Results summary */}
-            <div className="mt-4 text-center text-gray-500 text-sm">
-              {!loading && cars.length > 0 && (
-                <p>Duke treguar {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} nga {totalCars} makina</p>
-              )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex justify-center">
+              <nav className="inline-flex items-center bg-white rounded-lg shadow-md overflow-x-auto" aria-label="Pagination">
+                {/* Previous page button */}
+                <button 
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 md:px-4 py-2 rounded-l-lg border-r ${
+                    currentPage === 1 
+                      ? 'text-gray-400 cursor-not-allowed' 
+                      : 'text-blue-600 hover:bg-blue-50'
+                  }`}
+                  aria-label="Faqja e mëparshme"
+                >
+                  &laquo;
+                </button>
+                
+                {/* Page numbers */}
+                {getPaginationNumbers().map((page, index) => (
+                  <React.Fragment key={index}>
+                    {page === '...' ? (
+                      <span className="px-3 md:px-4 py-2 border-r text-gray-500">...</span>
+                    ) : (
+                      <button
+                        onClick={() => typeof page === 'number' && handlePageChange(page)}
+                        className={`px-3 md:px-4 py-2 border-r ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'text-blue-600 hover:bg-blue-50'
+                        }`}
+                        aria-current={currentPage === page ? 'page' : undefined}
+                      >
+                        {page}
+                      </button>
+                    )}
+                  </React.Fragment>
+                ))}
+                
+                {/* Next page button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 md:px-4 py-2 rounded-r-lg ${
+                    currentPage === totalPages
+                      ? 'text-gray-400 cursor-not-allowed' 
+                      : 'text-blue-600 hover:bg-blue-50'
+                  }`}
+                  aria-label="Faqja tjetër"
+                >
+                  &raquo;
+                </button>
+              </nav>
             </div>
+          )}
+          
+          {/* Results summary */}
+          <div className="mt-4 text-center text-gray-500 text-sm">
+            {!loading && cars.length > 0 && (
+              <p>Duke treguar {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} nga {totalCars} makina</p>
+            )}
           </div>
         </div>
-
-        {/* Overlay to dim background when filter panel is open on mobile */}
-        {isFilterOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
-            onClick={toggleFilter}
-          />
-        )}
       </div>
-    </>
+
+      {/* Overlay to dim background when filter panel is open on mobile */}
+      {isFilterOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={toggleFilter}
+        />
+      )}
+    </div>
   );
 };
 
