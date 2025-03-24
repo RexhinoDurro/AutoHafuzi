@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, CarIcon, Home, Search, Menu, X, Heart } from 'lucide-react';
+import { Phone, Home, Search, Menu, X, Heart } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useFavorites } from '../context/FavouritesContext';
 
@@ -35,13 +35,9 @@ const Navbar = () => {
 
               <Link to="/search" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Search className="h-5 w-5" />
-                <span className="font-medium">Kërko Makinë</span>
-              </Link>
-
-              <Link to="/cars" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
-                <CarIcon className="h-5 w-5" />
                 <span className="font-medium">Makina në Shitje</span>
               </Link>
+
 
               <Link to="/contact" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <Phone className="h-5 w-5" />
