@@ -1,15 +1,87 @@
-// RecommendedCars.tsx with direct navigation approach
+// RecommendedCars.tsx with direct links approach
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car } from '../types/car';
 import { API_ENDPOINTS } from '../config/api'; 
-import CarCard from './CarCard';
+import { API_BASE_URL } from '../config/api';
+import FavoriteButton from './FavouriteButton';
 
 interface RecommendedCarsProps {
   currentCar?: Car;
   excludeCarIds?: number[];
   alwaysShow?: boolean;
 }
+
+// Direct car card instead of using the regular component
+const DirectCarCard = ({ car }: { car: Car }) => {
+  // Get primary image URL
+  const getPrimaryImageUrl = () => {
+    if (!car.images || car.images.length === 0) {
+      return `${API_BASE_URL}/api/placeholder/400/300`;
+    }
+    
+    const primaryImage = car.images.find(img => img.is_primary);
+    const image = primaryImage || car.images[0];
+    
+    return image.url || image.image || `${API_BASE_URL}/api/placeholder/400/300`;
+  };
+
+  // Create direct URL to force full page load
+  const carUrl = `/car/${car.slug || car.id}`;
+
+  return (
+    <a href={carUrl} className="block car-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+      <div className="relative w-full h-40">
+        <img
+          src={getPrimaryImageUrl()}
+          alt={`${car.brand} ${car.model_name}`}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = `${API_BASE_URL}/api/placeholder/400/300`;
+          }}
+        />
+        
+        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+          <FavoriteButton 
+            carId={car.id} 
+            size={20} 
+            className="bg-white bg-opacity-70 p-1 rounded-full"
+          />
+        </div>
+      </div>
+      
+      <div className="p-3">
+        <h3 className="font-bold text-lg mb-1">
+          {car.brand} {car.model_name} {car.variant_name}
+        </h3>
+        
+        <div className="text-gray-700 text-sm mb-2">
+          <span>{car.first_registration_year || 'N/A'}</span>
+          <span className="mx-1">•</span>
+          <span>{car.mileage?.toLocaleString() || 'N/A'} km</span>
+          <span className="mx-1">•</span>
+          <span>{car.fuel_type}</span>
+        </div>
+        
+        <div className="flex justify-between items-center mt-2">
+          <span className="font-bold text-blue-600">
+            {car.discussed_price 
+              ? "I diskutueshem" 
+              : `€${typeof car.price === 'number' 
+                    ? car.price.toLocaleString() 
+                    : parseInt(car.price as unknown as string).toLocaleString()}`
+            }
+          </span>
+          
+          <span className="text-sm text-blue-600 hover:text-blue-800">
+            Shiko →
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+};
 
 const RecommendedCars: React.FC<RecommendedCarsProps> = ({ 
   currentCar, 
@@ -146,15 +218,6 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
     
     fetchRecommendedCars();
   }, [currentCar, excludeCarIds, navigate]);
-
-  // Custom handler for car card clicks
-  const handleCarClick = (car: Car) => {
-    // Get the target URL
-    const targetUrl = `/car/${car.slug || car.id.toString()}`;
-    
-    // Use direct browser navigation to completely refresh the page
-    window.location.href = targetUrl;
-  };
   
   if (loading) {
     return alwaysShow ? (
@@ -187,18 +250,7 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
       {carsToShow.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {carsToShow.map(car => (
-            <div key={car.id} 
-                 className="cursor-pointer" 
-                 onClick={() => handleCarClick(car)}>
-              <CarCard 
-                key={car.id} 
-                car={car} 
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleCarClick(car);
-                }}
-              />
-            </div>
+            <DirectCarCard key={car.id} car={car} />
           ))}
           
           {alwaysShow && emptySlots > 0 && [...Array(emptySlots)].map((_, index) => (
