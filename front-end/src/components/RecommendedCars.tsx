@@ -1,4 +1,4 @@
-// RecommendedCars.tsx with direct links approach
+// RecommendedCars.tsx with improved recommendation algorithm
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Car } from '../types/car';
@@ -42,7 +42,10 @@ const DirectCarCard = ({ car }: { car: Car }) => {
           }}
         />
         
-        <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute top-2 right-2 z-10" onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}>
           <FavoriteButton 
             carId={car.id} 
             size={20} 
@@ -105,108 +108,206 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
           allExcludedIds.push(currentCar.id);
         }
         
-        // Prepare query parameters for similar cars
-        const query: Record<string, string> = {
-          limit: '8' // Request more than we need in case some are excluded
-        };
+        // We'll use three different approaches to get diverse recommendations
+        let similarBrandCars: Car[] = [];
+        let similarPriceCars: Car[] = [];
+        let similarBodyTypeCars: Car[] = [];
+        let randomCars: Car[] = [];
         
-        // If we have a current car, use its attributes for similarity
-        if (currentCar) {
-          // Prioritize finding cars of the same make
-          if (currentCar.make) {
-            query.make = currentCar.make.toString();
+        // Step 1: Try to find cars from the same brand/make
+        if (currentCar && currentCar.make) {
+          const makeQuery = new URLSearchParams();
+          makeQuery.append('limit', '6');
+          makeQuery.append('make', currentCar.make.toString());
+          
+          const makeResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${makeQuery}`);
+          if (makeResponse.ok) {
+            const makeData = await makeResponse.json();
+            similarBrandCars = makeData.results || [];
+            
+            // Filter out the current car and any other excluded cars
+            similarBrandCars = similarBrandCars.filter((car: Car) => 
+              !allExcludedIds.includes(car.id)
+            );
+          }
+        }
+        
+        // Step 2: Try to find cars with similar price range (±20%)
+        if (currentCar && currentCar.price && !currentCar.discussed_price) {
+          const price = typeof currentCar.price === 'number' ? currentCar.price : parseInt(currentCar.price);
+          
+          // Set a wider price range for better diversity
+          const minPrice = Math.floor(price * 0.7);  // 30% lower
+          const maxPrice = Math.ceil(price * 1.3);   // 30% higher
+          
+          const priceQuery = new URLSearchParams();
+          priceQuery.append('limit', '6');
+          priceQuery.append('min_price', minPrice.toString());
+          priceQuery.append('max_price', maxPrice.toString());
+          
+          // If we already have cars from the same brand, exclude that brand to ensure diversity
+          if (similarBrandCars.length > 0 && currentCar.make) {
+            // Note: This feature would require backend support to exclude a make
+            // If backend doesn't support this, we'll handle filtering later
           }
           
-          // Then same body type
-          if (currentCar.body_type) {
-            query.bodyType = currentCar.body_type;
-          }
-          
-          // Then similar price range (±20%)
-          if (currentCar.price && !currentCar.discussed_price) {
-            const price = typeof currentCar.price === 'number' ? currentCar.price : parseInt(currentCar.price);
-            const minPrice = Math.floor(price * 0.8);
-            const maxPrice = Math.ceil(price * 1.2);
-            query.min_price = minPrice.toString();
-            query.max_price = maxPrice.toString();
-          }
-          
-          // Then similar fuel type
-          if (currentCar.fuel_type) {
-            query.fuel_type = currentCar.fuel_type;
-          }
-        } else {
-          // If no current car, use activity data for recommendations
-          const lastSearch = localStorage.getItem('lastCarSearch');
-          const lastSearchParams = lastSearch ? JSON.parse(lastSearch) : {};
-          
-          const userActivity = localStorage.getItem('userCarActivity');
-          const activityData = userActivity ? JSON.parse(userActivity) : { makes: {}, models: {} };
-          
-          let topMake = null;
-          
-          if (Object.keys(activityData.makes).length > 0) {
-            topMake = Object.entries(activityData.makes)
-              .sort((a, b) => (b[1] as number) - (a[1] as number))
-              .map(entry => entry[0])[0];
+          const priceResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${priceQuery}`);
+          if (priceResponse.ok) {
+            const priceData = await priceResponse.json();
+            similarPriceCars = priceData.results || [];
+            
+            // Filter out the current car, excluded cars, and any cars already in similarBrandCars
+            similarPriceCars = similarPriceCars.filter((car: Car) => 
+              !allExcludedIds.includes(car.id) && 
+              !similarBrandCars.some(c => c.id === car.id)
+            );
+            
+            // If we have brand cars, try to filter price cars to different makes
+            if (similarBrandCars.length > 0 && currentCar.make) {
+              // Keep some from same make, but prefer different makes
+              const differentMakeCars = similarPriceCars.filter(
+                (car: Car) => car.make?.toString() !== currentCar.make?.toString()
+              );
               
-            if (topMake && topMake.startsWith('name:')) {
-              query.search = topMake.substring(5);
-            } else if (topMake) {
-              query.make = topMake;
+              // If we have enough different make cars, prioritize those
+              if (differentMakeCars.length >= 2) {
+                similarPriceCars = differentMakeCars;
+              }
             }
           }
-          
-          if (lastSearchParams.fuel_type) {
-            query.fuel_type = lastSearchParams.fuel_type.toString();
-          }
-          
-          if (lastSearchParams.bodyType) {
-            query.bodyType = lastSearchParams.bodyType.toString();
-          }
-        }
-
-        const queryParams = new URLSearchParams();
-        Object.entries(query).forEach(([key, value]) => {
-          queryParams.append(key, value);
-        });
-        
-        const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${queryParams}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch recommended cars');
         }
         
-        const data = await response.json();
-        let cars = data.results || [];
+        // Step 3: Try to find cars with the same body type
+        if (currentCar && currentCar.body_type) {
+          const bodyTypeQuery = new URLSearchParams();
+          bodyTypeQuery.append('limit', '6');
+          bodyTypeQuery.append('bodyType', currentCar.body_type);
+          
+          const bodyTypeResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${bodyTypeQuery}`);
+          if (bodyTypeResponse.ok) {
+            const bodyTypeData = await bodyTypeResponse.json();
+            similarBodyTypeCars = bodyTypeData.results || [];
+            
+            // Filter out the current car, excluded cars, and cars already in other lists
+            similarBodyTypeCars = similarBodyTypeCars.filter((car: Car) => 
+              !allExcludedIds.includes(car.id) && 
+              !similarBrandCars.some(c => c.id === car.id) &&
+              !similarPriceCars.some(c => c.id === car.id)
+            );
+            
+            // Similar to price cars, if we have brand cars, try to filter body type cars to different makes
+            if (similarBrandCars.length > 0 && currentCar.make) {
+              const differentMakeCars = similarBodyTypeCars.filter(
+                (car: Car) => car.make?.toString() !== currentCar.make?.toString()
+              );
+              
+              if (differentMakeCars.length >= 2) {
+                similarBodyTypeCars = differentMakeCars;
+              }
+            }
+          }
+        }
         
-        cars = cars.filter((car: Car) => !allExcludedIds.includes(car.id));
+        // Step 4: Get some random cars to ensure we always have enough
+        const randomQuery = new URLSearchParams();
+        randomQuery.append('limit', '10');
         
-        if (cars.length < 4 && currentCar && currentCar.make) {
-          const backupQuery = { ...query };
-          delete backupQuery.make;
+        // If we're coming from Home page (no currentCar), get latest vehicles instead of random
+        if (!currentCar) {
+          randomQuery.append('sort', 'created_desc');
+        }
+        
+        const randomResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${randomQuery}`);
+        if (randomResponse.ok) {
+          const randomData = await randomResponse.json();
+          randomCars = randomData.results || [];
           
-          const backupQueryParams = new URLSearchParams();
-          Object.entries(backupQuery).forEach(([key, value]) => {
-            backupQueryParams.append(key, value);
-          });
+          // Filter out the current car, excluded cars, and cars already in other lists
+          randomCars = randomCars.filter((car: Car) => 
+            !allExcludedIds.includes(car.id) && 
+            !similarBrandCars.some(c => c.id === car.id) &&
+            !similarPriceCars.some(c => c.id === car.id) &&
+            !similarBodyTypeCars.some(c => c.id === car.id)
+          );
           
-          const backupResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${backupQueryParams}`);
+          // If we have enough cars, randomize their order
+          if (randomCars.length > 4) {
+            randomCars = randomCars
+              .sort(() => 0.5 - Math.random())
+              .slice(0, 8);
+          }
+        }
+        
+        // Now combine all cars with a priority order to ensure diversity
+        let finalCars: Car[] = [];
+        
+        // If we have brand cars, start with 1-2 of those
+        if (similarBrandCars.length > 0) {
+          finalCars = [...finalCars, ...similarBrandCars.slice(0, 2)];
+        }
+        
+        // Then add 1-2 price-similar cars if we have them
+        if (similarPriceCars.length > 0) {
+          finalCars = [...finalCars, ...similarPriceCars.slice(0, 2)];
+        }
+        
+        // Then add 1-2 body-type-similar cars if we have them
+        if (similarBodyTypeCars.length > 0) {
+          finalCars = [...finalCars, ...similarBodyTypeCars.slice(0, 2)];
+        }
+        
+        // If we still need more cars, add random cars
+        if (finalCars.length < 4 && randomCars.length > 0) {
+          const neededCars = 4 - finalCars.length;
+          finalCars = [...finalCars, ...randomCars.slice(0, neededCars)];
+        }
+        
+        // Special case: If we couldn't get enough cars with the specialized queries,
+        // just use all random cars
+        if (finalCars.length < 4 && randomCars.length >= 4) {
+          finalCars = randomCars.slice(0, 4);
+        }
+        
+        // Limit to 4 cars and set state
+        setRecommendedCars(finalCars.slice(0, 4));
+        
+        // If we still don't have 4 cars, make another random query with different parameters
+        if (finalCars.length < 4) {
+          const backupQuery = new URLSearchParams();
+          backupQuery.append('limit', '10');
           
+          // Try different sort to get more varied results
+          backupQuery.append('sort', 'price_desc');
+          
+          const backupResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${backupQuery}`);
           if (backupResponse.ok) {
             const backupData = await backupResponse.json();
             let backupCars = backupData.results || [];
             
+            // Filter out the current car, excluded cars, and cars already in finalCars
             backupCars = backupCars.filter((car: Car) => 
               !allExcludedIds.includes(car.id) && 
-              !cars.some((c: Car) => c.id === car.id)
+              !finalCars.some(c => c.id === car.id)
             );
             
-            cars = [...cars, ...backupCars];
+            // If we have enough, add the remaining cars needed
+            if (backupCars.length > 0) {
+              const neededCars = 4 - finalCars.length;
+              finalCars = [...finalCars, ...backupCars.slice(0, neededCars)];
+              setRecommendedCars(finalCars);
+            }
           }
         }
         
-        setRecommendedCars(cars.slice(0, 4));
+        // Log the sources of our recommendations for debugging
+        console.log('Recommendation sources:', {
+          similarBrandCars: similarBrandCars.length,
+          similarPriceCars: similarPriceCars.length,
+          similarBodyTypeCars: similarBodyTypeCars.length,
+          randomCars: randomCars.length,
+          finalCount: finalCars.length
+        });
+        
       } catch (error) {
         console.error('Error fetching recommended cars:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch recommended cars');
