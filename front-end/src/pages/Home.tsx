@@ -1,9 +1,9 @@
-// Home.tsx with direct card implementation
+// Home.tsx with proper section handling
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CarFilter from '../components/CarFilter';
 import { Car } from '../types/car';
-import { saveLastSearch } from '../utils/userActivityService';
+import { saveLastSearch, getLastSearch } from '../utils/userActivityService';
 import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
 import FavoriteButton from '../components/FavouriteButton';
 
@@ -83,9 +83,10 @@ const DirectCarCard = ({ car }: { car: Car }) => {
 
 const Home = () => {
   // State definitions
-  const [latestCars, setLatestCars] = useState<Car[]>([]);
-  const [recommendedCars, setRecommendedCars] = useState<Car[]>([]);
+  const [firstSectionCars, setFirstSectionCars] = useState<Car[]>([]);
+  const [secondSectionCars, setSecondSectionCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasLastSearch, setHasLastSearch] = useState(false);
   const navigate = useNavigate();
 
   // Handle filter submission
@@ -110,43 +111,135 @@ const Home = () => {
       setLoading(true);
       
       try {
-        // Make two separate queries for different sections
+        // Get last search parameters first
+        const lastSearch = getLastSearch();
+        const hasValidSearch = Object.keys(lastSearch).length > 0;
+        setHasLastSearch(hasValidSearch);
         
-        // 1. Latest cars query
-        const latestQuery = new URLSearchParams();
-        latestQuery.append('limit', '4');
-        latestQuery.append('sort', 'created_desc'); // Most recently added
+        // Prepare queries for different sections
+        let firstSectionQuery: URLSearchParams;
+        let secondSectionQuery: URLSearchParams;
         
-        // 2. Featured cars query (just use a different sort)
-        const featuredQuery = new URLSearchParams();
-        featuredQuery.append('limit', '8'); // Request more to ensure variety
-        featuredQuery.append('sort', 'price_desc'); // Sort by price descending
+        // First section: Based on last search if available, otherwise latest cars
+        if (hasValidSearch) {
+          firstSectionQuery = new URLSearchParams();
+          
+          // Add valid search parameters
+          Object.entries(lastSearch).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+              firstSectionQuery.append(key, value.toString());
+            }
+          });
+          
+          firstSectionQuery.append('limit', '8'); // Request more to ensure we get 4
+        } else {
+          firstSectionQuery = new URLSearchParams();
+          firstSectionQuery.append('limit', '8');
+          firstSectionQuery.append('sort', 'created_desc'); // Most recently added
+        }
+        
+        // Second section: Use different sorting or filtering
+        // Alternate between price sorting and random body types for variety
+        const randomSeedValue = Math.floor(Math.random() * 100);
+        
+        if (randomSeedValue % 2 === 0) {
+          // Use price sorting
+          secondSectionQuery = new URLSearchParams();
+          secondSectionQuery.append('limit', '10'); // Request more to ensure variety
+          secondSectionQuery.append('sort', 'price_desc'); // Sort by price descending
+        } else {
+          // Use random body type
+          const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Wagon'];
+          const randomBodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
+          
+          secondSectionQuery = new URLSearchParams();
+          secondSectionQuery.append('limit', '10');
+          secondSectionQuery.append('bodyType', randomBodyType);
+        }
+        
+        // Add timestamp to prevent caching
+        const timestamp = Date.now();
+        firstSectionQuery.append('_cb', timestamp.toString());
+        secondSectionQuery.append('_cb', (timestamp + 1).toString());
         
         // Run queries in parallel
-        const [latestResponse, featuredResponse] = await Promise.all([
-          fetch(`${API_ENDPOINTS.CARS.LIST}?${latestQuery}`),
-          fetch(`${API_ENDPOINTS.CARS.LIST}?${featuredQuery}`)
+        const [firstResponse, secondResponse, latestResponse] = await Promise.all([
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${firstSectionQuery}`),
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${secondSectionQuery}`),
+          // Always fetch latest cars as a fallback
+          fetch(`${API_ENDPOINTS.CARS.LIST}?limit=8&sort=created_desc&_cb=${timestamp + 2}`)
         ]);
         
-        // Process latest cars
-        if (latestResponse.ok) {
-          const latestData = await latestResponse.json();
-          setLatestCars(latestData.results || []);
+        // Process first section
+        let firstSectionData: Car[] = [];
+        if (firstResponse.ok) {
+          const data = await firstResponse.json();
+          firstSectionData = data.results || [];
         }
         
-        // Process featured cars
-        if (featuredResponse.ok) {
-          const featuredData = await featuredResponse.json();
-          // Shuffle the results to get random featured cars
-          const shuffled = [...(featuredData.results || [])].sort(() => 0.5 - Math.random());
-          
-          // Make sure we don't show the same cars as in the latest section
-          const filteredFeatured = shuffled.filter(
-            (featuredCar) => !latestCars.some(latestCar => latestCar.id === featuredCar.id)
+        // Process second section
+        let secondSectionData: Car[] = [];
+        if (secondResponse.ok) {
+          const data = await secondResponse.json();
+          secondSectionData = data.results || [];
+        }
+        
+        // Process latest cars (fallback)
+        let latestCars: Car[] = [];
+        if (latestResponse.ok) {
+          const data = await latestResponse.json();
+          latestCars = data.results || [];
+        }
+        
+        // Ensure first section has 4 cars, using latest cars as fallback
+        if (firstSectionData.length < 4) {
+          // Find cars from latest that aren't already in first section
+          const missingCars = latestCars.filter(
+            latestCar => !firstSectionData.some(car => car.id === latestCar.id)
           );
           
-          setRecommendedCars(filteredFeatured.slice(0, 4));
+          // Add missing cars to fill up to 4
+          firstSectionData = [
+            ...firstSectionData,
+            ...missingCars.slice(0, 4 - firstSectionData.length)
+          ];
         }
+        
+        // Ensure second section has 4 different cars
+        // First remove any cars that are in the first section
+        let filteredSecondSection = secondSectionData.filter(
+          secondCar => !firstSectionData.some(firstCar => firstCar.id === secondCar.id)
+        );
+        
+        // If we don't have enough, use cars from the latest section
+        if (filteredSecondSection.length < 4) {
+          // Find cars from latest that aren't in either section
+          const missingCars = latestCars.filter(
+            latestCar => 
+              !firstSectionData.some(car => car.id === latestCar.id) &&
+              !filteredSecondSection.some(car => car.id === latestCar.id)
+          );
+          
+          // Add missing cars to fill up to 4
+          filteredSecondSection = [
+            ...filteredSecondSection,
+            ...missingCars.slice(0, 4 - filteredSecondSection.length)
+          ];
+        }
+        
+        // Shuffle the second section for more variety
+        filteredSecondSection = filteredSecondSection.sort(() => 0.5 - Math.random());
+        
+        // Update state with exactly 4 cars for each section
+        setFirstSectionCars(firstSectionData.slice(0, 4));
+        setSecondSectionCars(filteredSecondSection.slice(0, 4));
+        
+        console.log('Home sections populated:', {
+          firstSection: firstSectionData.slice(0, 4).length,
+          secondSection: filteredSecondSection.slice(0, 4).length,
+          hasLastSearch: hasValidSearch
+        });
+        
       } catch (error) {
         console.error('Error fetching cars for home page:', error);
       } finally {
@@ -164,13 +257,13 @@ const Home = () => {
       {/* Main Car Filter */}
       <CarFilter onFilterChange={handleFilterSubmit} />
       
-      {/* LATEST CARS SECTION */}
+      {/* FIRST SECTION - Last Search or Latest Cars */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 pt-4 pb-4 border border-blue-100 my-2 sm:mt-12 sm:mb-16 sm:p-8 sm:rounded-xl sm:shadow">
         <h2 className="text-2xl font-bold mb-3 ml-0.5 text-blue-800 flex items-center sm:mb-6 sm:ml-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-          {'Makina të shtuara së fundmi'}
+          {hasLastSearch ? 'Bazuar në kërkimin e fundit' : 'Makina të shtuara së fundmi'}
         </h2>
         
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
@@ -179,16 +272,16 @@ const Home = () => {
             [...Array(4)].map((_, index) => (
               <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-48 sm:h-56"></div>
             ))
-          ) : latestCars.length > 0 ? (
+          ) : firstSectionCars.length > 0 ? (
             // Actual car cards
-            latestCars.slice(0, 4).map(car => (
+            firstSectionCars.map(car => (
               <DirectCarCard key={car.id} car={car} />
             ))
           ) : (
             // Empty state
             [...Array(4)].map((_, index) => (
               <div key={index} className="bg-gray-100 rounded-lg p-4 h-48 sm:h-56 flex items-center justify-center">
-                <p className="text-gray-400">Makina të shtuara së fundmi do të shfaqen këtu</p>
+                <p className="text-gray-400">Makina do të shfaqen këtu</p>
               </div>
             ))
           )}
@@ -205,7 +298,7 @@ const Home = () => {
         </button>
       </div>
       
-      {/* FEATURED CARS SECTION */}
+      {/* SECOND SECTION - Recommended Cars */}
       <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2 pt-4 pb-4 border border-amber-100 my-2 sm:my-16 sm:p-8 sm:rounded-xl sm:shadow">
         <h2 className="text-2xl font-bold mb-3 ml-0.5 text-amber-800 flex items-center sm:mb-6 sm:ml-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,16 +313,16 @@ const Home = () => {
             [...Array(4)].map((_, index) => (
               <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-48 sm:h-56"></div>
             ))
-          ) : recommendedCars.length > 0 ? (
+          ) : secondSectionCars.length > 0 ? (
             // Actual car cards
-            recommendedCars.slice(0, 4).map(car => (
+            secondSectionCars.map(car => (
               <DirectCarCard key={car.id} car={car} />
             ))
           ) : (
             // Empty state
             [...Array(4)].map((_, index) => (
               <div key={index} className="bg-gray-100 rounded-lg p-4 h-48 sm:h-56 flex items-center justify-center">
-                <p className="text-gray-400">Makina të zgjedhura do të shfaqen këtu</p>
+                <p className="text-gray-400">Makina do të shfaqen këtu</p>
               </div>
             ))
           )}
