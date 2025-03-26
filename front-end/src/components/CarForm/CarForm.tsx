@@ -373,648 +373,640 @@ const CarForm = () => {
     };
   }).reverse(); // Most recent years first
 
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
-        <button
-          onClick={() => navigate('/auth/dashboard')}
-          className="text-gray-600 hover:text-gray-800"
-        >
-          Back to Dashboard
-        </button>
+
+return (
+  <div className="max-w-4xl mx-auto p-6">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
+      <button
+        onClick={() => navigate('/auth/dashboard')}
+        className="text-gray-600 hover:text-gray-800"
+      >
+        Back to Dashboard
+      </button>
+    </div>
+
+    {error && (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <strong className="font-bold">Error! </strong>
+        <span className="block sm:inline">{error}</span>
       </div>
-  
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-          <strong className="font-bold">Error! </strong>
-          <span className="block sm:inline">{error}</span>
-        </div>
-      )}
-  
-      {/* Form validation errors */}
-      {Object.keys(validationErrors).length > 0 && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-          <strong className="font-bold">Please fix the following errors: </strong>
-          <ul className="mt-2 list-disc list-inside">
-            {Object.values(validationErrors).map((error, index) => (
-              <li key={index}>{error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-  
-      <form onSubmit={onSubmit} className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6 space-y-6">
-          {/* Basic Information Section */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+    )}
+
+    {/* Form validation errors */}
+    {Object.keys(validationErrors).length > 0 && (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+        <strong className="font-bold">Please fix the following errors: </strong>
+        <ul className="mt-2 list-disc list-inside">
+          {Object.values(validationErrors).map((error, index) => (
+            <li key={index}>{error}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <form onSubmit={onSubmit} className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6 space-y-6">
+        {/* Basic Information Section */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Make <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.make_id || ''}
+                onChange={(e) => setFormData({ ...formData, make_id: parseInt(e.target.value), model_id: 0, variant_id: undefined })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
+                required
+                disabled={isMakesLoading}
+              >
+                <option value="">Select Make</option>
+                {makes.map((make) => (
+                  <option key={make.id} value={make.id}>
+                    {make.name}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Model <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.model_id || ''}
+                onChange={(e) => setFormData({ ...formData, model_id: parseInt(e.target.value), variant_id: undefined })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
+                required
+                disabled={!formData.make_id || isModelsLoading}
+              >
+                <option value="">Select Model</option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+              {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
+              {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Variant
+              </label>
+              <select
+                value={formData.variant_id || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
+                  });
+                }}
+                className="w-full p-2 border rounded-lg"
+                disabled={!formData.model_id || isVariantsLoading}
+              >
+                <option value="">Select Variant</option>
+                {variants.map((variant) => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name}
+                  </option>
+                ))}
+              </select>
+              {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
+            </div>
+          </div>
+
+          {/* First Registration Date Fields */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              First Registration <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Day field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Make <span className="text-red-500">*</span>
-                </label>
                 <select
-                  value={formData.make_id || ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    make_id: parseInt(e.target.value), 
-                    model_id: 0, 
-                    variant_id: undefined 
-                  }))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
-                  required
-                  disabled={isMakesLoading}
+                  value={formData.first_registration_day || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
                 >
-                  <option value="">Select Make</option>
-                  {makes.map((make) => (
-                    <option key={make.id} value={make.id}>
-                      {make.name}
+                  <option value="">Day</option>
+                  {dayOptions.map(option => (
+                    <option key={`day-${option.value}`} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
-                {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
+                {validationErrors.first_registration_day && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
+                }
               </div>
               
+              {/* Month field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Model <span className="text-red-500">*</span>
-                </label>
                 <select
-                  value={formData.model_id || ''}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    model_id: parseInt(e.target.value), 
-                    variant_id: undefined 
-                  }))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
-                  required
-                  disabled={!formData.make_id || isModelsLoading}
+                  value={formData.first_registration_month || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
                 >
-                  <option value="">Select Model</option>
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
+                  <option value="">Month</option>
+                  {monthOptions.map(option => (
+                    <option key={`month-${option.value}`} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
-                {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
-                {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
+                {validationErrors.first_registration_month && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
+                }
+              </div>
+              
+              {/* Year field */}
+              <div>
+                <select
+                  value={formData.first_registration_year || ''}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
+                  })}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
+                  required={formData.is_used}
+                >
+                  <option value="">Year</option>
+                  {yearOptions.map(option => (
+                    <option key={`year-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.first_registration_year && 
+                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
+                }
               </div>
             </div>
-  
-            <div className="grid grid-cols-2 gap-4 mb-4">
+          </div>
+
+          {/* Colors Section */}
+          <div className="mt-4">
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {/* Exterior Color */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Variant
+                  Exterior Color <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={formData.variant_id || ''}
+                  value={formData.exterior_color_id || ''}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
-                    }));
+                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedColor = exteriorColors.find(color => color.id === colorId);
+                    
+                    setFormData({ 
+                      ...formData, 
+                      exterior_color_id: colorId,
+                      exterior_color_name: selectedColor?.name,
+                      exterior_color_hex: selectedColor?.hex_code
+                    });
+                  }}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                  required
+                  disabled={isColorsLoading}
+                >
+                  <option value="">Select Exterior Color</option>
+                  {exteriorColors.map((color) => (
+                    <option key={color.id} value={color.id}>
+                      {color.name}
+                    </option>
+                  ))}
+                </select>
+                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
+                {formData.exterior_color_hex && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                      style={{ backgroundColor: formData.exterior_color_hex }}
+                    ></div>
+                    <span className="text-xs text-gray-500">{formData.exterior_color_hex}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Interior Color */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Interior Color
+                </label>
+                <select
+                  value={formData.interior_color_id || ''}
+                  onChange={(e) => {
+                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedColor = interiorColors.find(color => color.id === colorId);
+                    
+                    setFormData({ 
+                      ...formData, 
+                      interior_color_id: colorId,
+                      interior_color_name: selectedColor?.name,
+                      interior_color_hex: selectedColor?.hex_code
+                    });
                   }}
                   className="w-full p-2 border rounded-lg"
-                  disabled={!formData.model_id || isVariantsLoading}
+                  disabled={isColorsLoading}
                 >
-                  <option value="">Select Variant</option>
-                  {variants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.name}
+                  <option value="">Select Interior Color</option>
+                  {interiorColors.map((color) => (
+                    <option key={color.id} value={color.id}>
+                      {color.name}
                     </option>
                   ))}
                 </select>
-                {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
+                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                {formData.interior_color_hex && (
+                  <div className="mt-2 flex items-center">
+                    <div 
+                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                      style={{ backgroundColor: formData.interior_color_hex }}
+                    ></div>
+                    <span className="text-xs text-gray-500">{formData.interior_color_hex}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Upholstery */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upholstery
+                </label>
+                <select
+                  value={formData.upholstery_id || ''}
+                  onChange={(e) => {
+                    const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
+                    const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
+                    
+                    setFormData({ 
+                      ...formData, 
+                      upholstery_id: upholsteryId,
+                      upholstery_name: selectedUpholstery?.name || ''
+                    });
+                  }}
+                  className="w-full p-2 border rounded-lg"
+                  disabled={isUpholsteryLoading}
+                >
+                  <option value="">Select Upholstery</option>
+                  {upholsteryTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.name}</option>
+                  ))}
+                </select>
+                {isUpholsteryLoading && <span className="text-sm text-gray-500">Loading upholstery types...</span>}
               </div>
             </div>
-  
-            {/* First Registration Date Fields */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Registration <span className="text-red-500">*</span>
+          </div>
+
+          <div className="space-y-2 mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type="text"
+              value={formattedPrice}
+              onChange={handlePriceChange}
+              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+              required={!formData.discussedPrice}
+              disabled={formData.discussedPrice}
+              placeholder={formData.discussedPrice ? 'Price will be discussed' : ''}
+            />
+            <div className="flex items-center mt-2">
+              <input
+                type="checkbox"
+                id="discussedPrice"
+                checked={formData.discussedPrice || false}
+                onChange={(e) => {
+                  const isChecked = e.target.checked;
+                  setFormData({ 
+                    ...formData, 
+                    discussedPrice: isChecked,
+                    price: isChecked ? 0 : formData.price // Set price to 0 when discussedPrice is checked
+                  });
+                }}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
+                Discussed price
               </label>
-              <div className="grid grid-cols-3 gap-4">
-                {/* Day field */}
-                <div>
-                  <select
-                    value={formData.first_registration_day || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
-                    }))}
-                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
-                    required={formData.is_used}
-                  >
-                    <option value="">Day</option>
-                    {dayOptions.map(option => (
-                      <option key={`day-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {validationErrors.first_registration_day && 
-                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
-                  }
-                </div>
-                
-                {/* Month field */}
-                <div>
-                  <select
-                    value={formData.first_registration_month || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
-                    }))}
-                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
-                    required={formData.is_used}
-                  >
-                    <option value="">Month</option>
-                    {monthOptions.map(option => (
-                      <option key={`month-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {validationErrors.first_registration_month && 
-                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
-                  }
-                </div>
-                
-                {/* Year field */}
-                <div>
-                  <select
-                    value={formData.first_registration_year || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
-                    }))}
-                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
-                    required={formData.is_used}
-                  >
-                    <option value="">Year</option>
-                    {yearOptions.map(option => (
-                      <option key={`year-${option.value}`} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  {validationErrors.first_registration_year && 
-                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
-                  }
-                </div>
-              </div>
             </div>
-  
-            {/* Colors Section */}
-            <div className="mt-4">
-              <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {/* Exterior Color */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Exterior Color <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.exterior_color_id || ''}
-                    onChange={(e) => {
-                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                      const selectedColor = exteriorColors.find(color => color.id === colorId);
-                      
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        exterior_color_id: colorId,
-                        exterior_color_name: selectedColor?.name,
-                        exterior_color_hex: selectedColor?.hex_code
-                      }));
-                    }}
-                    className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
-                    required
-                    disabled={isColorsLoading}
-                  >
-                    <option value="">Select Exterior Color</option>
-                    {exteriorColors.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.name}
-                      </option>
-                    ))}
-                  </select>
-                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                  {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
-                  {formData.exterior_color_hex && (
-                    <div className="mt-2 flex items-center">
-                      <div 
-                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                        style={{ backgroundColor: formData.exterior_color_hex }}
-                      ></div>
-                      <span className="text-xs text-gray-500">{formData.exterior_color_hex}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Interior Color */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Interior Color
-                  </label>
-                  <select
-                    value={formData.interior_color_id || ''}
-                    onChange={(e) => {
-                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                      const selectedColor = interiorColors.find(color => color.id === colorId);
-                      
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        interior_color_id: colorId,
-                        interior_color_name: selectedColor?.name,
-                        interior_color_hex: selectedColor?.hex_code
-                      }));
-                    }}
-                    className="w-full p-2 border rounded-lg"
-                    disabled={isColorsLoading}
-                  >
-                    <option value="">Select Interior Color</option>
-                    {interiorColors.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.name}
-                      </option>
-                    ))}
-                  </select>
-                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                  {formData.interior_color_hex && (
-                    <div className="mt-2 flex items-center">
-                      <div 
-                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                        style={{ backgroundColor: formData.interior_color_hex }}
-                      ></div>
-                      <span className="text-xs text-gray-500">{formData.interior_color_hex}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Upholstery - Properly implemented with the separate upholstery model */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Upholstery
-                  </label>
-                  <select
-                    value={formData.upholstery_id || ''}
-                    onChange={(e) => {
-                      const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
-                      const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
-                      
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        upholstery_id: upholsteryId,
-                        upholstery_name: selectedUpholstery?.name || ''
-                      }));
-                    }}
-                    className="w-full p-2 border rounded-lg"
-                    disabled={isUpholsteryLoading}
-                  >
-                    <option value="">Select Upholstery</option>
-                    {upholsteryTypes.map((type) => (
-                      <option key={type.id} value={type.id}>{type.name}</option>
-                    ))}
-                  </select>
-                  {isUpholsteryLoading && <span className="text-sm text-gray-500">Loading upholstery types...</span>}
-                </div>
-              </div>
-            </div>
-  
-            <div className="space-y-2 mt-4">
+            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
+          </label>
+          <input
+            type="file"
+            accept={ALLOWED_FILE_TYPES.join(',')}
+            multiple
+            onChange={handleImageUpload}
+            className="w-full border border-gray-300 p-2 rounded"
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            Max file size: 5MB. Supported formats: JPEG, PNG, WebP
+          </p>
+          {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+          {(formData.images?.length > 0 || tempImages.length > 0) && (
+            <ImageGallery
+              images={[...(formData.images || []), ...tempImages]}
+              onDeleteImage={handleImageDelete}
+              isEditing={true}
+              baseUrl={API_BASE_URL}
+            />
+          )}
+        </div>
+
+        {/* Vehicle Details */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
+                Body Type
+              </label>
+              <select
+                value={formData.body_type}
+                onChange={(e) => setFormData({ ...formData, body_type: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+              >
+                {BODY_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Drivetrain
+              </label>
+              <select
+                value={formData.drivetrain}
+                onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+              >
+                {DRIVETRAINS.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Seats
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="9"
+                value={formData.seats}
+                onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) })}
+                className="w-full p-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Doors
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="6"
+                value={formData.doors}
+                onChange={(e) => setFormData({ ...formData, doors: parseInt(e.target.value) })}
+                className="w-full p-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mileage (km)
               </label>
               <input
                 type="text"
-                value={formData.discussedPrice ? '' : formattedPrice}
-                onChange={handlePriceChange}
-                className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-                required={!formData.discussedPrice}
-                disabled={formData.discussedPrice}
-                placeholder={formData.discussedPrice ? 'Price will be discussed' : ''}
+                value={formattedMileage}
+                onChange={handleMileageChange}
+                className="w-full p-2 border rounded-lg"
               />
-              <div className="flex items-center mt-2">
-                <input
-                  type="checkbox"
-                  id="discussedPrice"
-                  checked={formData.discussedPrice || false}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      discussedPrice: isChecked,
-                      price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
-                    }));
-                  }}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
-                  Discussed price
-                </label>
-              </div>
-              {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
             </div>
           </div>
-  
-          {/* Image Upload */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
-            </label>
-            <input
-              type="file"
-              accept={ALLOWED_FILE_TYPES.join(',')}
-              multiple
-              onChange={handleImageUpload}
-              className="w-full border border-gray-300 p-2 rounded"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Max file size: 5MB. Supported formats: JPEG, PNG, WebP
-            </p>
-            {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
-            {(formData.images?.length > 0 || tempImages.length > 0) && (
-              <ImageGallery
-                images={[...(formData.images || []), ...tempImages]}
-                onDeleteImage={handleImageDelete}
-                isEditing={true}
-                baseUrl={API_BASE_URL}
+        </div>
+
+        {/* Technical Specifications */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Power (HP)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.power}
+                onChange={(e) => setFormData({ ...formData, power: parseInt(e.target.value) })}
+                className="w-full p-2 border rounded-lg"
               />
-            )}
-          </div>
-  
-          {/* Vehicle Details */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Body Type
-                </label>
-                <select
-                  value={formData.body_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, body_type: e.target.value }))}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {BODY_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Drivetrain
-                </label>
-                <select
-                  value={formData.drivetrain}
-                  onChange={(e) => setFormData(prev => ({ ...prev, drivetrain: e.target.value }))}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {DRIVETRAINS.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
             </div>
-  
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Seats
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="9"
-                  value={formData.seats}
-                  onChange={(e) => setFormData(prev => ({ ...prev, seats: parseInt(e.target.value) }))}
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Doors
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="6"
-                  value={formData.doors}
-                  onChange={(e) => setFormData(prev => ({ ...prev, doors: parseInt(e.target.value) }))}
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mileage (km)
-                </label>
-                <input
-                  type="text"
-                  value={formattedMileage}
-                  onChange={handleMileageChange}
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Engine Size (L)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.engine_size}
+                onChange={(e) => setFormData({ ...formData, engine_size: parseFloat(e.target.value) })}
+                className="w-full p-2 border rounded-lg"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
+                className="w-full p-2 border rounded-lg"
+              />
             </div>
           </div>
-  
-          {/* Technical Specifications */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Power (HP)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.power}
-                  onChange={(e) => setFormData(prev => ({ ...prev, power: parseInt(e.target.value) }))}
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Engine Size (L)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.engine_size}
-                  onChange={(e) => setFormData(prev => ({ ...prev, engine_size: parseFloat(e.target.value) }))}
-                  className="w-full p-2 border rounded-lg"
-                />
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Weight (kg)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.weight}
-                  onChange={(e) => setFormData(prev => ({ ...prev, weight: parseInt(e.target.value) }))}
-                  className="w-full p-2 border rounded-lg"
-                />
-                </div>
-            </div>
-  
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gearbox
-                </label>
-                <select
-                  value={formData.gearbox}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gearbox: e.target.value }))}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {GEARBOX_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cylinders
-                </label>
-                <select
-                  value={formData.cylinders}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cylinders: parseInt(e.target.value) }))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
-                >
-                  <option value="">Select Cylinders</option>
-                  {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
-                    <option key={num} value={num}>{num}</option>
-                  ))}
-                </select>
-                {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
-              </div>
-            </div>
-          </div>
-  
-          {/* Additional Information */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fuel Type
-                </label>
-                <select
-                  value={formData.fuel_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fuel_type: e.target.value }))}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {FUEL_TYPES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-  
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Emission Class
-                </label>
-                <select
-                  value={formData.emission_class}
-                  onChange={(e) => setFormData(prev => ({ ...prev, emission_class: e.target.value }))}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {EMISSION_CLASSES.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-  
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Created At <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.created_at}
-                  onChange={(e) => setFormData(prev => ({ ...prev, created_at: e.target.value }))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
-                  required
-                />
-                {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
-              </div>
-              
-              <div className="flex items-center mt-6">
-                <input
-                  type="checkbox"
-                  checked={formData.customs_paid}
-                  onChange={(e) => setFormData(prev => ({ ...prev, customs_paid: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600"
-                />
-                <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
-              </div>
-            </div>
-  
-            {/* Checkboxes */}
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.is_used}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_used: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600"
-                />
-                <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
-              </div>
-            </div>
-          </div>
-          
-          {/* Options */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Additional Options
-            </label>
-            
-            {/* Loading state */}
-            {availableOptions.length === 0 && (
-              <div className="text-sm text-gray-500 mb-2">Loading options...</div>
-            )}
-            
-            {/* Category tabs */}
-            <div className="mb-3 border-b border-gray-200">
-              <nav className="-mb-px flex space-x-4 overflow-x-auto">
-                {Object.entries(optionCategories).map(([categoryKey, categoryLabel]) => (
-                  <button
-                    key={categoryKey}
-                    type="button"
-                    onClick={() => setActiveCategory(categoryKey)}
-                    className={`whitespace-nowrap py-2 px-3 text-sm font-medium ${
-                      activeCategory === categoryKey 
-                        ? 'border-b-2 border-blue-500 text-blue-600' 
-                        : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    {categoryLabel}
-                  </button>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Gearbox
+              </label>
+              <select
+                value={formData.gearbox}
+                onChange={(e) => setFormData({ ...formData, gearbox: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+              >
+                {GEARBOX_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
-              </nav>
+              </select>
             </div>
-  
-            <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
-              <div className="grid grid-cols-2 gap-2">
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cylinders
+              </label>
+              <select
+                value={formData.cylinders}
+                onChange={(e) => setFormData({ ...formData, cylinders: parseInt(e.target.value) })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
+              >
+                <option value="">Select Cylinders</option>
+                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
+                  <option key={num} value={num}>{num}</option>
+                ))}
+              </select>
+              {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Information */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Fuel Type
+              </label>
+              <select
+                value={formData.fuel_type}
+                onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+              >
+                {FUEL_TYPES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Emission Class
+              </label>
+              <select
+                value={formData.emission_class}
+                onChange={(e) => setFormData({ ...formData, emission_class: e.target.value })}
+                className="w-full p-2 border rounded-lg"
+              >
+                {EMISSION_CLASSES.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Created At <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={formData.created_at}
+                onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
+                className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
+                required
+              />
+              {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
+            </div>
+            
+            <div className="flex items-center mt-6">
+              <input
+                type="checkbox"
+                checked={formData.customs_paid}
+                onChange={(e) => setFormData({ ...formData, customs_paid: e.target.checked })}
+                className="h-4 w-4 text-blue-600"
+              />
+              <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
+            </div>
+          </div>
+
+          {/* Checkboxes */}
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.is_used}
+                onChange={(e) => setFormData({ ...formData, is_used: e.target.checked })}
+                className="h-4 w-4 text-blue-600"
+              />
+              <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
+            </div>
+          </div>
+        </div>
+        
+        {/* Options */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Additional Options
+          </label>
+          
+          {/* Loading state */}
+          {availableOptions.length === 0 && (
+            <div className="text-sm text-gray-500 mb-2">Loading options...</div>
+          )}
+          
+          {/* Category tabs */}
+          <div className="mb-3 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-4 overflow-x-auto">
+              {Object.entries(optionCategories).map(([categoryKey, categoryLabel]) => (
+                <button
+                  key={categoryKey}
+                  type="button"
+                  onClick={() => setActiveCategory(categoryKey)}
+                  className={`whitespace-nowrap py-2 px-3 text-sm font-medium ${
+                    activeCategory === categoryKey 
+                      ? 'border-b-2 border-blue-500 text-blue-600' 
+                      : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {categoryLabel}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
+            <div className="grid grid-cols-2 gap-2">
               {categorizedOptions[activeCategory]?.map((option) => (
                 <div key={option.id} className="flex items-center">
                   <input
@@ -1036,10 +1028,10 @@ const CarForm = () => {
                       setSelectedOptions(newSelectedOptions);
                       
                       // Update formData with the selected option IDs directly
-                      setFormData(prev => ({
-                        ...prev,
+                      setFormData({
+                        ...formData,
                         option_ids: newSelectedOptions
-                      }));
+                      });
                     }}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
@@ -1048,75 +1040,75 @@ const CarForm = () => {
                   </label>
                 </div>
               ))}
-  
-                {categorizedOptions[activeCategory]?.length === 0 && (
-                  <div className="col-span-2 text-sm text-gray-500 py-2">
-                    No options available in this category
-                  </div>
-                )}
+
+              {categorizedOptions[activeCategory]?.length === 0 && (
+                <div className="col-span-2 text-sm text-gray-500 py-2">
+                  No options available in this category
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {selectedOptions.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Options ({selectedOptions.length}):</h4>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedOptions.map((optionId) => {
+                  const option = availableOptions.find(opt => opt.id === optionId);
+                  return option ? (
+                    <div key={optionId} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center">
+                      {option.name}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSelected = selectedOptions.filter(id => id !== optionId);
+                          setSelectedOptions(newSelected);
+                          setFormData({
+                            ...formData,
+                            option_ids: newSelected
+                          });
+                        }}
+                        className="ml-1 text-gray-500 hover:text-gray-700"
+                      >
+                        <span className="sr-only">Remove</span>
+                        ×
+                      </button>
+                    </div>
+                  ) : null;
+                })}
               </div>
             </div>
-            
-            {selectedOptions.length > 0 && (
-              <div className="mt-3">
-                <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Options ({selectedOptions.length}):</h4>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedOptions.map((optionId) => {
-                    const option = availableOptions.find(opt => opt.id === optionId);
-                    return option ? (
-                      <div key={optionId} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center">
-                        {option.name}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newSelected = selectedOptions.filter(id => id !== optionId);
-                            setSelectedOptions(newSelected);
-                            setFormData(prev => ({
-                              ...prev,
-                              option_ids: newSelected
-                            }));
-                          }}
-                          className="ml-1 text-gray-500 hover:text-gray-700"
-                        >
-                          <span className="sr-only">Remove</span>
-                          ×
-                        </button>
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-  
-         {/* Description */}
-         <div>
+          )}
+        </div>
+
+        {/* Description */}
+        <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">Description</h3>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description <span className="text-red-500">*</span>
           </label>
           <textarea
             value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className={`w-full p-2 border rounded-lg h-32 ${validationErrors.description ? 'border-red-500' : ''}`}
             required
-          />
-          {validationErrors.description && <p className="text-red-500 text-xs mt-1">{validationErrors.description}</p>}
-        </div>
-      </div>
+         />
+         {validationErrors.description && <p className="text-red-500 text-xs mt-1">{validationErrors.description}</p>}
+       </div>
+     </div>
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={isLoading}
-        className={`w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
-          ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        {isLoading ? 'Saving...' : id ? 'Update Car' : 'Add Car'}
-      </button>
-    </form>
-  </div>
-  );
+     {/* Submit Button */}
+     <button
+       type="submit"
+       disabled={isLoading}
+       className={`w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
+         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+     >
+       {isLoading ? 'Saving...' : id ? 'Update Car' : 'Add Car'}
+     </button>
+   </form>
+ </div>
+);
 };
 
 export default CarForm;
