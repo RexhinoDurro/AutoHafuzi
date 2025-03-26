@@ -406,7 +406,8 @@ def get_site_analytics(request):
         most_viewed_cars_data = [{
             'id': car.id,
             'name': f"{car.make.name} {car.model.name} ({car.first_registration_year or 'N/A'})",
-            'views': car.view_count
+            'views': car.view_count,
+            'slug': car.slug
         } for car in most_viewed_cars]
         
         # Get daily visits for the chart
