@@ -51,8 +51,8 @@ const CarCard: React.FC<CarCardProps> = ({
                           !location.pathname.includes('/admin') &&
                           !location.pathname.includes('/auth');
     
-    // If we're already on the car detail page for this car, force refresh
-    if (location.pathname === `/car/${carIdentifier}`) {
+    // If we're already on the car detail page or any car detail page, force refresh
+    if (location.pathname.includes('/car/')) {
       // Navigate away first
       navigate('/cars', { replace: true, state: { tempNavigation: true } });
       
@@ -60,7 +60,8 @@ const CarCard: React.FC<CarCardProps> = ({
       setTimeout(() => {
         navigateToCarDetail(navigate, carIdentifier, {
           trackView: shouldTrackView,
-          from: '/cars'
+          from: '/cars',
+          forceRefresh: true // Add forceRefresh flag
         });
       }, 0);
     } else {

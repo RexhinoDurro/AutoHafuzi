@@ -10,6 +10,7 @@ import { NavigateFunction } from 'react-router-dom';
  *        - trackView: whether to track this view (default: true)
  *        - from: the page navigating from (for context)
  *        - replace: whether to replace current history entry (default: false)
+ *        - forceRefresh: whether to force component refresh (default: false)
  */
 export const navigateToCarDetail = (
   navigate: NavigateFunction, 
@@ -18,18 +19,19 @@ export const navigateToCarDetail = (
     trackView?: boolean;
     from?: string;
     replace?: boolean;
+    forceRefresh?: boolean;
   } = {}
 ) => {
-  const { trackView = true, from, replace = false } = options;
+  const { trackView = true, from, replace = false, forceRefresh = false } = options;
   
   // Log navigation for debugging
-  console.log(`[Navigation] To car ${carId} from ${from || 'unknown'}, trackView: ${trackView}`);
+  console.log(`[Navigation] To car ${carId} from ${from || 'unknown'}, trackView: ${trackView}, forceRefresh: ${forceRefresh}`);
   
   // Check if we're already on the car detail page for this car
   const currentPath = window.location.pathname;
   const targetPath = `/car/${carId}`;
   
-  if (currentPath === targetPath) {
+  if (currentPath === targetPath && !forceRefresh) {
     // First navigate away to force React Router to handle the navigation
     navigate('/cars', { 
       replace: true, 
@@ -46,7 +48,8 @@ export const navigateToCarDetail = (
         state: {
           from: '/cars',
           doNotTrackView: !trackView,
-          navigatedAt: Date.now()
+          navigatedAt: Date.now(),
+          forceRefresh: true
         }
       });
     }, 10);
@@ -56,7 +59,8 @@ export const navigateToCarDetail = (
       state: {
         from,
         doNotTrackView: !trackView,
-        navigatedAt: Date.now()
+        navigatedAt: Date.now(),
+        forceRefresh
       },
       replace
     });

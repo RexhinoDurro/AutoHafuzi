@@ -56,6 +56,18 @@ const CarDetail: React.FC = () => {
   
   // Add a media query hook to detect mobile screens
   const isMobile = useMediaQuery('(max-width: 768px)');
+  
+  // Add this useEffect to reset state when id changes in URL
+  useEffect(() => {
+    // Reset states when id changes in URL
+    if (id) {
+      setCar(null);
+      setLoading(true);
+      setError(null);
+      setInitialFetchDone(false);
+      setViewTracked(null);
+    }
+  }, [id]); // Only re-run when id changes
 
   // Check if tracking should be disabled based on navigation source
   useEffect(() => {
@@ -394,6 +406,7 @@ const CarDetail: React.FC = () => {
   
   // Get categorized options
   const optionsByCategory = categorizeOptions();
+  
   
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
