@@ -1,3 +1,4 @@
+// Updated Home.tsx to ensure recommendations always appear
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CarCard from '../components/CarCard';
@@ -10,7 +11,7 @@ const Home = () => {
   // State definitions
   const [lastSearchCars, setLastSearchCars] = useState<Car[]>([]);
   const [interestCars, setInterestCars] = useState<Car[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState<boolean>(false);
+  const [recommendationsLoading, setRecommendationsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSearchQuery, setLastSearchQuery] = useState<URLSearchParams | null>(null);
   const [interestQuery, setInterestQuery] = useState<URLSearchParams | null>(null);
@@ -37,8 +38,8 @@ const Home = () => {
     try {
       // Create query for latest cars
       const latestCarsQuery = new URLSearchParams();
-      latestCarsQuery.append('limit', '4');
-      latestCarsQuery.append('ordering', '-created_at'); // Order by most recently added
+      latestCarsQuery.append('limit', '6'); // Request more than needed
+      latestCarsQuery.append('sort', 'created_desc'); // Order by most recently added
 
       const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${latestCarsQuery}`);
       if (response.ok) {
@@ -54,25 +55,53 @@ const Home = () => {
     }
   };
 
-  // Fetch random cars as fallback for when there are no interest-based recommendations
+  // Fetch random cars for diversity
   const fetchRandomCars = async (): Promise<Car[]> => {
     try {
-      // Create query for random cars - first try ordering by id which might be somewhat random
+      const priceQueries = ['price_asc', 'price_desc']; // Use price sorting in both directions
+      const selectedQuery = priceQueries[Math.floor(Math.random() * priceQueries.length)];
+      
       const randomCarsQuery = new URLSearchParams();
-      randomCarsQuery.append('limit', '8'); // Get more to shuffle
+      randomCarsQuery.append('limit', '10'); // Get more to ensure diversity
+      randomCarsQuery.append('sort', selectedQuery);
       
       const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${randomCarsQuery}`);
       if (response.ok) {
         const data = await response.json();
-        // Shuffle the results to get random cars
+        // Shuffle the results for better randomness
         const shuffled = [...(data.results || [])].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, 4);
+        return shuffled.slice(0, 6); // Get 6 random cars
       } else {
         console.warn('Random cars API request failed');
         return [];
       }
     } catch (error) {
       console.error('Error fetching random cars:', error);
+      return [];
+    }
+  };
+
+  // Fetch additional diverse cars
+  const fetchDiverseCars = async (): Promise<Car[]> => {
+    try {
+      // Get cars with different body types for diversity
+      const bodyTypes = ['Sedan', 'SUV', 'Hatchback', 'Coupe'];
+      const selectedBodyType = bodyTypes[Math.floor(Math.random() * bodyTypes.length)];
+      
+      const diverseCarsQuery = new URLSearchParams();
+      diverseCarsQuery.append('limit', '8');
+      diverseCarsQuery.append('bodyType', selectedBodyType);
+      
+      const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${diverseCarsQuery}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.results || [];
+      } else {
+        console.warn('Diverse cars API request failed');
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching diverse cars:', error);
       return [];
     }
   };
@@ -85,11 +114,16 @@ const Home = () => {
       // Get recently viewed car IDs to exclude them
       const recentViewIds = getRecentlyViewedCarIds();
       
+      // Fetch all backup data sources in parallel to speed things up
+      const [latestCarsData, randomCarsData, diverseCarsData] = await Promise.all([
+        fetchLatestCars(), 
+        fetchRandomCars(),
+        fetchDiverseCars()
+      ]);
+      
       // Get last search parameters from localStorage
       const lastSearch = getLastSearch();
-      
-      // Fetch fallback options first - store the results directly
-      const [latestCarsData, randomCarsData] = await Promise.all([fetchLatestCars(), fetchRandomCars()]);
+      let hasValidLastSearch = false;
       
       // Create query for last search recommendation
       const lastSearchQueryParams = new URLSearchParams();
@@ -105,10 +139,11 @@ const Home = () => {
           key !== 'options'
         ) {
           lastSearchQueryParams.append(key, value.toString());
+          hasValidLastSearch = true;
         }
       });
       
-      lastSearchQueryParams.append('limit', '4'); // Limit to 4 cars
+      lastSearchQueryParams.append('limit', '6'); // Request more to ensure diversity
       setLastSearchQuery(lastSearchQueryParams);
       
       // Get user activity from localStorage for interest-based recommendations
@@ -117,7 +152,7 @@ const Home = () => {
       
       // Find most viewed make and model IDs, not names
       let topMakeId = null;
-      let topModelId = null;
+      let hasValidInterest = false;
       
       if (Object.keys(activityData.makes).length > 0) {
         // Filter only numeric IDs (not name-prefixed entries)
@@ -128,57 +163,67 @@ const Home = () => {
           topMakeId = makeEntries
             .sort((a, b) => (b[1] as number) - (a[1] as number))
             .map(entry => entry[0])[0];
-        }
-      }
-      
-      if (Object.keys(activityData.models).length > 0) {
-        // Filter only numeric IDs (not name-prefixed entries)
-        const modelEntries = Object.entries(activityData.models)
-          .filter(([key]) => !key.startsWith('name:') && !isNaN(Number(key)));
           
-        if (modelEntries.length > 0) {
-          topModelId = modelEntries
-            .sort((a, b) => (b[1] as number) - (a[1] as number))
-            .map(entry => entry[0])[0];
+          if (topMakeId) {
+            hasValidInterest = true;
+          }
         }
       }
       
       // Create query for interest-based recommendations
       const interestQueryParams = new URLSearchParams();
       if (topMakeId) interestQueryParams.append('make', topMakeId);
-      if (topModelId) interestQueryParams.append('model', topModelId);
-      interestQueryParams.append('limit', '4');
+      interestQueryParams.append('limit', '6');
       setInterestQuery(interestQueryParams);
       
       // Make API calls - only if we have valid query parameters
       let lastSearchData = { results: [] };
       let interestData = { results: [] };
       
+      const fetchPromises = [];
+      
       // Only make the API call if we have query parameters
-      if (lastSearchQueryParams.toString() !== 'limit=4') {
-        const lastSearchResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${lastSearchQueryParams}`);
-        if (lastSearchResponse.ok) {
-          lastSearchData = await lastSearchResponse.json();
-        } else {
-          console.warn('Last search API request failed');
-        }
+      if (hasValidLastSearch) {
+        fetchPromises.push(
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${lastSearchQueryParams}`)
+            .then(response => response.ok ? response.json() : { results: [] })
+            .then(data => {
+              lastSearchData = data;
+              return data;
+            })
+            .catch(err => {
+              console.warn('Last search API request failed:', err);
+              return { results: [] };
+            })
+        );
       } else {
         console.log('Skipping last search API call - no valid parameters, will use latest cars instead');
       }
       
-      // Only make the API call if we have both make and model
-      if (interestQueryParams.toString() !== 'limit=4') {
-        const interestResponse = await fetch(`${API_ENDPOINTS.CARS.LIST}?${interestQueryParams}`);
-        if (interestResponse.ok) {
-          interestData = await interestResponse.json();
-        } else {
-          console.warn('Interest-based API request failed');
-        }
+      // Only make the API call if we have make
+      if (hasValidInterest) {
+        fetchPromises.push(
+          fetch(`${API_ENDPOINTS.CARS.LIST}?${interestQueryParams}`)
+            .then(response => response.ok ? response.json() : { results: [] })
+            .then(data => {
+              interestData = data;
+              return data;
+            })
+            .catch(err => {
+              console.warn('Interest-based API request failed:', err);
+              return { results: [] };
+            })
+        );
       } else {
         console.log('Skipping interest API call - no valid parameters, will use random cars instead');
       }
       
-      // Filter out recently viewed cars
+      // Wait for all fetches to complete
+      if (fetchPromises.length > 0) {
+        await Promise.all(fetchPromises);
+      }
+      
+      // Filter out recently viewed cars and ensure diversity
       const filteredLastSearchCars = (lastSearchData.results || []).filter(
         (car: Car) => !recentViewIds.includes(car.id)
       );
@@ -188,35 +233,90 @@ const Home = () => {
                     !filteredLastSearchCars.some((c: Car) => c.id === car.id)
       );
       
-      // Set the primary recommendation arrays
-      if (filteredLastSearchCars.length > 0) {
-        setLastSearchCars(filteredLastSearchCars.slice(0, 4));
+      // Prepare final recommendations, ensuring we always have 4 cars in each section
+      let finalLastSearchCars: Car[] = [];
+      let finalInterestCars: Car[] = [];
+      
+      // For last search cars section
+      if (filteredLastSearchCars.length >= 4) {
+        // If we have enough from the search, use those
+        finalLastSearchCars = filteredLastSearchCars.slice(0, 4);
       } else {
-        // Use latest cars as fallback
-        console.log("Using latest cars fallback:", latestCarsData.length);
+        // If we don't have enough from search, use latest cars as backup
+        finalLastSearchCars = [...filteredLastSearchCars];
+        
+        // Filter latest cars to avoid duplicates
         const filteredLatestCars = latestCarsData.filter(
-          (car: Car) => !recentViewIds.includes(car.id)
-        );
-        setLastSearchCars(filteredLatestCars.slice(0, 4));
-      }
-      
-      // Get the latest search cars that were set above
-      const currentLastSearchCars = filteredLastSearchCars.length > 0 
-        ? filteredLastSearchCars.slice(0, 4) 
-        : latestCarsData.filter((car: Car) => !recentViewIds.includes(car.id)).slice(0, 4);
-      
-      if (filteredInterestCars.length > 0) {
-        setInterestCars(filteredInterestCars.slice(0, 4));
-      } else {
-        // Use random cars as fallback
-        console.log("Using random cars fallback:", randomCarsData.length);
-        // Filter to avoid duplicates with what's already shown in lastSearchCars
-        const filteredRandomCars = randomCarsData.filter(
           (car: Car) => !recentViewIds.includes(car.id) && 
-                         !currentLastSearchCars.some((c: Car) => c.id === car.id)
+                      !finalLastSearchCars.some((c: Car) => c.id === car.id)
         );
-        setInterestCars(filteredRandomCars.slice(0, 4));
+        
+        // Add latest cars until we have 4
+        const neededCars = 4 - finalLastSearchCars.length;
+        finalLastSearchCars = [...finalLastSearchCars, ...filteredLatestCars.slice(0, neededCars)];
+        
+        // If we still don't have 4, use random cars
+        if (finalLastSearchCars.length < 4) {
+          const filteredRandomCars = randomCarsData.filter(
+            (car: Car) => !recentViewIds.includes(car.id) && 
+                        !finalLastSearchCars.some((c: Car) => c.id === car.id)
+          );
+          
+          const stillNeededCars = 4 - finalLastSearchCars.length;
+          finalLastSearchCars = [...finalLastSearchCars, ...filteredRandomCars.slice(0, stillNeededCars)];
+        }
       }
+      
+      // For interest-based cars section
+      if (filteredInterestCars.length >= 4) {
+        // If we have enough from interests, use those
+        finalInterestCars = filteredInterestCars.slice(0, 4);
+      } else {
+        // If we don't have enough from interests, use diverse cars as first backup
+        finalInterestCars = [...filteredInterestCars];
+        
+        // Filter diverse cars to avoid duplicates
+        const filteredDiverseCars = diverseCarsData.filter(
+          (car: Car) => !recentViewIds.includes(car.id) && 
+                      !finalLastSearchCars.some((c: Car) => c.id === car.id) &&
+                      !finalInterestCars.some((c: Car) => c.id === car.id)
+        );
+        
+        // Add diverse cars until we have 4
+        const neededCars = 4 - finalInterestCars.length;
+        finalInterestCars = [...finalInterestCars, ...filteredDiverseCars.slice(0, neededCars)];
+        
+        // If we still don't have 4, use random cars
+        if (finalInterestCars.length < 4) {
+          const filteredRandomCars = randomCarsData.filter(
+            (car: Car) => !recentViewIds.includes(car.id) && 
+                        !finalLastSearchCars.some((c: Car) => c.id === car.id) &&
+                        !finalInterestCars.some((c: Car) => c.id === car.id)
+          );
+          
+          const stillNeededCars = 4 - finalInterestCars.length;
+          finalInterestCars = [...finalInterestCars, ...filteredRandomCars.slice(0, stillNeededCars)];
+        }
+      }
+      
+      // Set the final recommendations
+      setLastSearchCars(finalLastSearchCars);
+      setInterestCars(finalInterestCars);
+      
+      // Log what we're showing
+      console.log('Home page recommendations:', {
+        lastSearchSection: {
+          fromSearch: filteredLastSearchCars.length,
+          fromLatest: finalLastSearchCars.length - filteredLastSearchCars.length,
+          total: finalLastSearchCars.length
+        },
+        interestSection: {
+          fromInterest: filteredInterestCars.length,
+          fromDiverse: finalInterestCars.length - filteredInterestCars.length,
+          total: finalInterestCars.length
+        }
+      });
+      
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       setError('Failed to load recommendations. Please try again later.');
@@ -271,70 +371,67 @@ const Home = () => {
       {/* Error display */}
       {error && <p className="text-center text-red-500 my-6">{error}</p>}
       
+      {/* Always show recommendations, even while loading */}
       {/* "Based on your last search" OR "Latest Cars" Recommendation Section */}
-      {!recommendationsLoading && lastSearchCars.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 pt-4 pb-4 border border-blue-100 my-2 sm:mt-12 sm:mb-16 sm:p-8 sm:rounded-xl sm:shadow">
-          <h2 className="text-2xl font-bold mb-3 ml-0.5 text-blue-800 flex items-center sm:mb-6 sm:ml-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            {lastSearchQuery && lastSearchQuery.toString() !== 'limit=4' 
-              ? 'Bazuar në kërkimin e fundit' 
-              : 'Makina të shtuara së fundmi'}
-          </h2>
-          {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
-            {lastSearchCars.map(car => (
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-2 pt-4 pb-4 border border-blue-100 my-2 sm:mt-12 sm:mb-16 sm:p-8 sm:rounded-xl sm:shadow">
+        <h2 className="text-2xl font-bold mb-3 ml-0.5 text-blue-800 flex items-center sm:mb-6 sm:ml-0">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          {lastSearchQuery && lastSearchQuery.toString() !== 'limit=6' 
+            ? 'Bazuar në kërkimin e fundit' 
+            : 'Makina të shtuara së fundmi'}
+        </h2>
+        {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
+          {recommendationsLoading ? (
+            // Loading placeholders
+            [...Array(4)].map((_, index) => (
+              <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-48 sm:h-56"></div>
+            ))
+          ) : (
+            // Actual car cards
+            lastSearchCars.map(car => (
               <CarCard key={car.id} car={car} />
-            ))}
-          </div>
-          <button
-            onClick={() => navigate('/cars')}
-            className="mt-3 mb-1 mx-0.5 w-full py-3 bg-blue-600 text-white font-semibold text-lg rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center sm:mt-8 sm:mb-0 sm:mx-0"
-          >
-            <span>Dëshironi të shihni më shumë makina?</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+            ))
+          )}
         </div>
-      )}
+        <button
+          onClick={() => navigate('/cars')}
+          className="mt-3 mb-1 mx-0.5 w-full py-3 bg-blue-600 text-white font-semibold text-lg rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center sm:mt-8 sm:mb-0 sm:mx-0"
+        >
+          <span>Dëshironi të shihni më shumë makina?</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
       
       {/* "Cars You Might Like" OR "Randomly Selected Cars" Recommendation Section */}
-      {!recommendationsLoading && interestCars.length > 0 && (
-        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2 pt-4 pb-4 border border-amber-100 my-2 sm:my-16 sm:p-8 sm:rounded-xl sm:shadow">
-          <h2 className="text-2xl font-bold mb-3 ml-0.5 text-amber-800 flex items-center sm:mb-6 sm:ml-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-            </svg>
-            {interestQuery && interestQuery.toString() !== 'limit=4' 
-              ? 'Makina që mund t\'ju interesojnë' 
-              : 'Makina të zgjedhura për ju'}
-          </h2>
-          {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
-            {interestCars.map(car => (
+      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-2 pt-4 pb-4 border border-amber-100 my-2 sm:my-16 sm:p-8 sm:rounded-xl sm:shadow">
+        <h2 className="text-2xl font-bold mb-3 ml-0.5 text-amber-800 flex items-center sm:mb-6 sm:ml-0">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+          {interestQuery && interestQuery.toString() !== 'limit=6' 
+            ? 'Makina që mund t\'ju interesojnë' 
+            : 'Makina të zgjedhura për ju'}
+        </h2>
+        {/* Grid with 2 columns on mobile, 2 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-1 mx-0.5 sm:gap-4 sm:mx-0">
+          {recommendationsLoading ? (
+            // Loading placeholders
+            [...Array(4)].map((_, index) => (
+              <div key={index} className="bg-gray-200 animate-pulse rounded-lg h-48 sm:h-56"></div>
+            ))
+          ) : (
+            // Actual car cards
+            interestCars.map(car => (
               <CarCard key={car.id} car={car} />
-            ))}
-          </div>
+            ))
+          )}
         </div>
-      )}
-      
-      {/* Loading state for recommendations */}
-      {recommendationsLoading && (
-        <div className="flex justify-center my-4 sm:my-16">
-          <div className="animate-pulse flex space-x-4">
-            <div className="rounded-full bg-blue-200 h-12 w-12"></div>
-            <div className="flex-1 space-y-4 py-1">
-              <div className="h-4 bg-blue-200 rounded w-3/4"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-blue-200 rounded"></div>
-                <div className="h-4 bg-blue-200 rounded w-5/6"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
