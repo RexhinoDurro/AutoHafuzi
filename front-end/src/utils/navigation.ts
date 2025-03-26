@@ -25,14 +25,42 @@ export const navigateToCarDetail = (
   // Log navigation for debugging
   console.log(`[Navigation] To car ${carId} from ${from || 'unknown'}, trackView: ${trackView}`);
   
-  navigate(`/car/${carId}`, {
-    state: {
-      doNotTrackView: !trackView,
-      from,
-      navigatedAt: Date.now()
-    },
-    replace
-  });
+  // Check if we're already on the car detail page for this car
+  const currentPath = window.location.pathname;
+  const targetPath = `/car/${carId}`;
+  
+  if (currentPath === targetPath) {
+    // First navigate away to force React Router to handle the navigation
+    navigate('/cars', { 
+      replace: true, 
+      state: { 
+        tempNavigation: true,
+        originalCarId: carId
+      }
+    });
+    
+    // Then navigate back to the car detail
+    setTimeout(() => {
+      navigate(targetPath, {
+        replace: false,
+        state: {
+          from: '/cars',
+          doNotTrackView: !trackView,
+          navigatedAt: Date.now()
+        }
+      });
+    }, 10);
+  } else {
+    // Normal navigation
+    navigate(targetPath, {
+      state: {
+        from,
+        doNotTrackView: !trackView,
+        navigatedAt: Date.now()
+      },
+      replace
+    });
+  }
 };
 
 /**

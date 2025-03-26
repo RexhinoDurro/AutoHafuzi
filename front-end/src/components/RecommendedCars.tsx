@@ -1,6 +1,6 @@
 // front-end/src/components/RecommendedCars.tsx
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CarCard from './CarCard';
 import { Car } from '../types/car';
 import { API_ENDPOINTS } from '../config/api'; 
@@ -20,6 +20,7 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const fetchRecommendedCars = async () => {
@@ -163,6 +164,33 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
     fetchRecommendedCars();
   }, [currentCar, excludeCarIds, navigate]);
   
+  // Handle view of similar car
+  const handleViewSimilarCar = (carSlug: string) => {
+    // Force a reload by navigating to a different URL first if we're already viewing this car
+    if (location.pathname === `/car/${carSlug}`) {
+      // Create a temporary different path and then navigate to the actual car
+      navigate('/cars', { replace: true, state: { tempNavigation: true } });
+      
+      // Use setTimeout to ensure the navigation happens in the next event loop
+      setTimeout(() => {
+        navigate(`/car/${carSlug}`, { 
+          state: { 
+            from: '/cars',
+            trackView: true 
+          }
+        });
+      }, 0);
+    } else {
+      // Normal navigation if we're not already on this car's page
+      navigate(`/car/${carSlug}`, { 
+        state: { 
+          from: location.pathname,
+          trackView: true 
+        }
+      });
+    }
+  };
+  
   // Only show the component if we have recommendations or alwaysShow is true
   if (loading) {
     return alwaysShow ? (
@@ -198,7 +226,9 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
       {carsToShow.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {carsToShow.map(car => (
-            <CarCard key={car.id} car={car} />
+            <div key={car.id} onClick={() => handleViewSimilarCar(car.slug || car.id.toString())} className="cursor-pointer">
+              <CarCard key={car.id} car={car} />
+            </div>
           ))}
           
           {/* Add empty placeholders if needed */}

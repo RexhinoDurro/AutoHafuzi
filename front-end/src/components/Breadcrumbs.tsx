@@ -19,7 +19,27 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ carTitle }) => {
     ];
     
     let currentPath = '';
+
+    // Special handling for car details page
+    if (pathSegments.length === 2 && pathSegments[0] === 'car' && pathSegments[1]) {
+      // Add 'Cars' as the intermediate breadcrumb
+      items.push({ 
+        name: 'Makina për Shitje', 
+        path: '/cars', 
+        isLast: false 
+      });
+      
+      // Add the car title as the final breadcrumb
+      items.push({ 
+        name: carTitle || 'Detaje Makine', 
+        path: location.pathname, 
+        isLast: true 
+      });
+      
+      return items;
+    }
     
+    // Process regular path segments
     pathSegments.forEach((segment, index) => {
       currentPath += `/${segment}`;
       const isLast = index === pathSegments.length - 1;
@@ -32,8 +52,8 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ carTitle }) => {
           name = 'Makina për Shitje';
           break;
         case 'car':
-          name = carTitle || 'Detaje Makine';
-          break;
+          // Skip this segment as we handle car details specially
+          return;
         case 'about':
           name = 'Rreth Nesh';
           break;
@@ -44,16 +64,19 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ carTitle }) => {
           name = 'Të Preferuarat';
           break;
         default:
-          // Try to handle dynamic parameters
-          if (params.id && segment === params.id) {
+          // For the car slug in car/:slug, use the car title
+          if (params.id && segment === params.id && index === pathSegments.length - 1) {
             name = carTitle || 'Detaje Makine';
           } else {
-            // Capitalize first letter
+            // Capitalize first letter for other segments
             name = segment.charAt(0).toUpperCase() + segment.slice(1);
           }
       }
       
-      items.push({ name, path: currentPath, isLast });
+      // Only add the item if we have a name for it
+      if (name) {
+        items.push({ name, path: currentPath, isLast });
+      }
     });
     
     return items;

@@ -1,5 +1,7 @@
+
+
 // src/components/CarForm/CarForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
@@ -54,6 +56,8 @@ const CarForm = () => {
   const [exteriorColors, setExteriorColors] = useState<ExteriorColor[]>([]);
   const [interiorColors, setInteriorColors] = useState<InteriorColor[]>([]);
   const [isColorsLoading, setIsColorsLoading] = useState<boolean>(false);
+  const [formattedPrice, setFormattedPrice] = useState<string>('');
+  const [formattedMileage, setFormattedMileage] = useState<string>('');
 
   const optionCategories = {
     'COMFORT': 'Rehatia & Komoditeti',
@@ -97,6 +101,21 @@ const CarForm = () => {
     }
   }, [formData.model, fetchVariants]);
 
+  // Initialize formatted values when formData changes
+  useEffect(() => {
+    if (!formData.discussedPrice && formData.price) {
+      setFormattedPrice(formatPrice(formData.price));
+    } else {
+      setFormattedPrice('');
+    }
+    
+    if (formData.mileage) {
+      setFormattedMileage(formatMileage(formData.mileage));
+    } else {
+      setFormattedMileage('');
+    }
+  }, [formData.price, formData.discussedPrice, formData.mileage]);
+
   // Format price with commas
   const formatPrice = (price: number | string): string => {
     if (!price) return '';
@@ -118,6 +137,33 @@ const CarForm = () => {
   const parseMileage = (formattedMileage: string): number => {
     return parseFloat(formattedMileage.replace(/,/g, '')) || 0;
   };
+
+  // Handle price change with debouncing
+  const handlePriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormattedPrice(value);
+    
+    // Only update the actual formData when needed
+    const parsedPrice = parsePrice(value);
+    setFormData(prev => ({
+      ...prev,
+      price: parsedPrice, 
+      discussedPrice: false
+    }));
+  }, [setFormData]);
+
+  // Handle mileage change with debouncing
+  const handleMileageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormattedMileage(value);
+    
+    // Only update the actual formData when needed
+    const parsedMileage = parseMileage(value);
+    setFormData(prev => ({
+      ...prev,
+      mileage: parsedMileage
+    }));
+  }, [setFormData]);
 
   // Use the image upload handler from the hook
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,6 +237,13 @@ const CarForm = () => {
     fetchOptions();
     fetchColors();
   }, []);
+
+  // Update selectedOptions when formData option_ids change
+  useEffect(() => {
+    if (formData.option_ids && formData.option_ids.length > 0) {
+      setSelectedOptions(formData.option_ids);
+    }
+  }, [formData.option_ids]);
 
   // Validate dates
   const validateDates = () => {
@@ -331,14 +384,14 @@ const CarForm = () => {
           Back to Dashboard
         </button>
       </div>
-
+  
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-
+  
       {/* Form validation errors */}
       {Object.keys(validationErrors).length > 0 && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
@@ -350,7 +403,7 @@ const CarForm = () => {
           </ul>
         </div>
       )}
-
+  
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6 space-y-6">
           {/* Basic Information Section */}
@@ -363,7 +416,12 @@ const CarForm = () => {
                 </label>
                 <select
                   value={formData.make_id || ''}
-                  onChange={(e) => setFormData({ ...formData, make_id: parseInt(e.target.value), model_id: 0, variant_id: undefined })}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    make_id: parseInt(e.target.value), 
+                    model_id: 0, 
+                    variant_id: undefined 
+                  }))}
                   className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
                   required
                   disabled={isMakesLoading}
@@ -384,7 +442,11 @@ const CarForm = () => {
                 </label>
                 <select
                   value={formData.model_id || ''}
-                  onChange={(e) => setFormData({ ...formData, model_id: parseInt(e.target.value), variant_id: undefined })}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    model_id: parseInt(e.target.value), 
+                    variant_id: undefined 
+                  }))}
                   className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
                   required
                   disabled={!formData.make_id || isModelsLoading}
@@ -400,7 +462,7 @@ const CarForm = () => {
                 {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
               </div>
             </div>
-
+  
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -410,10 +472,10 @@ const CarForm = () => {
                   value={formData.variant_id || ''}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setFormData({ 
-                      ...formData, 
+                    setFormData(prev => ({ 
+                      ...prev, 
                       variant_id: value === '' ? undefined : parseInt(value) // Keep as undefined if empty, otherwise use the value
-                    });
+                    }));
                   }}
                   className="w-full p-2 border rounded-lg"
                   disabled={!formData.model_id || isVariantsLoading}
@@ -428,7 +490,7 @@ const CarForm = () => {
                 {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
               </div>
             </div>
-
+  
             {/* First Registration Date Fields */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -439,10 +501,10 @@ const CarForm = () => {
                 <div>
                   <select
                     value={formData.first_registration_day || ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
                       first_registration_day: e.target.value ? parseInt(e.target.value) : undefined
-                    })}
+                    }))}
                     className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
                     required={formData.is_used}
                   >
@@ -462,10 +524,10 @@ const CarForm = () => {
                 <div>
                   <select
                     value={formData.first_registration_month || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
                       first_registration_month: e.target.value ? parseInt(e.target.value) : undefined
-                    })}
+                    }))}
                     className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
                     required={formData.is_used}
                   >
@@ -485,10 +547,10 @@ const CarForm = () => {
                 <div>
                   <select
                     value={formData.first_registration_year || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
                       first_registration_year: e.target.value ? parseInt(e.target.value) : undefined
-                    })}
+                    }))}
                     className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
                     required={formData.is_used}
                   >
@@ -505,7 +567,7 @@ const CarForm = () => {
                 </div>
               </div>
             </div>
-
+  
             {/* Colors Section */}
             <div className="mt-4">
               <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
@@ -521,12 +583,12 @@ const CarForm = () => {
                       const colorId = e.target.value ? parseInt(e.target.value) : undefined;
                       const selectedColor = exteriorColors.find(color => color.id === colorId);
                       
-                      setFormData({ 
-                        ...formData, 
+                      setFormData(prev => ({ 
+                        ...prev, 
                         exterior_color_id: colorId,
                         exterior_color_name: selectedColor?.name,
                         exterior_color_hex: selectedColor?.hex_code
-                      });
+                      }));
                     }}
                     className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
                     required
@@ -563,12 +625,12 @@ const CarForm = () => {
                       const colorId = e.target.value ? parseInt(e.target.value) : undefined;
                       const selectedColor = interiorColors.find(color => color.id === colorId);
                       
-                      setFormData({ 
-                        ...formData, 
+                      setFormData(prev => ({ 
+                        ...prev, 
                         interior_color_id: colorId,
                         interior_color_name: selectedColor?.name,
                         interior_color_hex: selectedColor?.hex_code
-                      });
+                      }));
                     }}
                     className="w-full p-2 border rounded-lg"
                     disabled={isColorsLoading}
@@ -603,11 +665,11 @@ const CarForm = () => {
                       const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
                       const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
                       
-                      setFormData({ 
-                        ...formData, 
+                      setFormData(prev => ({ 
+                        ...prev, 
                         upholstery_id: upholsteryId,
                         upholstery_name: selectedUpholstery?.name || ''
-                      });
+                      }));
                     }}
                     className="w-full p-2 border rounded-lg"
                     disabled={isUpholsteryLoading}
@@ -621,15 +683,15 @@ const CarForm = () => {
                 </div>
               </div>
             </div>
-
+  
             <div className="space-y-2 mt-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Price (€) {!formData.discussedPrice && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
-                value={formData.discussedPrice ? '' : formatPrice(formData.price)}
-                onChange={(e) => setFormData({ ...formData, price: parsePrice(e.target.value), discussedPrice: false })}
+                value={formData.discussedPrice ? '' : formattedPrice}
+                onChange={handlePriceChange}
                 className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
                 required={!formData.discussedPrice}
                 disabled={formData.discussedPrice}
@@ -642,11 +704,11 @@ const CarForm = () => {
                   checked={formData.discussedPrice || false}
                   onChange={(e) => {
                     const isChecked = e.target.checked;
-                    setFormData({ 
-                      ...formData, 
+                    setFormData(prev => ({ 
+                      ...prev, 
                       discussedPrice: isChecked,
-                      price: isChecked ? 0 : formData.price // Set price to 0 when discussedPrice is checked
-                    });
+                      price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
+                    }));
                   }}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
@@ -657,7 +719,7 @@ const CarForm = () => {
               {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
             </div>
           </div>
-
+  
           {/* Image Upload */}
           <div>
             <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
@@ -684,359 +746,358 @@ const CarForm = () => {
               />
             )}
           </div>
-
-        {/* Vehicle Details */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Body Type
-              </label>
-              <select
-                value={formData.body_type}
-                onChange={(e) => setFormData({ ...formData, body_type: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              >
-                {BODY_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Drivetrain
-              </label>
-              <select
-                value={formData.drivetrain}
-                onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              >
-                {DRIVETRAINS.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Seats
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="9"
-                value={formData.seats}
-                onChange={(e) => setFormData({ ...formData, seats: parseInt(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Doors
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="6"
-                value={formData.doors}
-                onChange={(e) => setFormData({ ...formData, doors: parseInt(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mileage (km)
-              </label>
-              <input
-                type="text"
-                value={formData.mileage === 0 ? '' : formatMileage(formData.mileage)}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  mileage: parseMileage(e.target.value) 
-                })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Technical Specifications */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Power (HP)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.power}
-                onChange={(e) => setFormData({ ...formData, power: parseInt(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Engine Size (L)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.engine_size}
-                onChange={(e) => setFormData({ ...formData, engine_size: parseFloat(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Weight (kg)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) })}
-                className="w-full p-2 border rounded-lg"
-              />
+  
+          {/* Vehicle Details */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Body Type
+                </label>
+                <select
+                  value={formData.body_type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, body_type: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {BODY_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gearbox
-              </label>
-              <select
-                value={formData.gearbox}
-                onChange={(e) => setFormData({ ...formData, gearbox: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              >
-                {GEARBOX_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Drivetrain
+                </label>
+                <select
+                  value={formData.drivetrain}
+                  onChange={(e) => setFormData(prev => ({ ...prev, drivetrain: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {DRIVETRAINS.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cylinders
-              </label>
-              <select
-                value={formData.cylinders}
-                onChange={(e) => setFormData({ ...formData, cylinders: parseInt(e.target.value) })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
-              >
-                <option value="">Select Cylinders</option>
-                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-              {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Information */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fuel Type
-              </label>
-              <select
-                value={formData.fuel_type}
-                onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              >
-                {FUEL_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Emission Class
-              </label>
-              <select
-                value={formData.emission_class}
-                onChange={(e) => setFormData({ ...formData, emission_class: e.target.value })}
-                className="w-full p-2 border rounded-lg"
-              >
-                {EMISSION_CLASSES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+  
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Seats
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="9"
+                  value={formData.seats}
+                  onChange={(e) => setFormData(prev => ({ ...prev, seats: parseInt(e.target.value) }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doors
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={formData.doors}
+                  onChange={(e) => setFormData(prev => ({ ...prev, doors: parseInt(e.target.value) }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mileage (km)
+                </label>
+                <input
+                  type="text"
+                  value={formattedMileage}
+                  onChange={handleMileageChange}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
             </div>
           </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Created At <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.created_at}
-                onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
-                className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
-                required
-              />
-              {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
+  
+          {/* Technical Specifications */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Power (HP)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.power}
+                  onChange={(e) => setFormData(prev => ({ ...prev, power: parseInt(e.target.value) }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Engine Size (L)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={formData.engine_size}
+                  onChange={(e) => setFormData(prev => ({ ...prev, engine_size: parseFloat(e.target.value) }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.weight}
+                  onChange={(e) => setFormData(prev => ({ ...prev, weight: parseInt(e.target.value) }))}
+                  className="w-full p-2 border rounded-lg"
+                />
+                </div>
+            </div>
+  
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gearbox
+                </label>
+                <select
+                  value={formData.gearbox}
+                  onChange={(e) => setFormData(prev => ({ ...prev, gearbox: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {GEARBOX_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cylinders
+                </label>
+                <select
+                  value={formData.cylinders}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cylinders: parseInt(e.target.value) }))}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
+                >
+                  <option value="">Select Cylinders</option>
+                  {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
+                </select>
+                {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
+              </div>
+            </div>
+          </div>
+  
+          {/* Additional Information */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fuel Type
+                </label>
+                <select
+                  value={formData.fuel_type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fuel_type: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {FUEL_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+  
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Emission Class
+                </label>
+                <select
+                  value={formData.emission_class}
+                  onChange={(e) => setFormData(prev => ({ ...prev, emission_class: e.target.value }))}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {EMISSION_CLASSES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+  
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Created At <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.created_at}
+                  onChange={(e) => setFormData(prev => ({ ...prev, created_at: e.target.value }))}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
+                  required
+                />
+                {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
+              </div>
+              
+              <div className="flex items-center mt-6">
+                <input
+                  type="checkbox"
+                  checked={formData.customs_paid}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customs_paid: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
+              </div>
+            </div>
+  
+            {/* Checkboxes */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.is_used}
+                  onChange={(e) => setFormData(prev => ({ ...prev, is_used: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
+              </div>
+            </div>
+          </div>
+          
+          {/* Options */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Additional Options
+            </label>
+            
+            {/* Loading state */}
+            {availableOptions.length === 0 && (
+              <div className="text-sm text-gray-500 mb-2">Loading options...</div>
+            )}
+            
+            {/* Category tabs */}
+            <div className="mb-3 border-b border-gray-200">
+              <nav className="-mb-px flex space-x-4 overflow-x-auto">
+                {Object.entries(optionCategories).map(([categoryKey, categoryLabel]) => (
+                  <button
+                    key={categoryKey}
+                    type="button"
+                    onClick={() => setActiveCategory(categoryKey)}
+                    className={`whitespace-nowrap py-2 px-3 text-sm font-medium ${
+                      activeCategory === categoryKey 
+                        ? 'border-b-2 border-blue-500 text-blue-600' 
+                        : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {categoryLabel}
+                  </button>
+                ))}
+              </nav>
+            </div>
+  
+            <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
+              <div className="grid grid-cols-2 gap-2">
+              {categorizedOptions[activeCategory]?.map((option) => (
+                <div key={option.id} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`option-${option.id}`}
+                    checked={selectedOptions.includes(option.id)}
+                    onChange={(e) => {
+                      const optionId = option.id;
+                      let newSelectedOptions: number[];
+                      
+                      if (e.target.checked) {
+                        // Add the option if checked
+                        newSelectedOptions = [...selectedOptions, optionId];
+                      } else {
+                        // Remove the option if unchecked
+                        newSelectedOptions = selectedOptions.filter(id => id !== optionId);
+                      }
+                      
+                      setSelectedOptions(newSelectedOptions);
+                      
+                      // Update formData with the selected option IDs directly
+                      setFormData(prev => ({
+                        ...prev,
+                        option_ids: newSelectedOptions
+                      }));
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor={`option-${option.id}`} className="ml-2 text-sm text-gray-700">
+                    {option.name}
+                  </label>
+                </div>
+              ))}
+  
+                {categorizedOptions[activeCategory]?.length === 0 && (
+                  <div className="col-span-2 text-sm text-gray-500 py-2">
+                    No options available in this category
+                  </div>
+                )}
+              </div>
             </div>
             
-            <div className="flex items-center mt-6">
-              <input
-                type="checkbox"
-                checked={formData.customs_paid}
-                onChange={(e) => setFormData({ ...formData, customs_paid: e.target.checked })}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
-            </div>
+            {selectedOptions.length > 0 && (
+              <div className="mt-3">
+                <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Options ({selectedOptions.length}):</h4>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedOptions.map((optionId) => {
+                    const option = availableOptions.find(opt => opt.id === optionId);
+                    return option ? (
+                      <div key={optionId} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center">
+                        {option.name}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newSelected = selectedOptions.filter(id => id !== optionId);
+                            setSelectedOptions(newSelected);
+                            setFormData(prev => ({
+                              ...prev,
+                              option_ids: newSelected
+                            }));
+                          }}
+                          className="ml-1 text-gray-500 hover:text-gray-700"
+                        >
+                          <span className="sr-only">Remove</span>
+                          ×
+                        </button>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Checkboxes */}
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.is_used}
-                onChange={(e) => setFormData({ ...formData, is_used: e.target.checked })}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
-            </div>
-          </div>
-        </div>
-{/* Options */}
-<div>
-  <h3 className="text-lg font-medium text-gray-800 mb-3">Options</h3>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Additional Options
-  </label>
   
-  {/* Loading state */}
-  {availableOptions.length === 0 && (
-    <div className="text-sm text-gray-500 mb-2">Loading options...</div>
-  )}
-  
-  {/* Category tabs */}
-  <div className="mb-3 border-b border-gray-200">
-    <nav className="-mb-px flex space-x-4 overflow-x-auto">
-      {Object.entries(optionCategories).map(([categoryKey, categoryLabel]) => (
-        <button
-          key={categoryKey}
-          type="button"
-          onClick={() => setActiveCategory(categoryKey)}
-          className={`whitespace-nowrap py-2 px-3 text-sm font-medium ${
-            activeCategory === categoryKey 
-              ? 'border-b-2 border-blue-500 text-blue-600' 
-              : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-          }`}
-        >
-          {categoryLabel}
-        </button>
-      ))}
-    </nav>
-  </div>
-
-  <div className="max-h-60 overflow-y-auto border rounded-lg p-3">
-    <div className="grid grid-cols-2 gap-2">
-    {categorizedOptions[activeCategory]?.map((option) => (
-  <div key={option.id} className="flex items-center">
-    <input
-      type="checkbox"
-      id={`option-${option.id}`}
-      checked={selectedOptions.includes(option.id)}
-      onChange={(e) => {
-        const optionId = option.id;
-        let newSelectedOptions: number[];
-        
-        if (e.target.checked) {
-          // Add the option if checked
-          newSelectedOptions = [...selectedOptions, optionId];
-        } else {
-          // Remove the option if unchecked
-          newSelectedOptions = selectedOptions.filter(id => id !== optionId);
-        }
-        
-        setSelectedOptions(newSelectedOptions);
-        
-        // Update formData with the selected option IDs directly
-        setFormData({
-          ...formData,
-          option_ids: newSelectedOptions
-        });
-      }}
-      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-    />
-    <label htmlFor={`option-${option.id}`} className="ml-2 text-sm text-gray-700">
-      {option.name}
-    </label>
-  </div>
-))}
-
-      {categorizedOptions[activeCategory]?.length === 0 && (
-        <div className="col-span-2 text-sm text-gray-500 py-2">
-          No options available in this category
-        </div>
-      )}
-    </div>
-  </div>
-  
-  {selectedOptions.length > 0 && (
-    <div className="mt-3">
-      <h4 className="text-sm font-medium text-gray-700 mb-1">Selected Options ({selectedOptions.length}):</h4>
-      <div className="flex flex-wrap gap-2 mt-2">
-        {selectedOptions.map((optionId) => {
-          const option = availableOptions.find(opt => opt.id === optionId);
-          return option ? (
-            <div key={optionId} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full flex items-center">
-              {option.name}
-              <button
-                type="button"
-                onClick={() => {
-                  const newSelected = selectedOptions.filter(id => id !== optionId);
-                  setSelectedOptions(newSelected);
-                  setFormData({
-                    ...formData,
-                    option_ids: newSelected
-                  });
-                }}
-                className="ml-1 text-gray-500 hover:text-gray-700"
-              >
-                <span className="sr-only">Remove</span>
-                ×
-              </button>
-            </div>
-          ) : null;
-        })}
-      </div>
-    </div>
-  )}
-</div>
-        {/* Description */}
-        <div>
+         {/* Description */}
+         <div>
           <h3 className="text-lg font-medium text-gray-800 mb-3">Description</h3>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description <span className="text-red-500">*</span>
           </label>
           <textarea
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             className={`w-full p-2 border rounded-lg h-32 ${validationErrors.description ? 'border-red-500' : ''}`}
             required
           />
@@ -1054,7 +1115,7 @@ const CarForm = () => {
         {isLoading ? 'Saving...' : id ? 'Update Car' : 'Add Car'}
       </button>
     </form>
-    </div>
+  </div>
   );
 };
 

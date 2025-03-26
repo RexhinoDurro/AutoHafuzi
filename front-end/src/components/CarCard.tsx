@@ -9,12 +9,14 @@ interface CarCardProps {
   car: Car;
   showFavoriteButton?: boolean;
   isFromFavorites?: boolean;
+  onClick?: (event: React.MouseEvent) => void; // Added onClick prop for external handling
 }
 
 const CarCard: React.FC<CarCardProps> = ({ 
   car, 
   showFavoriteButton = true,
-  isFromFavorites = false 
+  isFromFavorites = false,
+  onClick // New prop
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +35,12 @@ const CarCard: React.FC<CarCardProps> = ({
 
   // Handle card click - use the centralized navigation utility
   const handleCardClick = (e: React.MouseEvent) => {
+    // If an external onClick handler is provided, use that instead
+    if (onClick) {
+      onClick(e);
+      return;
+    }
+    
     e.preventDefault();
     
     // Use the car slug if available, otherwise use the ID
@@ -43,10 +51,25 @@ const CarCard: React.FC<CarCardProps> = ({
                           !location.pathname.includes('/admin') &&
                           !location.pathname.includes('/auth');
     
-    navigateToCarDetail(navigate, carIdentifier, {
-      trackView: shouldTrackView,
-      from: location.pathname
-    });
+    // If we're already on the car detail page for this car, force refresh
+    if (location.pathname === `/car/${carIdentifier}`) {
+      // Navigate away first
+      navigate('/cars', { replace: true, state: { tempNavigation: true } });
+      
+      // Then navigate back to the car detail
+      setTimeout(() => {
+        navigateToCarDetail(navigate, carIdentifier, {
+          trackView: shouldTrackView,
+          from: '/cars'
+        });
+      }, 0);
+    } else {
+      // Normal navigation
+      navigateToCarDetail(navigate, carIdentifier, {
+        trackView: shouldTrackView,
+        from: location.pathname
+      });
+    }
   };
 
   return (
@@ -68,7 +91,7 @@ const CarCard: React.FC<CarCardProps> = ({
         
         {/* Favorite button overlay if enabled */}
         {showFavoriteButton && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
             <FavoriteButton 
               carId={car.id} 
               size={20} 
