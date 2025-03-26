@@ -1,9 +1,9 @@
-// Updated RecommendedCars.tsx to fix navigation issue
+// RecommendedCars.tsx with direct navigation approach
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CarCard from './CarCard';
 import { Car } from '../types/car';
 import { API_ENDPOINTS } from '../config/api'; 
+import CarCard from './CarCard';
 
 interface RecommendedCarsProps {
   currentCar?: Car;
@@ -41,7 +41,6 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
         // If we have a current car, use its attributes for similarity
         if (currentCar) {
           // Prioritize finding cars of the same make
-          // Use make property which could be either an ID or string
           if (currentCar.make) {
             query.make = currentCar.make.toString();
           }
@@ -66,16 +65,12 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
           }
         } else {
           // If no current car, use activity data for recommendations
-          
-          // Get last search parameters from localStorage
           const lastSearch = localStorage.getItem('lastCarSearch');
           const lastSearchParams = lastSearch ? JSON.parse(lastSearch) : {};
           
-          // Get user activity from localStorage
           const userActivity = localStorage.getItem('userCarActivity');
           const activityData = userActivity ? JSON.parse(userActivity) : { makes: {}, models: {} };
           
-          // Find most viewed make and model
           let topMake = null;
           
           if (Object.keys(activityData.makes).length > 0) {
@@ -83,16 +78,13 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
               .sort((a, b) => (b[1] as number) - (a[1] as number))
               .map(entry => entry[0])[0];
               
-            // If topMake starts with 'name:', extract just the name
             if (topMake && topMake.startsWith('name:')) {
-              // We have a name instead of ID, try to match by name (not ideal but better than nothing)
               query.search = topMake.substring(5);
             } else if (topMake) {
               query.make = topMake;
             }
           }
           
-          // Add other relevant parameters from last search
           if (lastSearchParams.fuel_type) {
             query.fuel_type = lastSearchParams.fuel_type.toString();
           }
@@ -102,13 +94,11 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
           }
         }
 
-        // Convert query object to URLSearchParams
         const queryParams = new URLSearchParams();
         Object.entries(query).forEach(([key, value]) => {
           queryParams.append(key, value);
         });
         
-        // Fetch the recommendations
         const response = await fetch(`${API_ENDPOINTS.CARS.LIST}?${queryParams}`);
         
         if (!response.ok) {
@@ -118,12 +108,9 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
         const data = await response.json();
         let cars = data.results || [];
         
-        // Filter out excluded cars
         cars = cars.filter((car: Car) => !allExcludedIds.includes(car.id));
         
-        // If we can't find enough cars of the same make, try without make filter
         if (cars.length < 4 && currentCar && currentCar.make) {
-          // Build a new query without make
           const backupQuery = { ...query };
           delete backupQuery.make;
           
@@ -138,18 +125,15 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
             const backupData = await backupResponse.json();
             let backupCars = backupData.results || [];
             
-            // Filter out excluded cars and cars already in our list
             backupCars = backupCars.filter((car: Car) => 
               !allExcludedIds.includes(car.id) && 
               !cars.some((c: Car) => c.id === car.id)
             );
             
-            // Add backup cars to main list
             cars = [...cars, ...backupCars];
           }
         }
         
-        // Limit to 4 cars
         setRecommendedCars(cars.slice(0, 4));
       } catch (error) {
         console.error('Error fetching recommended cars:', error);
@@ -162,8 +146,16 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
     
     fetchRecommendedCars();
   }, [currentCar, excludeCarIds, navigate]);
+
+  // Custom handler for car card clicks
+  const handleCarClick = (car: Car) => {
+    // Get the target URL
+    const targetUrl = `/car/${car.slug || car.id.toString()}`;
+    
+    // Use direct browser navigation to completely refresh the page
+    window.location.href = targetUrl;
+  };
   
-  // Only show the component if we have recommendations or alwaysShow is true
   if (loading) {
     return alwaysShow ? (
       <div className="mt-12 space-y-10">
@@ -181,13 +173,10 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
     return null;
   }
   
-  // Hide the component if no recommendations are available and alwaysShow is false
   if (recommendedCars.length === 0 && !alwaysShow) {
     return null;
   }
   
-  // If we need to always show but don't have enough cars, show what we have
-  // or placeholders if we have none
   const carsToShow = recommendedCars.length > 0 ? recommendedCars : [];
   const emptySlots = 4 - carsToShow.length;
   
@@ -197,15 +186,21 @@ const RecommendedCars: React.FC<RecommendedCarsProps> = ({
       
       {carsToShow.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Key change: Don't wrap CarCard in a div with onClick handler */}
           {carsToShow.map(car => (
-            <CarCard 
-              key={car.id} 
-              car={car} 
-            />
+            <div key={car.id} 
+                 className="cursor-pointer" 
+                 onClick={() => handleCarClick(car)}>
+              <CarCard 
+                key={car.id} 
+                car={car} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCarClick(car);
+                }}
+              />
+            </div>
           ))}
           
-          {/* Add empty placeholders if needed */}
           {alwaysShow && emptySlots > 0 && [...Array(emptySlots)].map((_, index) => (
             <div key={`empty-${index}`} className="bg-gray-100 rounded-lg p-4 h-64 flex items-center justify-center">
               <p className="text-gray-400">Makina të ngjashme do të shfaqen këtu</p>
