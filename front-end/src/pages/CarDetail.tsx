@@ -708,7 +708,6 @@ const CarDetail: React.FC = () => {
 
       {/* Related cars section - Added for better internal linking and SEO */}
       <div className="mt-12">
-        <h3 className="text-2xl font-bold mb-6">Makina të Ngjashme</h3>
         <RecommendedCars excludeCarIds={[Number(id)]} />
       </div>
     </div>
