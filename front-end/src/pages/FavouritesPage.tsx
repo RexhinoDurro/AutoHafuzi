@@ -12,7 +12,7 @@ const FavoritesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // Fetch all favorite cars
+  // Fetch all cars and filter for favorites
   useEffect(() => {
     const fetchFavoriteCars = async () => {
       if (favorites.length === 0) {
@@ -27,19 +27,24 @@ const FavoritesPage: React.FC = () => {
       try {
         console.log('Fetching all cars to find favorites with IDs:', favorites);
         
-        // First, fetch all cars (we'll filter for favorites)
-        const allCarsResponse = await fetch(API_ENDPOINTS.CARS.LIST, {
+        // Get all cars without pagination limits
+        // This ensures we get all cars to filter for favorites
+        const url = `${API_ENDPOINTS.CARS.LIST}?limit=100`;
+        console.log('Fetching cars from:', url);
+        
+        const response = await fetch(url, {
           headers: { 'X-View-Tracking': 'false' }
         });
         
-        if (!allCarsResponse.ok) {
+        if (!response.ok) {
           throw new Error('Failed to fetch cars listing');
         }
         
-        const allCarsData = await allCarsResponse.json();
+        const data = await response.json();
+        console.log(`Fetched ${data.results.length} total cars`);
         
         // Filter to include only favorited cars
-        const favoriteCarsList = allCarsData.results.filter(
+        const favoriteCarsList = data.results.filter(
           (car: Car) => favorites.includes(car.id)
         );
         

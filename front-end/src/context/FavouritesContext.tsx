@@ -19,48 +19,35 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(undefin
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [favorites, setFavorites] = useState<number[]>([]);
   const [favoritesCars, setFavoritesCars] = useState<Car[]>([]);
-  const [initialized, setInitialized] = useState(false);
 
   // Load favorites from localStorage when the component mounts
   useEffect(() => {
-    const loadFavorites = () => {
-      try {
-        const savedFavorites = localStorage.getItem(FAVORITES_STORAGE_KEY);
-        if (savedFavorites) {
-          const parsedFavorites = JSON.parse(savedFavorites);
-          if (Array.isArray(parsedFavorites)) {
-            console.log('Loaded favorites from storage:', parsedFavorites);
-            setFavorites(parsedFavorites);
-          }
+    try {
+      const savedFavorites = localStorage.getItem(FAVORITES_STORAGE_KEY);
+      if (savedFavorites) {
+        const parsedFavorites = JSON.parse(savedFavorites);
+        if (Array.isArray(parsedFavorites)) {
+          console.log('Loaded favorites from storage:', parsedFavorites);
+          setFavorites(parsedFavorites);
         }
-      } catch (error) {
-        console.error('Failed to parse favorites:', error);
-        localStorage.removeItem(FAVORITES_STORAGE_KEY);
-      } finally {
-        setInitialized(true);
       }
-    };
-
-    loadFavorites();
+    } catch (error) {
+      console.error('Failed to parse favorites:', error);
+      localStorage.removeItem(FAVORITES_STORAGE_KEY);
+    }
   }, []);
 
   // Save favorites to localStorage whenever they change
   useEffect(() => {
-    if (!initialized) return;
-    
     try {
-      const favoritesJson = JSON.stringify(favorites);
-      localStorage.setItem(FAVORITES_STORAGE_KEY, favoritesJson);
-      console.log('Saved favorites to storage:', favorites);
+      localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
     } catch (error) {
       console.error('Error saving favorites:', error);
     }
-  }, [favorites, initialized]);
+  }, [favorites]);
 
-  const addFavorite = (carId: number, slug?: string) => {
-    console.log(`Adding favorite: ${carId} (slug: ${slug || 'none'})`);
-    
-    // Only store the ID in our primary favorites array
+  const addFavorite = (carId: number) => {
+    console.log(`Adding favorite: ${carId}`);
     setFavorites(prev => {
       if (!prev.includes(carId)) {
         return [...prev, carId];
@@ -82,6 +69,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     console.log('Clearing all favorites');
     setFavorites([]);
     setFavoritesCars([]);
+    localStorage.removeItem(FAVORITES_STORAGE_KEY);
   };
 
   return (
