@@ -1,4 +1,4 @@
-// front-end/src/context/EnhancedFavouritesContext.tsx
+// front-end/src/context/FavouritesContext.tsx
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { Car } from '../types/car';
 
@@ -126,6 +126,8 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [favorites, storedFavorites, initialized]);
 
   const addFavorite = (carId: number, slug?: string) => {
+    console.log(`Adding favorite: id=${carId}, slug=${slug || 'not provided'}`);
+    
     // Update regular favorites
     setFavorites(prev => {
       if (!prev.includes(carId)) {
@@ -137,16 +139,23 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     // Update stored favorites with slugs
     setStoredFavorites(prev => {
       // If this car ID is already in the stored favorites, update the slug if provided
-      const existing = prev.find(fav => fav.id === carId);
-      if (existing) {
-        if (slug && existing.slug !== slug) {
-          return prev.map(fav => fav.id === carId ? { ...fav, slug: slug } : fav);
+      const existingIdx = prev.findIndex(fav => fav.id === carId);
+      
+      if (existingIdx >= 0) {
+        if (slug && prev[existingIdx].slug !== slug) {
+          // Create a new array with the updated slug
+          const newStoredFavorites = [...prev];
+          newStoredFavorites[existingIdx] = { ...newStoredFavorites[existingIdx], slug };
+          console.log(`Updated slug for car ${carId}: ${slug}`);
+          return newStoredFavorites;
         }
         return prev;
       }
       
       // Otherwise add a new favorite with the provided slug or carId as fallback
-      return [...prev, { id: carId, slug: slug || carId.toString() }];
+      const newEntry = { id: carId, slug: slug || carId.toString() };
+      console.log(`Added new stored favorite: ${JSON.stringify(newEntry)}`);
+      return [...prev, newEntry];
     });
   };
 
@@ -169,6 +178,15 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
     setFavoritesCars([]);
     setStoredFavorites([]);
   };
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('FavoritesContext state updated:', {
+      favorites: favorites.length,
+      storedFavorites: storedFavorites.length,
+      initialized
+    });
+  }, [favorites, storedFavorites, initialized]);
 
   return (
     <FavoritesContext.Provider value={{ 

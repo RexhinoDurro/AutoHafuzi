@@ -94,8 +94,8 @@ const CarCard: React.FC<CarCardProps> = ({
         {showFavoriteButton && (
           <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
             <FavoriteButton 
-              carId={car.id} 
-              carSlug={car.slug}
+              carId={car.id}
+              carSlug={car.slug} 
               size={20} 
               className="bg-white bg-opacity-70 p-1 rounded-full"
             />

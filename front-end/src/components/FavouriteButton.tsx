@@ -27,6 +27,7 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       removeFavorite(carId);
     } else {
       // Always pass both ID and slug when adding to favorites
+      // This ensures we have the slug for API calls later
       addFavorite(carId, carSlug || carId.toString());
     }
   };
