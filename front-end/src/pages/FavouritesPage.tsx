@@ -6,51 +6,13 @@ import { Car } from '../types/car';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
 
-interface StoredFavorite {
-  id: number;
-  slug: string;
-}
-
 const FavoritesPage: React.FC = () => {
-  const { favorites, favoritesCars, setFavoritesCars, clearAllFavorites, addFavorite, removeFavorite, getSlugById } = useFavorites();
+  const { favorites, favoritesCars, setFavoritesCars, clearAllFavorites, removeFavorite } = useFavorites();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [storedFavorites, setStoredFavorites] = useState<StoredFavorite[]>([]);
   const navigate = useNavigate();
 
-  // Load the stored favorites with slugs
-  useEffect(() => {
-    const loadStoredFavorites = () => {
-      try {
-        const favsJson = localStorage.getItem('car_favorites_with_slugs');
-        if (favsJson) {
-          const parsed = JSON.parse(favsJson);
-          if (Array.isArray(parsed)) {
-            console.log('Loaded stored favorites with slugs:', parsed);
-            setStoredFavorites(parsed);
-            return;
-          }
-        }
-        
-        // If no stored favorites with slugs, create entries based on what we know
-        const storedFavs: StoredFavorite[] = favorites.map(id => {
-          // Try to get the slug from the context
-          const slug = getSlugById ? getSlugById(id) : undefined;
-          return { id, slug: slug || id.toString() };
-        });
-
-        console.log('Created new stored favorites:', storedFavs);
-        setStoredFavorites(storedFavs);
-      } catch (error) {
-        console.error('Error loading stored favorites:', error);
-        setStoredFavorites([]);
-      }
-    };
-    
-    loadStoredFavorites();
-  }, [favorites, getSlugById]);
-
-  // Fetch the favorite cars with improved approach
+  // Fetch all favorite cars
   useEffect(() => {
     const fetchFavoriteCars = async () => {
       if (favorites.length === 0) {
@@ -63,115 +25,38 @@ const FavoritesPage: React.FC = () => {
       setError(null);
 
       try {
-        // Map favorites to stored favorites to get slugs
-        const favsToFetch = favorites.map(id => {
-          const stored = storedFavorites.find(sf => sf.id === id);
-          return { id, slug: stored?.slug || id.toString() };
+        console.log('Fetching all cars to find favorites with IDs:', favorites);
+        
+        // First, fetch all cars (we'll filter for favorites)
+        const allCarsResponse = await fetch(API_ENDPOINTS.CARS.LIST, {
+          headers: { 'X-View-Tracking': 'false' }
         });
         
-        console.log('Favorites to fetch:', favsToFetch);
-        
-        // Fetch each favorite car
-        const carPromises = favsToFetch.map(async (fav) => {
-          // First determine if we have a proper slug or just a numeric ID
-          const isProperSlug = fav.slug && isNaN(Number(fav.slug));
-          const apiEndpoint = isProperSlug ? 
-                             API_ENDPOINTS.CARS.GET(fav.slug) : 
-                             `${API_ENDPOINTS.CARS.LIST}${fav.id}/`;
-          
-          console.log(`Fetching car ${fav.id} using ${isProperSlug ? 'slug' : 'ID'}: ${apiEndpoint}`);
-          
-          try {
-            const response = await fetch(apiEndpoint, {
-              headers: { 'X-View-Tracking': 'false' }
-            });
-            
-            if (!response.ok) {
-              console.error(`Failed to fetch car with ${isProperSlug ? 'slug' : 'ID'} ${isProperSlug ? fav.slug : fav.id}`);
-              
-              // If we tried with a slug and it failed, try with the ID directly as backup
-              if (isProperSlug) {
-                console.log(`Trying fallback with ID: ${fav.id}`);
-                const fallbackEndpoint = `${API_ENDPOINTS.CARS.LIST}${fav.id}/`;
-                const fallbackResponse = await fetch(fallbackEndpoint, {
-                  headers: { 'X-View-Tracking': 'false' }
-                });
-                
-                if (!fallbackResponse.ok) {
-                  console.error(`Fallback also failed for car ID ${fav.id}`);
-                  return null;
-                }
-                
-                return fallbackResponse.json();
-              }
-              
-              return null;
-            }
-            
-            return response.json();
-          } catch (error) {
-            console.error(`Error fetching car with ID ${fav.id}:`, error);
-            return null;
-          }
-        });
-
-        const carsData = await Promise.all(carPromises);
-        
-        // Filter out any null values (failed fetches)
-        const validCars = carsData.filter(car => car !== null) as Car[];
-        console.log(`Successfully fetched ${validCars.length} out of ${favsToFetch.length} cars`);
-        
-        setFavoritesCars(validCars);
-        
-        // Update stored slugs for any cars we found
-        const updatedStoredFavs = [...storedFavorites];
-        let hasUpdates = false;
-        
-        validCars.forEach(car => {
-          if (car.id && car.slug) {
-            const existingIdx = updatedStoredFavs.findIndex(sf => sf.id === car.id);
-            
-            if (existingIdx >= 0) {
-              // Update the slug if it's different
-              if (updatedStoredFavs[existingIdx].slug !== car.slug) {
-                console.log(`Updating slug for car ${car.id} from ${updatedStoredFavs[existingIdx].slug} to ${car.slug}`);
-                updatedStoredFavs[existingIdx].slug = car.slug;
-                hasUpdates = true;
-              }
-            } else {
-              // Add a new entry
-              console.log(`Adding new stored favorite for car ${car.id} with slug ${car.slug}`);
-              updatedStoredFavs.push({ id: car.id, slug: car.slug });
-              hasUpdates = true;
-            }
-            
-            // Ensure the car is properly saved in context
-            addFavorite(car.id, car.slug);
-          }
-        });
-        
-        // If we made any updates to the stored favorites, save them
-        if (hasUpdates) {
-          console.log('Saving updated stored favorites:', updatedStoredFavs);
-          setStoredFavorites(updatedStoredFavs);
-          localStorage.setItem('car_favorites_with_slugs', JSON.stringify(updatedStoredFavs));
+        if (!allCarsResponse.ok) {
+          throw new Error('Failed to fetch cars listing');
         }
         
-        // If some cars couldn't be found, update the favorites to remove them
-        if (validCars.length < favorites.length) {
-          const validIds = validCars.map(car => car.id);
+        const allCarsData = await allCarsResponse.json();
+        
+        // Filter to include only favorited cars
+        const favoriteCarsList = allCarsData.results.filter(
+          (car: Car) => favorites.includes(car.id)
+        );
+        
+        console.log(`Found ${favoriteCarsList.length} favorites out of ${favorites.length} saved favorites`);
+        
+        // Set the filtered favorites
+        setFavoritesCars(favoriteCarsList);
+        
+        // If some favorite cars weren't found, remove them from favorites
+        if (favoriteCarsList.length < favorites.length) {
+          const validIds = favoriteCarsList.map((car: Car) => car.id);
           const invalidIds = favorites.filter(id => !validIds.includes(id));
           
           // Remove invalid favorites
           invalidIds.forEach(id => {
-            console.log(`Removing invalid favorite with ID ${id}`);
+            console.log(`Removing invalid favorite with ID ${id} (not found in car list)`);
             removeFavorite(id);
-            
-            const storedIdx = updatedStoredFavs.findIndex(sf => sf.id === id);
-            if (storedIdx !== -1) {
-              updatedStoredFavs.splice(storedIdx, 1);
-              localStorage.setItem('car_favorites_with_slugs', JSON.stringify(updatedStoredFavs));
-            }
           });
         }
       } catch (error) {
@@ -182,18 +67,16 @@ const FavoritesPage: React.FC = () => {
       }
     };
 
-    if (storedFavorites.length > 0) {
+    if (favorites.length > 0) {
       fetchFavoriteCars();
     } else {
       setLoading(false);
     }
-  }, [favorites, storedFavorites, setFavoritesCars, addFavorite, removeFavorite]);
+  }, [favorites, setFavoritesCars, removeFavorite]);
 
   const handleClearFavorites = () => {
-    // Clear both favorites and stored favorites
+    // Clear favorites
     clearAllFavorites();
-    setStoredFavorites([]);
-    localStorage.removeItem('car_favorites_with_slugs');
   };
 
   return (
