@@ -1,5 +1,5 @@
 // front-end/src/pages/FavouritesPage.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useFavorites } from '../context/FavouritesContext';
 import CarCard from '../components/CarCard';
 import { Car } from '../types/car';
@@ -11,9 +11,27 @@ const FavoritesPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  // Add a ref to track fetching state and prevent duplicate fetches
+  const isFetchingRef = useRef(false);
+  // Add a ref to store last fetched favorites to prevent unnecessary refetches
+  const lastFetchedFavoritesRef = useRef<number[]>([]);
 
   // Fetch all cars and filter for favorites
   useEffect(() => {
+    // Skip if already fetching or if favorites haven't changed
+    if (isFetchingRef.current) return;
+    
+    // Check if favorites have changed since last fetch
+    const favoritesChanged = 
+      lastFetchedFavoritesRef.current.length !== favorites.length ||
+      favorites.some(id => !lastFetchedFavoritesRef.current.includes(id));
+    
+    if (!favoritesChanged && favoritesCars.length > 0) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchFavoriteCars = async () => {
       if (favorites.length === 0) {
         setFavoritesCars([]);
@@ -21,14 +39,18 @@ const FavoritesPage: React.FC = () => {
         return;
       }
 
+      // Set fetching flag to prevent duplicate requests
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
 
       try {
         console.log('Fetching all cars to find favorites with IDs:', favorites);
         
+        // Update last fetched favorites
+        lastFetchedFavoritesRef.current = [...favorites];
+        
         // Get all cars without pagination limits
-        // This ensures we get all cars to filter for favorites
         const url = `${API_ENDPOINTS.CARS.LIST}?limit=100`;
         console.log('Fetching cars from:', url);
         
@@ -69,6 +91,8 @@ const FavoritesPage: React.FC = () => {
         setError('Dështoi në marrjen e makinave të preferuara. Ju lutemi provoni përsëri më vonë.');
       } finally {
         setLoading(false);
+        // Reset fetching flag
+        isFetchingRef.current = false;
       }
     };
 
@@ -77,7 +101,7 @@ const FavoritesPage: React.FC = () => {
     } else {
       setLoading(false);
     }
-  }, [favorites, setFavoritesCars, removeFavorite]);
+  }, [favorites, setFavoritesCars, removeFavorite, favoritesCars.length]);
 
   const handleClearFavorites = () => {
     // Clear favorites
