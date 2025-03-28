@@ -21,6 +21,11 @@ const CarCard: React.FC<CarCardProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Add debug logging for car data
+  if (!car.slug && process.env.NODE_ENV !== 'production') {
+    console.log('Warning: Car card rendered without a slug:', car);
+  }
+  
   // Get primary image URL
   const getPrimaryImageUrl = () => {
     if (!car.images || car.images.length === 0) {
@@ -43,8 +48,13 @@ const CarCard: React.FC<CarCardProps> = ({
     
     e.preventDefault();
     
-    // Use the car slug if available, otherwise use the ID
+    // IMPORTANT: Always use the car slug if available, otherwise use the ID
+    // This is a key part of the fix
     const carIdentifier = car.slug || car.id;
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Navigating to car detail with identifier: ${carIdentifier}, type: ${typeof carIdentifier}`);
+    }
     
     // Don't track views when coming from favorites or admin pages
     const shouldTrackView = !isFromFavorites && 
@@ -94,8 +104,8 @@ const CarCard: React.FC<CarCardProps> = ({
         {showFavoriteButton && (
           <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
             <FavoriteButton 
-              carId={car.id}
-              carSlug={car.slug} 
+              carId={car.id} 
+              carSlug={car.slug}
               size={20} 
               className="bg-white bg-opacity-70 p-1 rounded-full"
             />

@@ -30,6 +30,13 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [storedFavorites, setStoredFavorites] = useState<StoredFavorite[]>([]);
   const [initialized, setInitialized] = useState(false);
 
+  // Enhanced debugging utility
+  const logDebug = (message: string, data?: any) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[FavoritesContext] ${message}`, data !== undefined ? data : '');
+    }
+  };
+
   // Load favorites from localStorage when the component mounts
   useEffect(() => {
     const loadFavorites = () => {
@@ -39,6 +46,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (savedFavoritesWithSlugs) {
           const parsedFavoritesWithSlugs = JSON.parse(savedFavoritesWithSlugs);
           if (Array.isArray(parsedFavoritesWithSlugs)) {
+            logDebug('Loaded stored favorites with slugs:', parsedFavoritesWithSlugs);
             setStoredFavorites(parsedFavoritesWithSlugs);
             // Extract just the IDs for the regular favorites
             const ids = parsedFavoritesWithSlugs.map(fav => fav.id);
@@ -53,6 +61,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (savedFavorites) {
           const parsedFavorites = JSON.parse(savedFavorites);
           if (Array.isArray(parsedFavorites)) {
+            logDebug('Loaded regular favorites, creating stored favorites:', parsedFavorites);
             setFavorites(parsedFavorites);
             // Create stored favorites with just IDs (slugs will be updated later)
             setStoredFavorites(parsedFavorites.map(id => ({ id, slug: id.toString() })));
@@ -64,6 +73,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
         if (cookieFavorites) {
           const parsedFavorites = JSON.parse(cookieFavorites);
           if (Array.isArray(parsedFavorites)) {
+            logDebug('Loaded favorites from cookie:', parsedFavorites);
             setFavorites(parsedFavorites);
             setStoredFavorites(parsedFavorites.map(id => ({ id, slug: id.toString() })));
             // Also save to localStorage for future
@@ -120,17 +130,28 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Save favorites with slugs
       const favoritesWithSlugsJson = JSON.stringify(storedFavorites);
       localStorage.setItem(FAVORITES_WITH_SLUGS_NAME, favoritesWithSlugsJson);
+      
+      logDebug('Saved favorites to storage:', { 
+        favorites, 
+        storedFavorites,
+        favoritesJson,
+        favoritesWithSlugsJson
+      });
     } catch (error) {
       console.error('Error saving favorites:', error);
     }
   }, [favorites, storedFavorites, initialized]);
 
   const addFavorite = (carId: number, slug?: string) => {
-    console.log(`Adding favorite: id=${carId}, slug=${slug || 'not provided'}`);
+    logDebug(`Adding favorite: id=${carId}, slug=${slug || 'not provided'}`);
+    
+    // If the slug is numeric, make sure we treat it as a slug, not a number
+    const safeSlug = slug ? String(slug) : undefined;
     
     // Update regular favorites
     setFavorites(prev => {
       if (!prev.includes(carId)) {
+        logDebug(`Adding car ID ${carId} to favorites`);
         return [...prev, carId];
       }
       return prev;
@@ -142,24 +163,25 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       const existingIdx = prev.findIndex(fav => fav.id === carId);
       
       if (existingIdx >= 0) {
-        if (slug && prev[existingIdx].slug !== slug) {
+        if (safeSlug && prev[existingIdx].slug !== safeSlug) {
           // Create a new array with the updated slug
+          logDebug(`Updating slug for car ${carId} from ${prev[existingIdx].slug} to ${safeSlug}`);
           const newStoredFavorites = [...prev];
-          newStoredFavorites[existingIdx] = { ...newStoredFavorites[existingIdx], slug };
-          console.log(`Updated slug for car ${carId}: ${slug}`);
+          newStoredFavorites[existingIdx] = { ...newStoredFavorites[existingIdx], slug: safeSlug };
           return newStoredFavorites;
         }
         return prev;
       }
       
       // Otherwise add a new favorite with the provided slug or carId as fallback
-      const newEntry = { id: carId, slug: slug || carId.toString() };
-      console.log(`Added new stored favorite: ${JSON.stringify(newEntry)}`);
+      const newEntry = { id: carId, slug: safeSlug || carId.toString() };
+      logDebug(`Added new stored favorite:`, newEntry);
       return [...prev, newEntry];
     });
   };
 
   const removeFavorite = (carId: number) => {
+    logDebug(`Removing favorite: id=${carId}`);
     setFavorites(prev => prev.filter(id => id !== carId));
     setStoredFavorites(prev => prev.filter(fav => fav.id !== carId));
   };
@@ -170,23 +192,21 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
   
   const getSlugById = (carId: number) => {
     const stored = storedFavorites.find(fav => fav.id === carId);
-    return stored?.slug;
+    if (stored?.slug) {
+      logDebug(`Found slug for car ${carId}: ${stored.slug}`);
+      return stored.slug;
+    } else {
+      logDebug(`No slug found for car ${carId}`);
+      return undefined;
+    }
   };
 
   const clearAllFavorites = () => {
+    logDebug('Clearing all favorites');
     setFavorites([]);
     setFavoritesCars([]);
     setStoredFavorites([]);
   };
-
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log('FavoritesContext state updated:', {
-      favorites: favorites.length,
-      storedFavorites: storedFavorites.length,
-      initialized
-    });
-  }, [favorites, storedFavorites, initialized]);
 
   return (
     <FavoritesContext.Provider value={{ 
