@@ -45,7 +45,8 @@ export const useCarForm = (id?: string) => {
     handleImageDelete,
     setTempImages,
     setNextTempId,
-    uploadTempImages
+    uploadTempImages,
+    clearTempImagesStorage  // This is the function we need to expose
   } = useCarFormImageUpload();
 
   const [formData, setFormData] = useState<CarFormData>({
@@ -191,13 +192,6 @@ export const useCarForm = (id?: string) => {
       fetchVariants(formData.model_id.toString());
     }
   }, [formData.model_id, fetchVariants]);
-
-  // FIXED: This was redundant and contributing to the loop
-  // useEffect(() => {
-  //   if (formData.model_id) {
-  //     fetchVariants(formData.model_id.toString());
-  //   }
-  // }, [formData.model_id, fetchVariants]);
 
   const fetchCarDetails = useCallback(async () => {
     if (!id || initialFetchDone.current) return;
@@ -577,6 +571,8 @@ export const useCarForm = (id?: string) => {
     setNextTempId,
     // Additional image-related properties
     isUploading,
-    uploadError
+    uploadError,
+    // Export the clearTempImagesStorage function
+    clearTempImagesStorage
   };
 };

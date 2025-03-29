@@ -4,19 +4,22 @@ import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
 import { getCloudinaryUrl } from '../../utils/imageService';
 import { TempImage } from './useCarFormImageUpload';
+import { AspectRatioOption } from './persistentImageStorage';
 
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
   onDeleteImage: (id: number) => void;
   isEditing: boolean;
   baseUrl?: string;
+  selectedAspectRatio?: AspectRatioOption;
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
   images, 
   onDeleteImage, 
   isEditing, 
-  baseUrl = API_BASE_URL 
+  baseUrl = API_BASE_URL,
+  selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 }
 }) => {
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
   
@@ -63,19 +66,50 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     return fallbackImageUrl;
   };
   
+  // Calculate the aspect ratio styles based on selectedAspectRatio
+  const getAspectRatioStyles = () => {
+    if (selectedAspectRatio.value === 'original') {
+      return {
+        aspectRatio: 'auto',
+        objectFit: 'cover' as const,
+        height: '100%',
+        width: '100%'
+      };
+    }
+    
+    // For specific aspect ratios
+    return {
+      aspectRatio: `${selectedAspectRatio.width} / ${selectedAspectRatio.height}`,
+      objectFit: 'cover' as const,
+      height: '100%',
+      width: '100%',
+    };
+  };
+  
   return (
     <div className="grid grid-cols-3 gap-4 mt-4">
       {images.map((image) => (
         <div key={image.id} className="relative">
-          <img 
-            src={getImageUrl(image)}
-            alt={isTempImage(image) ? "Preview" : "Car"} 
-            className="w-full h-48 object-cover rounded"
-            onError={(e) => {
-              console.error(`Failed to load image: ${getImageUrl(image)}`);
-              e.currentTarget.src = fallbackImageUrl;
+          <div 
+            className="w-full h-48 overflow-hidden rounded" 
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: '#f1f1f1'
             }}
-          />
+          >
+            <img 
+              src={getImageUrl(image)}
+              alt={isTempImage(image) ? "Preview" : "Car"} 
+              className="rounded"
+              style={getAspectRatioStyles()}
+              onError={(e) => {
+                console.error(`Failed to load image: ${getImageUrl(image)}`);
+                e.currentTarget.src = fallbackImageUrl;
+              }}
+            />
+          </div>
           {isEditing && (
             <button
               onClick={() => onDeleteImage(image.id)}
