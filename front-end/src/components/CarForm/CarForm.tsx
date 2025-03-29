@@ -1,10 +1,10 @@
-// src/components/CarForm/CarForm.tsx - Improved version
+// src/components/CarForm/CarForm.tsx - Fixed version for makes, models, images refresh
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
 import { API_BASE_URL } from '../../config/api';
-import { ExteriorColor, InteriorColor } from '../../types/car';
+import { ExteriorColor, InteriorColor, CarImage } from '../../types/car';
 import {
   BODY_TYPES,
   DRIVETRAINS,
@@ -13,6 +13,8 @@ import {
   EMISSION_CLASSES,
 } from './constants';
 // Import debounce function
+import { debounce } from 'lodash';
+import { TempImage } from './useCarFormImageUpload';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 10;
@@ -34,8 +36,8 @@ const CarForm = () => {
     formData: serverFormData,
     setFormData: setServerFormData,
     handleSubmit: hookHandleSubmit,
-    handleImageDelete,
-    tempImages,
+    handleImageDelete: hookHandleImageDelete,
+    tempImages: hookTempImages,
     fetchVariants,
     handleImageUpload: hookHandleImageUpload
   } = useCarForm(id);
@@ -43,10 +45,23 @@ const CarForm = () => {
   // Local form state that doesn't trigger API calls until necessary
   const [localFormData, setLocalFormData] = useState(serverFormData);
 
+  // Local state for images to prevent refresh on add/delete
+  const [localImages, setLocalImages] = useState<CarImage[]>([]);
+  const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
+
   // Update local form state when server data changes (initial load or after submit)
   useEffect(() => {
     setLocalFormData(serverFormData);
   }, [serverFormData]);
+
+  // Update local images when server images change
+  useEffect(() => {
+    if (serverFormData.images) {
+      setLocalImages(serverFormData.images);
+    }
+    setLocalTempImages(hookTempImages);
+  }, [serverFormData.images, hookTempImages]);
 
   // State for form validation errors
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -74,7 +89,13 @@ const CarForm = () => {
     'EXTRAS': 'Ekstra'
   };
 
-  // Create a debounced version of setServerFormData
+  // Create a debounced version of setServerFormData for make/model relationships
+  const debouncedRelationshipUpdate = useCallback(
+    debounce((newData) => {
+      setServerFormData(newData);
+    }, 300),
+    [setServerFormData]
+  );
 
   // Add this useEffect at the top level to prevent continuous refreshes
   useEffect(() => {
@@ -96,15 +117,15 @@ const CarForm = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       
       // Revoke object URLs for temp images
-      tempImages.forEach(image => {
+      localTempImages.forEach(image => {
         if (image.preview) {
           URL.revokeObjectURL(image.preview);
         }
       });
     };
-  }, [tempImages]);
+  }, [localTempImages]);
 
-  // Load variants when model changes - only based on serverFormData
+  // Load variants when model changes - but only from server data, not local data
   useEffect(() => {
     if (serverFormData.model) {
       fetchVariants(serverFormData.model);
@@ -177,11 +198,57 @@ const CarForm = () => {
     handleFieldChange('mileage', parsedMileage);
   }, [handleFieldChange]);
 
-  // Use the image upload handler from the hook
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Modified function for make and model changes
+  const updateServerFormDataForRelationships = useCallback((field: string, value: any) => {
+    // First, update local state immediately
+    setLocalFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // If changing make, reset model and variant
+      if (field === 'make_id') {
+        newData.model_id = 0;
+        newData.variant_id = undefined;
+      }
+      
+      // If changing model, reset variant
+      if (field === 'model_id') {
+        newData.variant_id = undefined;
+      }
+      
+      // For critical fields, schedule server update after a delay
+      if (field === 'make_id' || field === 'model_id') {
+        // Use debounced update to prevent immediate refresh
+        debouncedRelationshipUpdate(newData);
+      }
+      
+      return newData;
+    });
+  }, [debouncedRelationshipUpdate]);
+
+  // Local image handlers (fixes image refresh issue)
+  const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Use the hook's handler which includes validation and compression
+      // Call the hook's handler but store temporarily 
       hookHandleImageUpload(e);
+      
+      // The hook will update hookTempImages which will feed into our localTempImages via the useEffect
+    }
+  };
+
+  const handleLocalImageDelete = (imageId: number) => {
+    // Handle locally based on image type
+    if (imageId < 0) {
+      // It's a temporary image
+      setLocalTempImages(prev => prev.filter(img => img.id !== imageId));
+      
+      // Also call the hook handler to stay in sync
+      hookHandleImageDelete(imageId);
+    } else {
+      // It's a server image - remove from local display but don't call API yet
+      setLocalImages(prev => prev.filter(img => img.id !== imageId));
+      
+      // Track that we should delete this on submit
+      setImagesToDelete(prev => [...prev, imageId]);
     }
   };
 
@@ -341,42 +408,17 @@ const CarForm = () => {
       return;
     }
 
+    // Process any pending image deletions
+    for (const imageId of imagesToDelete) {
+      await hookHandleImageDelete(imageId);
+    }
+    setImagesToDelete([]);
+
     const success = await hookHandleSubmit(e);
     if (success) {
       navigate('/auth/dashboard');
     }
   };
-
-  // When the main critical relationships change, update the server data
-  // This will trigger API calls like variant fetching, but only when necessary
-  const updateServerFormDataForRelationships = useCallback((field: string, value: any) => {
-    setLocalFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // For critical fields, update server data immediately
-    if (field === 'make_id' || field === 'model_id') {
-      const updatedData = {
-        ...localFormData,
-        [field]: value
-      };
-      
-      // If changing make, reset model and variant
-      if (field === 'make_id') {
-        updatedData.model_id = 0;
-        updatedData.variant_id = undefined;
-      }
-      
-      // If changing model, reset variant
-      if (field === 'model_id') {
-        updatedData.variant_id = undefined;
-      }
-      
-      // Update server form data
-      setServerFormData(updatedData);
-    }
-  }, [localFormData, setServerFormData]);
 
   if (isLoading || isMakesLoading) {
     return (
@@ -752,17 +794,17 @@ const CarForm = () => {
               type="file"
               accept={ALLOWED_FILE_TYPES.join(',')}
               multiple
-              onChange={handleImageUpload}
+              onChange={handleLocalImageUpload}
               className="w-full border border-gray-300 p-2 rounded"
             />
             <p className="mt-1 text-sm text-gray-500">
               Max file size: 5MB. Supported formats: JPEG, PNG, WebP
             </p>
             {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
-            {(serverFormData.images?.length > 0 || tempImages.length > 0) && (
+            {(localImages.length > 0 || localTempImages.length > 0) && (
               <ImageGallery
-                images={[...(serverFormData.images || []), ...tempImages]}
-                onDeleteImage={handleImageDelete}
+                images={[...localImages, ...localTempImages]}
+                onDeleteImage={handleLocalImageDelete}
                 isEditing={true}
                 baseUrl={API_BASE_URL}
               />
@@ -1121,8 +1163,8 @@ const CarForm = () => {
          </div>
        </div>
   
-            {/* Submit Button */}
-     <button
+       {/* Submit Button */}
+       <button
        type="submit"
        disabled={isLoading}
        className={`w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
@@ -1134,5 +1176,4 @@ const CarForm = () => {
  </div>
 );
 }
-
 export default CarForm
