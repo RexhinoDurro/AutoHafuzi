@@ -33,6 +33,7 @@ interface UseCarFormImageUploadResult {
   uploadError: string | null;
   handleImageUpload: (files: FileList) => Promise<void>;
   handleImageDelete: (imageId: number) => Promise<boolean>;
+  handleImageUpdate: (imageId: number, newImageBlob: Blob) => Promise<void>;
   setTempImages: React.Dispatch<React.SetStateAction<TempImage[]>>;
   setNextTempId: React.Dispatch<React.SetStateAction<number>>;
   uploadTempImages: (carSlug: string) => Promise<UploadedImage[]>;
@@ -161,6 +162,71 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     }
   }, [nextTempId, tempImages.length, validateImages]);
 
+  // Update an existing temporary image
+  const handleImageUpdate = useCallback(async (imageId: number, newImageBlob: Blob) => {
+    setUploadError(null);
+    
+    try {
+      // Check if the image is a temporary one or server one
+      if (imageId < 0) {
+        // It's a temporary image, update it locally
+        const file = new File([newImageBlob], `cropped-image-${Date.now()}.jpg`, {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        
+        // Create a new preview URL
+        const preview = URL.createObjectURL(file);
+        
+        // Update the temp images array
+        setTempImages(prev => {
+          const updatedImages = prev.map(img => {
+            if (img.id === imageId) {
+              // Revoke the old preview URL
+              if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+              }
+              // Return updated image
+              return { ...img, file, preview };
+            }
+            return img;
+          });
+          
+          // Also update localStorage
+          saveTempImagesToStorage(updatedImages);
+          
+          return updatedImages;
+        });
+      } else {
+        // It's a server-side image, we need to upload the cropped version
+        if (!token) {
+          throw new Error('Authentication token missing');
+        }
+        
+        const formData = new FormData();
+        formData.append('image', newImageBlob, `cropped-image-${Date.now()}.jpg`);
+        formData.append('replace_id', imageId.toString());
+        
+        // Use a generic endpoint that updates any image by its ID
+        const response = await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
+          method: 'PUT', // Use PUT to update
+          headers: { Authorization: `Token ${token}` },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to update image: ${response.status}`);
+        }
+        
+        // You might want to refresh the parent component after this
+        console.log('Server image updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating image:', error);
+      setUploadError(error instanceof Error ? error.message : 'Error updating image');
+    }
+  }, [token]);
+
   // Delete temporary or server-side image
   const handleImageDelete = useCallback(async (imageId: number): Promise<boolean> => {
     try {
@@ -285,6 +351,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     uploadError,
     handleImageUpload,
     handleImageDelete,
+    handleImageUpdate,
     setTempImages,
     setNextTempId,
     uploadTempImages,

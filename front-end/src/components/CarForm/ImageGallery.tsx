@@ -1,14 +1,17 @@
 // src/components/CarForm/ImageGallery.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
 import { getCloudinaryUrl } from '../../utils/imageService';
 import { TempImage } from './useCarFormImageUpload';
 import { AspectRatioOption } from './persistentImageStorage';
+import ImageCropper from './ImageCropper';
+import { Crop, Edit2 } from 'lucide-react';
 
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
   onDeleteImage: (id: number) => void;
+  onUpdateImage?: (id: number, imageBlob: Blob) => Promise<void>;
   isEditing: boolean;
   baseUrl?: string;
   selectedAspectRatio?: AspectRatioOption;
@@ -17,11 +20,17 @@ interface ImageGalleryProps {
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
   images, 
   onDeleteImage, 
+  onUpdateImage,
   isEditing, 
   baseUrl = API_BASE_URL,
   selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 }
 }) => {
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
+
+  // State for crop modal
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [currentImageId, setCurrentImageId] = useState<number | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   
   // Helper to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
@@ -85,50 +94,101 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
       width: '100%',
     };
   };
+
+  // Handle opening the crop modal
+  const handleOpenCropModal = (image: CarImage | TempImage) => {
+    if (!onUpdateImage) return; // Only proceed if update handler is provided
+    
+    setCurrentImageId(image.id);
+    setCurrentImageUrl(getImageUrl(image));
+    setCropModalOpen(true);
+  };
+
+  // Handle crop completion
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    if (currentImageId === null || !onUpdateImage) return;
+    
+    try {
+      await onUpdateImage(currentImageId, croppedImageBlob);
+    } catch (error) {
+      console.error('Error updating image after crop:', error);
+    }
+  };
   
   return (
-    <div className="grid grid-cols-3 gap-4 mt-4">
-      {images.map((image) => (
-        <div key={image.id} className="relative">
-          <div 
-            className="w-full h-48 overflow-hidden rounded" 
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: '#f1f1f1'
-            }}
-          >
-            <img 
-              src={getImageUrl(image)}
-              alt={isTempImage(image) ? "Preview" : "Car"} 
-              className="rounded"
-              style={getAspectRatioStyles()}
-              onError={(e) => {
-                console.error(`Failed to load image: ${getImageUrl(image)}`);
-                e.currentTarget.src = fallbackImageUrl;
+    <>
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        {images.map((image) => (
+          <div key={image.id} className="relative">
+            <div 
+              className="w-full h-48 overflow-hidden rounded" 
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#f1f1f1'
               }}
-            />
-          </div>
-          {isEditing && (
-            <button
-              onClick={() => onDeleteImage(image.id)}
-              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-              type="button"
-              aria-label="Delete image"
             >
-              ×
-            </button>
-          )}
-          {/* Display "preview" badge for temporary images */}
-          {isTempImage(image) && (
-            <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-              Preview
+              <img 
+                src={getImageUrl(image)}
+                alt={isTempImage(image) ? "Preview" : "Car"} 
+                className="rounded"
+                style={getAspectRatioStyles()}
+                onError={(e) => {
+                  console.error(`Failed to load image: ${getImageUrl(image)}`);
+                  e.currentTarget.src = fallbackImageUrl;
+                }}
+              />
             </div>
-          )}
-        </div>
-      ))}
-    </div>
+            
+            {/* Action buttons */}
+            <div className="absolute top-2 right-2 flex space-x-1">
+              {/* Edit button */}
+              {isEditing && onUpdateImage && (
+                <button
+                  onClick={() => handleOpenCropModal(image)}
+                  className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600"
+                  type="button"
+                  aria-label="Crop image"
+                >
+                  <Crop size={16} />
+                </button>
+              )}
+              
+              {/* Delete button */}
+              {isEditing && (
+                <button
+                  onClick={() => onDeleteImage(image.id)}
+                  className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  type="button"
+                  aria-label="Delete image"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+            </div>
+            
+            {/* Display "preview" badge for temporary images */}
+            {isTempImage(image) && (
+              <div className="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                Preview
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {/* Image cropper modal */}
+      {cropModalOpen && currentImageUrl && (
+        <ImageCropper 
+          isOpen={cropModalOpen}
+          onClose={() => setCropModalOpen(false)}
+          imageUrl={currentImageUrl}
+          onCropComplete={handleCropComplete}
+          selectedAspectRatio={selectedAspectRatio}
+        />
+      )}
+    </>
   );
 };
 

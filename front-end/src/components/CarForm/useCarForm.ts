@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
-import { useCarFormImageUpload} from './useCarFormImageUpload';
+import { useCarFormImageUpload } from './useCarFormImageUpload';
 import { getCloudinaryUrl } from '../../utils/imageService';
+import { saveTempImagesToStorage } from './persistentImageStorage';
 
 const parseNumericValue = (value: string | number | null | undefined, defaultValue: number): number => {
   if (value === null || value === undefined || value === '') {
@@ -46,7 +47,8 @@ export const useCarForm = (id?: string) => {
     setTempImages,
     setNextTempId,
     uploadTempImages,
-    clearTempImagesStorage  // This is the function we need to expose
+    clearTempImagesStorage,  // This is the function we need to expose
+    handleImageUpdate: originalHandleImageUpdate
   } = useCarFormImageUpload();
 
   const [formData, setFormData] = useState<CarFormData>({
@@ -95,6 +97,86 @@ export const useCarForm = (id?: string) => {
     images: [],
     option_ids: []
   });
+
+  // Enhanced image update function
+  const handleImageUpdate = async (imageId: number, imageBlob: Blob) => {
+    try {
+      if (imageId < 0) {
+        // It's a temporary image
+        const file = new File([imageBlob], `cropped-image-${Date.now()}.jpg`, {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        
+        // Create a new preview URL
+        const preview = URL.createObjectURL(file);
+        
+        // Update the temp images
+        setTempImages(prev => {
+          const updated = prev.map(img => {
+            if (img.id === imageId) {
+              // Revoke the old preview URL
+              if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+              }
+              // Return updated image
+              return { ...img, file, preview };
+            }
+            return img;
+          });
+          
+          // Update localStorage
+          saveTempImagesToStorage(updated);
+          
+          return updated;
+        });
+      } else {
+        // Server image handling
+        if (!token) {
+          throw new Error('Authentication token missing');
+        }
+        
+        const formData = new FormData();
+        formData.append('image', imageBlob, `cropped-image-${Date.now()}.jpg`);
+        formData.append('replace_id', imageId.toString());
+        
+        const response = await fetch(`${API_ENDPOINTS.CARS.IMAGES.UPDATE(imageId)}`, {
+          method: 'PUT',
+          headers: { Authorization: `Token ${token}` },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to update image: ${response.status}`);
+        }
+        
+        // Update car data to reflect the changes
+        if (id) {
+          const carResponse = await fetch(API_ENDPOINTS.CARS.GET(id), {
+            headers: { Authorization: `Token ${token}` },
+          });
+          
+          if (carResponse.ok) {
+            const carData = await carResponse.json();
+            if (carData.images) {
+              // Update the car's images in formData
+              setFormData(prev => ({
+                ...prev,
+                images: carData.images.map((img: any) => ({
+                  ...img,
+                  image: img.image || img.url || '',
+                  url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
+                }))
+              }));
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating image:', error);
+      throw error;
+    }
+  };
 
   const fetchMakes = useCallback(async () => {
     setIsMakesLoading(true);
@@ -567,12 +649,14 @@ export const useCarForm = (id?: string) => {
     fetchModels,
     fetchUpholsteryTypes,
     nextTempId,
-    setTempImages,
+    setTempImages,  // Add this line
     setNextTempId,
     // Additional image-related properties
     isUploading,
     uploadError,
     // Export the clearTempImagesStorage function
-    clearTempImagesStorage
+    clearTempImagesStorage,
+    // Add handleImageUpdate function
+    handleImageUpdate
   };
 };
