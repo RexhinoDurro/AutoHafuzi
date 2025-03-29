@@ -136,6 +136,7 @@ export const useCarForm = (id?: string) => {
     }
   }, [token]);
 
+  
   const fetchVariants = useCallback(async (modelId: string) => {
     if (!modelId) {
       setVariants([]);
@@ -509,6 +510,7 @@ export const useCarForm = (id?: string) => {
     handleImageDelete, 
     handleSubmit,
     fetchVariants,
+    fetchModels,
     fetchUpholsteryTypes,
     nextTempId,
     setTempImages,

@@ -13,7 +13,6 @@ import {
   EMISSION_CLASSES,
 } from './constants';
 // Import debounce function
-import { debounce } from 'lodash';
 import { TempImage } from './useCarFormImageUpload';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -39,6 +38,7 @@ const CarForm = () => {
     handleImageDelete: hookHandleImageDelete,
     tempImages: hookTempImages,
     fetchVariants,
+    fetchModels,
     handleImageUpload: hookHandleImageUpload
   } = useCarForm(id);
 
@@ -90,12 +90,6 @@ const CarForm = () => {
   };
 
   // Create a debounced version of setServerFormData for make/model relationships
-  const debouncedRelationshipUpdate = useCallback(
-    debounce((newData) => {
-      setServerFormData(newData);
-    }, 300),
-    [setServerFormData]
-  );
 
   // Add this useEffect at the top level to prevent continuous refreshes
   useEffect(() => {
@@ -199,8 +193,8 @@ const CarForm = () => {
   }, [handleFieldChange]);
 
   // Modified function for make and model changes
-  const updateServerFormDataForRelationships = useCallback((field: string, value: any) => {
-    // First, update local state immediately
+  const updateLocalFormDataForRelationships = useCallback((field: string, value: any) => {
+    // Update local state immediately
     setLocalFormData(prev => {
       const newData = { ...prev, [field]: value };
       
@@ -208,22 +202,24 @@ const CarForm = () => {
       if (field === 'make_id') {
         newData.model_id = 0;
         newData.variant_id = undefined;
+        
+        // Fetch models for this make without updating server data
+        fetchModels(value.toString());
       }
       
       // If changing model, reset variant
       if (field === 'model_id') {
         newData.variant_id = undefined;
-      }
-      
-      // For critical fields, schedule server update after a delay
-      if (field === 'make_id' || field === 'model_id') {
-        // Use debounced update to prevent immediate refresh
-        debouncedRelationshipUpdate(newData);
+        
+        // Fetch variants for this model without updating server data
+        if (value) {
+          fetchVariants(value.toString());
+        }
       }
       
       return newData;
     });
-  }, [debouncedRelationshipUpdate]);
+  }, [fetchModels, fetchVariants]);
 
   // Local image handlers (fixes image refresh issue)
   const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,10 +389,7 @@ const CarForm = () => {
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Sync local form data to server form data before submitting
-    setServerFormData(localFormData);
-
+  
     // Validate the form
     const errors = validateForm();
     setValidationErrors(errors);
@@ -407,13 +400,19 @@ const CarForm = () => {
       window.scrollTo(0, 0);
       return;
     }
-
+  
     // Process any pending image deletions
     for (const imageId of imagesToDelete) {
       await hookHandleImageDelete(imageId);
     }
     setImagesToDelete([]);
-
+  
+    // Sync local form data to server form data before submitting
+    setServerFormData(localFormData);
+    
+    // Small delay to ensure state update has completed
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     const success = await hookHandleSubmit(e);
     if (success) {
       navigate('/auth/dashboard');
@@ -498,12 +497,12 @@ const CarForm = () => {
                   Make <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={localFormData.make_id || ''}
-                  onChange={(e) => updateServerFormDataForRelationships('make_id', parseInt(e.target.value))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
-                  required
-                  disabled={isMakesLoading}
-                >
+                    value={localFormData.make_id || ''}
+                    onChange={(e) => updateLocalFormDataForRelationships('make_id', parseInt(e.target.value))}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
+                    required
+                    disabled={isMakesLoading}
+                  >
                   <option value="">Select Make</option>
                   {makes.map((make) => (
                     <option key={make.id} value={make.id}>
@@ -519,12 +518,12 @@ const CarForm = () => {
                   Model <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={localFormData.model_id || ''}
-                  onChange={(e) => updateServerFormDataForRelationships('model_id', parseInt(e.target.value))}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
-                  required
-                  disabled={!localFormData.make_id || isModelsLoading}
-                >
+                        value={localFormData.model_id || ''}
+                        onChange={(e) => updateLocalFormDataForRelationships('model_id', parseInt(e.target.value))}
+                        className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
+                        required
+                        disabled={!localFormData.make_id || isModelsLoading}
+                      >
                   <option value="">Select Model</option>
                   {models.map((model) => (
                     <option key={model.id} value={model.id}>
