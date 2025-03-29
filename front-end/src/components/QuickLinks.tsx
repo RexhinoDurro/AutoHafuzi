@@ -1,7 +1,8 @@
-// src/components/QuickLinks.tsx
-import React, { useState, useEffect } from 'react';
+// src/components/EnhancedQuickLinks.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { ChevronDown, ChevronUp, ChevronRight } from 'lucide-react';
 
 // Define types
 interface Make {
@@ -24,26 +25,19 @@ interface Variant {
 }
 
 interface GroupedMakes {
-  popular: Make[];
-  all: Make[];
+  [key: string]: Make;
 }
 
-const QuickLinks: React.FC = () => {
+const EnhancedQuickLinks: React.FC = () => {
   const navigate = useNavigate();
-  const [groupedMakes, setGroupedMakes] = useState<GroupedMakes>({ popular: [], all: [] });
+  const [, setMakes] = useState<Make[]>([]);
+  const [groupedMakes, setGroupedMakes] = useState<GroupedMakes>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [expandedMake, setExpandedMake] = useState<number | null>(null);
-  const [expandedElectricSection, setExpandedElectricSection] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Popular electric car models - hardcoded as these might not be in the database
-  const popularElectricCars = [
-    { make: 'Tesla', model: 'Model 3' },
-    { make: 'Tesla', model: 'Model S' },
-    { make: 'Audi', model: 'e-tron' },
-    { make: 'Porsche', model: 'Taycan' },
-    { make: 'Renault', model: 'ZOE' },
-    { make: 'Hyundai', model: 'Kona Electric' }
-  ];
+  // Popular makes to prioritize in display
+  const popularMakeNames = ['Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Toyota', 'Peugeot', 'Porsche', 'Ford'];
 
   // Fetch makes and their models
   useEffect(() => {
@@ -57,41 +51,62 @@ const QuickLinks: React.FC = () => {
         
         const makesData: Make[] = await makesResponse.json();
         
-        // Sort makes by name
+        // Sort makes alphabetically
         const sortedMakes = [...makesData].sort((a, b) => a.name.localeCompare(b.name));
         
-        // Define popular makes (usually luxury or common brands)
-        const popularMakeNames = ['Audi', 'BMW', 'Mercedes-Benz', 'Volkswagen', 'Toyota', 'Peugeot'];
-        
-        // Split makes into popular and all
-        const popular: Make[] = [];
-        const all: Make[] = [];
-        
-        sortedMakes.forEach(make => {
-          if (popularMakeNames.includes(make.name)) {
-            popular.push(make);
-          } else {
-            all.push(make);
-          }
+        // Filter out popular makes first
+        const popularMakes = sortedMakes.filter(make => 
+          popularMakeNames.includes(make.name)
+        ).sort((a, b) => {
+          // Custom sort to match the order in popularMakeNames
+          return popularMakeNames.indexOf(a.name) - popularMakeNames.indexOf(b.name);
         });
         
-        // For each popular make, fetch top models
-        const popularWithModels = await Promise.all(
-          popular.map(async (make) => {
-            const modelsResponse = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(make.id.toString()));
-            if (!modelsResponse.ok) return make;
-            
-            const modelsData: Model[] = await modelsResponse.json();
-            return { ...make, models: modelsData.slice(0, 5) }; // Get top 5 models
+        // Get other makes
+        const otherMakes = sortedMakes.filter(make => 
+          !popularMakeNames.includes(make.name)
+        );
+        
+        // Combine with popular makes first
+        const orderedMakes = [...popularMakes, ...otherMakes];
+        setMakes(orderedMakes);
+        
+        // For each make, fetch its models
+        const makesWithModels = await Promise.all(
+          orderedMakes.map(async (make) => {
+            try {
+              const modelsResponse = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(make.id.toString()));
+              if (!modelsResponse.ok) return make;
+              
+              const modelsData: Model[] = await modelsResponse.json();
+              
+              // Only include makes that actually have models with cars
+              if (modelsData && modelsData.length > 0) {
+                return { ...make, models: modelsData };
+              }
+              return null;
+            } catch (error) {
+              console.error(`Error fetching models for make ${make.name}:`, error);
+              return null;
+            }
           })
         );
         
-        setGroupedMakes({
-          popular: popularWithModels,
-          all
+        // Filter out makes with no models
+        const validMakes = makesWithModels.filter(make => make !== null) as Make[];
+        
+        // Group makes by first letter to create a lookup object
+        const grouped: GroupedMakes = {};
+        validMakes.forEach(make => {
+          if (make && make.id) {
+            grouped[make.id.toString()] = make;
+          }
         });
+        
+        setGroupedMakes(grouped);
       } catch (error) {
         console.error('Error fetching makes and models:', error);
+        setError('Failed to load quick links. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -100,114 +115,138 @@ const QuickLinks: React.FC = () => {
     fetchMakesAndModels();
   }, []);
 
-  // Toggle a make's expanded state
+  // Toggle a make's expanded state in mobile view
   const toggleMake = (makeId: number) => {
-    if (expandedMake === makeId) {
-      setExpandedMake(null);
-    } else {
-      setExpandedMake(makeId);
+    setExpandedMake(expandedMake === makeId ? null : makeId);
+  };
+
+  // Navigate to filtered cars
+  const navigateToMake = useCallback((makeId: number) => {
+    navigate(`/cars?make=${makeId}`);
+  }, [navigate]);
+
+  const navigateToModel = useCallback((makeId: number, modelId: number, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation(); // Prevent triggering parent click events
     }
-  };
-
-  // Toggle the electric section
-  const toggleElectricSection = () => {
-    setExpandedElectricSection(!expandedElectricSection);
-  };
-
-  // Navigate to car holder with filters
-  const navigateToMake = (makeId: number) => {
-    navigate(`/cars?make=${makeId}`);
-  };
-
-  const navigateToModel = (e: React.MouseEvent, makeId: number, modelId: number) => {
-    e.stopPropagation(); // Prevent triggering the make click
     navigate(`/cars?make=${makeId}&model=${modelId}`);
-  };
+  }, [navigate]);
 
-  const navigateToElectricCar = (make: string, model: string) => {
-    navigate(`/cars?search=${make}+${model}`);
-  };
+  // Determine if we're in mobile view
 
-  const navigateToAllMakes = () => {
-    navigate('/cars');
-  };
-
-  const navigateToAllModelsOfMake = (e: React.MouseEvent, makeId: number, makeName: string) => {
-    e.stopPropagation(); // Prevent triggering the make click
-    navigate(`/cars?make=${makeId}`);
-  };
+  // Handle empty state
+  if (error) {
+    return <div className="max-w-6xl mx-auto p-4 mt-10 text-center text-red-500">{error}</div>;
+  }
 
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-4 mt-10">
-        <h2 className="text-2xl font-bold mb-4">Markat dhe Modelet</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-gray-200 h-32 rounded-lg"></div>
+        <h2 className="text-2xl font-bold mb-6">Markat dhe Modelet Popullore</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 h-64 rounded-lg"></div>
           ))}
         </div>
       </div>
     );
   }
 
+  // Get a list of makes that have models
+  const makesWithModels = Object.values(groupedMakes);
+  
+  // Select only top makes if there are many
+  const displayMakes = makesWithModels.slice(0, 20); // Limit to 20 makes maximum
+
   return (
     <div className="max-w-6xl mx-auto p-4 mt-10 mb-16">
-      <h2 className="text-2xl font-bold mb-6">Markat dhe Modelet Popullorë</h2>
+      <h2 className="text-2xl font-bold mb-6">Markat dhe Modelet Popullore</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Popular Makes */}
-        {groupedMakes.popular.map((make) => (
+      {/* Desktop view - columns */}
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {displayMakes.map((make) => (
           <div 
             key={make.id} 
             className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden"
           >
             <div 
-              onClick={() => toggleMake(make.id)} 
-              className="flex justify-between items-center p-4 cursor-pointer bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100"
+              className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 cursor-pointer"
+              onClick={() => navigateToMake(make.id)}
             >
               <h3 className="text-lg font-semibold">{make.name}</h3>
-              <div className="flex items-center">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigateToMake(make.id);
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-800 mr-3"
-                >
-                  Të gjitha
-                </button>
-                <svg 
-                  className={`w-5 h-5 transition-transform ${expandedMake === make.id ? 'transform rotate-180' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+              <ChevronRight className="w-5 h-5" />
             </div>
             
-            {expandedMake === make.id && make.models && (
+            {make.models && make.models.length > 0 && (
               <div className="p-4 bg-white">
                 <ul className="space-y-2">
-                  {make.models.map((model) => (
+                  {/* Show only top 5 models per make */}
+                  {make.models.slice(0, 5).map((model) => (
                     <li key={model.id} className="hover:bg-gray-50 rounded">
                       <button 
-                        onClick={(e) => navigateToModel(e, make.id, model.id)}
+                        onClick={(e) => navigateToModel(make.id, model.id, e)}
                         className="w-full text-left py-1 px-2 text-gray-700 hover:text-blue-700 flex justify-between items-center"
                       >
                         <span>{model.name}</span>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       </button>
                     </li>
                   ))}
-                  <li className="border-t pt-2 mt-2">
+                  
+                  {make.models.length > 5 && (
+                    <li className="border-t pt-2 mt-2">
+                      <button 
+                        onClick={() => navigateToMake(make.id)}
+                        className="w-full text-left py-1 px-2 text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Të gjitha modelet {make.name} →
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      {/* Mobile view - accordion dropdowns */}
+      <div className="md:hidden space-y-2">
+        {displayMakes.map((make) => (
+          <div 
+            key={make.id} 
+            className="border border-gray-200 rounded-lg shadow-sm overflow-hidden"
+          >
+            <div 
+              onClick={() => toggleMake(make.id)} 
+              className="flex justify-between items-center p-4 cursor-pointer bg-gradient-to-r from-blue-50 to-indigo-50"
+            >
+              <h3 className="text-lg font-semibold">{make.name}</h3>
+              {expandedMake === make.id ? 
+                <ChevronUp className="w-5 h-5" /> : 
+                <ChevronDown className="w-5 h-5" />
+              }
+            </div>
+            
+            {expandedMake === make.id && make.models && make.models.length > 0 && (
+              <div className="p-4 bg-white">
+                <ul className="space-y-2">
+                  {make.models.slice(0, 7).map((model) => (
+                    <li key={model.id} className="hover:bg-gray-50 rounded">
+                      <button 
+                        onClick={(e) => navigateToModel(make.id, model.id, e)}
+                        className="w-full text-left py-2 px-2 text-gray-700 hover:text-blue-700 flex justify-between items-center border-b"
+                      >
+                        <span>{model.name}</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </li>
+                  ))}
+                  
+                  <li className="pt-2">
                     <button 
-                      onClick={(e) => navigateToAllModelsOfMake(e, make.id, make.name)}
-                      className="w-full text-left py-1 px-2 text-blue-600 hover:text-blue-800 font-medium"
+                      onClick={() => navigateToMake(make.id)}
+                      className="w-full text-center py-2 px-2 text-blue-600 hover:text-blue-800 font-medium"
                     >
                       Të gjitha modelet {make.name} →
                     </button>
@@ -217,80 +256,20 @@ const QuickLinks: React.FC = () => {
             )}
           </div>
         ))}
-        
-        {/* Additional Makes */}
-        <div className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100">
-            <h3 className="text-lg font-semibold mb-2">Marka të Tjera</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {groupedMakes.all.slice(0, 10).map((make) => (
-                <button 
-                  key={make.id}
-                  onClick={() => navigateToMake(make.id)}
-                  className="text-left py-1 px-2 text-gray-700 hover:text-blue-700 hover:bg-gray-50 rounded"
-                >
-                  {make.name}
-                </button>
-              ))}
-            </div>
-            <button 
-              onClick={navigateToAllMakes}
-              className="w-full text-left py-2 px-2 mt-2 text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Të gjitha Markat →
-            </button>
-          </div>
-        </div>
-        
-        {/* Electric Cars Section */}
-        <div className="border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-          <div 
-            onClick={toggleElectricSection} 
-            className="flex justify-between items-center p-4 cursor-pointer bg-gradient-to-r from-green-50 to-teal-50 hover:from-green-100 hover:to-teal-100"
-          >
-            <h3 className="text-lg font-semibold">Makina Elektrike Popullore</h3>
-            <svg 
-              className={`w-5 h-5 transition-transform ${expandedElectricSection ? 'transform rotate-180' : ''}`} 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-          
-          {expandedElectricSection && (
-            <div className="p-4 bg-white">
-              <ul className="space-y-2">
-                {popularElectricCars.map((car, index) => (
-                  <li key={index} className="hover:bg-gray-50 rounded">
-                    <button 
-                      onClick={() => navigateToElectricCar(car.make, car.model)}
-                      className="w-full text-left py-1 px-2 text-gray-700 hover:text-blue-700 flex justify-between items-center"
-                    >
-                      <span>{car.make} {car.model}</span>
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-                <li className="border-t pt-2 mt-2">
-                  <button 
-                    onClick={() => navigate('/cars?fuel_type=Elektrik')}
-                    className="w-full text-left py-1 px-2 text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Të gjitha makinat elektrike →
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
-        </div>
+      </div>
+      
+      {/* View all makes button */}
+      <div className="text-center mt-8">
+        <button
+          onClick={() => navigate('/cars')}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors shadow-md inline-flex items-center"
+        >
+          <span>Shiko të gjitha markat</span>
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </button>
       </div>
     </div>
   );
 };
 
-export default QuickLinks;
+export default EnhancedQuickLinks;

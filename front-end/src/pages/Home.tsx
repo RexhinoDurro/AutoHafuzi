@@ -1,7 +1,8 @@
-// Home.tsx with proper section handling
+// src/pages/Home.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CarFilter from '../components/CarFilter';
+import EnhancedQuickLinks from '../components/QuickLinks'; // Import the new component
 import { Car } from '../types/car';
 import { saveLastSearch, getLastSearch } from '../utils/userActivityService';
 import { API_ENDPOINTS, API_BASE_URL } from '../config/api';
@@ -328,6 +329,9 @@ const Home = () => {
           )}
         </div>
       </div>
+      
+      {/* Enhanced Quick Links Section - Added here */}
+      <EnhancedQuickLinks />
     </div>
   );
 };
