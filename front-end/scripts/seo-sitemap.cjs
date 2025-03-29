@@ -1,6 +1,7 @@
-// front-end/scripts/create-sitemap.js
+// front-end/scripts/seo-sitemap.cjs
 const fs = require('fs');
 const zlib = require('zlib');
+const path = require('path');
 
 // Set the primary domain consistently for all SEO-related files
 const PRIMARY_DOMAIN = 'https://autohafuzi-fe.onrender.com';
@@ -100,36 +101,50 @@ Crawl-delay: 1
 
 // Make sure the public directory exists
 const ensurePublicDir = () => {
-  if (!fs.existsSync('public')) {
-    fs.mkdirSync('public');
+  // In a build environment, the dist directory is the output directory
+  const publicDir = path.resolve(__dirname, '../dist');
+  
+  if (!fs.existsSync(publicDir)) {
+    console.log(`Public directory ${publicDir} does not exist, using 'public' instead`);
+    const fallbackDir = path.resolve(__dirname, '../public');
+    if (!fs.existsSync(fallbackDir)) {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    }
+    return fallbackDir;
   }
+  return publicDir;
 };
 
 // Generate and save the sitemap files
 const createSitemaps = () => {
   try {
-    ensurePublicDir();
+    const publicDir = ensurePublicDir();
+    console.log(`Using directory: ${publicDir} for sitemap files`);
     
     // Generate sitemap content
     const sitemap = generateSitemap();
     
     // Save uncompressed version
-    fs.writeFileSync('public/sitemap.xml', sitemap);
-    console.log('Created sitemap.xml');
+    const sitemapPath = path.join(publicDir, 'sitemap.xml');
+    fs.writeFileSync(sitemapPath, sitemap);
+    console.log(`Created sitemap.xml at ${sitemapPath}`);
     
     // Create gzipped version
     const compressed = zlib.gzipSync(sitemap);
-    fs.writeFileSync('public/sitemap.xml.gz', compressed);
-    console.log('Created sitemap.xml.gz');
+    const gzipPath = path.join(publicDir, 'sitemap.xml.gz');
+    fs.writeFileSync(gzipPath, compressed);
+    console.log(`Created sitemap.xml.gz at ${gzipPath}`);
     
     // Create robots.txt
     const robotsTxt = generateRobotsTxt();
-    fs.writeFileSync('public/robots.txt', robotsTxt);
-    console.log('Created robots.txt');
+    const robotsPath = path.join(publicDir, 'robots.txt');
+    fs.writeFileSync(robotsPath, robotsTxt);
+    console.log(`Created robots.txt at ${robotsPath}`);
     
     console.log('Sitemap generation completed successfully!');
   } catch (error) {
     console.error('Error generating sitemap:', error);
+    console.error(error.stack);
     process.exit(1);
   }
 };

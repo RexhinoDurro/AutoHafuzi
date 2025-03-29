@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Award, Car, Clock, Settings, Sparkles} from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '../config/api';
 const AboutPage = () => {
   const [companyDescription, setCompanyDescription] = useState('I shtyrë nga pasioni, i përkushtuar ndaj cilësisë. Ne kemi ndihmuar klientët të gjejnë automjetin e tyre të përsosur që nga viti 2010.');
   const [isLoading, setIsLoading] = useState(false);
+  const contentRef = useRef(null);
   const [isVisible] = useState({
     'overview': true,
     'history': true,
@@ -17,7 +18,7 @@ const AboutPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set document title for SEO
+    // Ensure content is crawlable by setting it up immediately
     document.title = "Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri";
     
     // Define meta description for SEO
@@ -53,19 +54,18 @@ const AboutPage = () => {
     navigate('/cars');
   };
 
-  // Use null for LoadingSpinner to avoid showing it at all in initial render
-  // This ensures search engines can see the content immediately
+  // For very first render, include pre-rendered content
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <h1 className="sr-only">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
+      <div ref={contentRef} className="flex justify-center items-center min-h-screen">
+        <h1 className="text-3xl font-bold">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden" ref={contentRef}>
       {/* Hero Section with Parallax Effect */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div 
@@ -87,7 +87,7 @@ const AboutPage = () => {
           </p>
           <p className="text-lg text-white mb-8 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
             Që nga viti 2010, ne jemi përkushtuar ndaj sigurimit të makinave të cilësisë më të lartë për klientët tanë.
-            Me një përzgjedhje të gjerë të makinave nga markat më të mira si Mercedes, BMW, Audi dhe më shumë,
+            Me një përzgjedhje të gjerë të makinave nga markat më të mira si <strong>Mercedes</strong>, <strong>BMW</strong>, <strong>Audi</strong> dhe më shumë,
             ne ofrojmë një përzgjedhje të pasur të automjeteve diesel dhe benzinë për çdo nevojë dhe buxhet.
           </p>
           <button 
@@ -175,14 +175,14 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Our History Timeline */}
+      {/* Our History Timeline - Improved with strong headings for SEO */}
       <section id="history" className="py-20 bg-gray-100">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['history'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
             <h2 className="text-4xl font-bold mb-6 text-gray-900">Rrugëtimi Ynë</h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Nga fillime të thjeshta deri në bërjen një emër të besuar në industrinë e automobilave në Shqipëri
+              <strong>Nga fillime të thjeshta deri në bërjen një emër të besuar në industrinë e automobilave në Shqipëri</strong>
             </p>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
               Rrugëtimi ynë është bazuar në vendosmërinë për të ofruar makinat më të mira për klientët tanë shqiptarë. Me një fokus të fuqishëm në cilësi dhe shërbim, ne kemi evoluar nga një biznes i vogël familjar në një nga tregtarët më të respektuar të makinave në vend.
@@ -221,19 +221,17 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Rest of the sections remain the same... */}
-      
-      {/* Our Services with Animated Cards */}
+      {/* Our Services with Improved Headings and SEO markup */}
       <section id="services" className="py-20">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['services'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
             <h2 className="text-4xl font-bold mb-6 text-gray-900">Shërbimet Tona</h2>
             <div className="w-24 h-1 bg-green-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Zgjidhje gjithëpërfshirëse automobilistike të përshtatura për nevojat tuaja
+              <strong>Zgjidhje gjithëpërfshirëse automobilistike të përshtatura për nevojat tuaja</strong>
             </p>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
-              Ne kuptojmë se blerja e një makine është një vendim i rëndësishëm. Prandaj, ofrojmë një gamë të gjerë shërbimesh për t'ju ndihmuar në çdo hap të rrugës, nga gjetja e makinës së përsosur deri te mirëmbajtja e saj për vitet në vijim. Ekspertiza jonë shtrihet në të gjitha markat kryesore, duke përfshirë Mercedes, BMW, Audi dhe shumë të tjera.
+              Ne kuptojmë se blerja e një makine është një vendim i rëndësishëm. Prandaj, ofrojmë një gamë të gjerë shërbimesh për t'ju ndihmuar në çdo hap të rrugës, nga gjetja e makinës së përsosur deri te mirëmbajtja e saj për vitet në vijim. Ekspertiza jonë shtrihet në të gjitha markat kryesore, duke përfshirë <strong>Mercedes</strong>, <strong>BMW</strong>, <strong>Audi</strong> dhe shumë të tjera.
             </p>
           </div>
 
@@ -258,6 +256,75 @@ const AboutPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section with Improved SEO */}
+      <section id="contact" className="py-20 bg-gray-100">
+        <div className="container mx-auto px-4">
+          <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Kontaktoni Auto Hafuzi</h2>
+            <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Na vizitoni në ekspozitën tonë në Fushë-Kruje ose na kontaktoni përmes telefonit apo email
+            </p>
+          </div>
+
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-800">Informacion Kontakti</h3>
+                <address className="not-italic">
+                  <p className="mb-3 flex items-start">
+                    <strong className="inline-block w-24">Adresa:</strong> 
+                    <span>Fushë-Kruje, E762</span>
+                  </p>
+                  <p className="mb-3 flex items-start">
+                    <strong className="inline-block w-24">Telefon:</strong> 
+                    <span>069 931 1111</span>
+                  </p>
+                  <p className="mb-3 flex items-start">
+                    <strong className="inline-block w-24">Email:</strong> 
+                    <span>info@hafuziauto.ch</span>
+                  </p>
+                </address>
+                
+                <h3 className="text-2xl font-bold mb-4 mt-8 text-gray-800">Orari i Punës</h3>
+                <p className="mb-2 flex items-start">
+                  <strong className="inline-block w-24">Hënë-Premte:</strong> 
+                  <span>9:00 - 18:00</span>
+                </p>
+                <p className="mb-2 flex items-start">
+                  <strong className="inline-block w-24">E Shtunë:</strong> 
+                  <span>10:00 - 16:00</span>
+                </p>
+                <p className="mb-2 flex items-start">
+                  <strong className="inline-block w-24">E Dielë:</strong> 
+                  <span>Mbyllur</span>
+                </p>
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-800">Na Vizitoni</h3>
+                <div className="h-64 bg-gray-200 rounded-lg mb-4">
+                  {/* Replace with actual map component */}
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-gray-600">Harta e Lokacionit</p>
+                  </div>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  Ekspozita jonë ndodhet në një lokacion të lehtë për t'u arritur në Fushë-Kruje. 
+                  Na vizitoni për të parë nga afër koleksionin tonë të makinave premium.
+                </p>
+                <button 
+                  onClick={() => navigate('/contact')}
+                  className="bg-blue-600 text-white hover:bg-blue-700 font-bold py-3 px-6 rounded-lg transition duration-300 w-full"
+                >
+                  Dërgoni një Mesazh
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -303,6 +370,8 @@ const AboutPage = () => {
         <div className="text-center p-10">
           <h1 className="text-3xl font-bold">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
           <p className="mt-4">Që nga viti 2010, ne jemi përkushtuar ndaj sigurimit të makinave të cilësisë më të lartë për klientët tanë.</p>
+          <p className="mt-4">Me një përzgjedhje të gjerë të makinave nga markat më të mira si Mercedes, BMW, Audi dhe më shumë, ne ofrojmë automjete për çdo nevojë dhe buxhet.</p>
+          <p className="mt-4">Na vizitoni në ekspozitën tonë në Fushë-Kruje ose na kontaktoni në 069 931 1111.</p>
           <p className="mt-4">Ju lutemi aktivizoni JavaScript për të parë faqen tonë me të gjitha funksionalitetet.</p>
         </div>
       </noscript>
