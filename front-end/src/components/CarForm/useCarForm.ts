@@ -178,12 +178,19 @@ export const useCarForm = (id?: string) => {
     }
   }, [token]);
 
-  // FIXED: Only fetch models when formData.make_id changes, not when formData changes
+  // Fetch models when make_id changes
   useEffect(() => {
     if (formData.make_id) {
       fetchModels(formData.make_id.toString());
     }
   }, [formData.make_id, fetchModels]);
+  
+  // Fetch variants when model_id changes
+  useEffect(() => {
+    if (formData.model_id) {
+      fetchVariants(formData.model_id.toString());
+    }
+  }, [formData.model_id, fetchVariants]);
 
   // FIXED: This was redundant and contributing to the loop
   // useEffect(() => {

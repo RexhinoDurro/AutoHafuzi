@@ -37,8 +37,6 @@ const CarForm = () => {
     handleSubmit: hookHandleSubmit,
     handleImageDelete: hookHandleImageDelete,
     tempImages: hookTempImages,
-    fetchVariants,
-    fetchModels,
     handleImageUpload: hookHandleImageUpload
   } = useCarForm(id);
 
@@ -89,8 +87,6 @@ const CarForm = () => {
     'EXTRAS': 'Ekstra'
   };
 
-  // Create a debounced version of setServerFormData for make/model relationships
-
   // Add this useEffect at the top level to prevent continuous refreshes
   useEffect(() => {
     // This runs only once when the component mounts
@@ -118,13 +114,6 @@ const CarForm = () => {
       });
     };
   }, [localTempImages]);
-
-  // Load variants when model changes - but only from server data, not local data
-  useEffect(() => {
-    if (serverFormData.model) {
-      fetchVariants(serverFormData.model);
-    }
-  }, [serverFormData.model, fetchVariants]);
 
   // Initialize formatted values when localFormData changes
   useEffect(() => {
@@ -163,20 +152,27 @@ const CarForm = () => {
     return parseFloat(formattedMileage.replace(/,/g, '')) || 0;
   };
 
-  // General field change handler - updates only localFormData, not server
+  // General field change handler - updates both localFormData and serverFormData
   const handleFieldChange = useCallback((field: string, value: any) => {
+    // Update local form data immediately for responsive UI
     setLocalFormData(prev => ({
       ...prev,
       [field]: value
     }));
-  }, []);
+    
+    // Also update the server form data to ensure changes are saved
+    setServerFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }, [setServerFormData]);
 
   // Handle price change with formatting
   const handlePriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormattedPrice(value);
     
-    // Only update the local formData 
+    // Update both form states with the parsed price
     const parsedPrice = parsePrice(value);
     handleFieldChange('price', parsedPrice);
     handleFieldChange('discussedPrice', false);
@@ -187,12 +183,12 @@ const CarForm = () => {
     const value = e.target.value;
     setFormattedMileage(value);
     
-    // Only update the local formData
+    // Update both form states with the parsed mileage
     const parsedMileage = parseMileage(value);
     handleFieldChange('mileage', parsedMileage);
   }, [handleFieldChange]);
 
-  // Modified function for make and model changes
+  // Modified function for make and model changes - updates both states
   const updateLocalFormDataForRelationships = useCallback((field: string, value: any) => {
     // Update local state immediately
     setLocalFormData(prev => {
@@ -202,25 +198,38 @@ const CarForm = () => {
       if (field === 'make_id') {
         newData.model_id = 0;
         newData.variant_id = undefined;
-        
-        // Fetch models for this make without updating server data
-        fetchModels(value.toString());
       }
       
       // If changing model, reset variant
       if (field === 'model_id') {
         newData.variant_id = undefined;
-        
-        // Fetch variants for this model without updating server data
-        if (value) {
-          fetchVariants(value.toString());
-        }
       }
       
       return newData;
     });
-  }, [fetchModels, fetchVariants]);
-
+    
+    // Also update server form data
+    setServerFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // If changing make, reset model and variant
+      if (field === 'make_id') {
+        newData.model_id = 0;
+        newData.variant_id = undefined;
+      }
+      
+      // If changing model, reset variant
+      if (field === 'model_id') {
+        newData.variant_id = undefined;
+      }
+      
+      return newData;
+    });
+    
+    // No need to call fetchModels/fetchVariants directly
+    // The useEffect hooks in useCarForm will handle this based on formData changes
+  }, [setServerFormData]);
+  
   // Local image handlers (fixes image refresh issue)
   const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -407,12 +416,7 @@ const CarForm = () => {
     }
     setImagesToDelete([]);
   
-    // Sync local form data to server form data before submitting
-    setServerFormData(localFormData);
-    
-    // Small delay to ensure state update has completed
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
+    // No need to sync with serverFormData first since we've been keeping them in sync
     const success = await hookHandleSubmit(e);
     if (success) {
       navigate('/auth/dashboard');
