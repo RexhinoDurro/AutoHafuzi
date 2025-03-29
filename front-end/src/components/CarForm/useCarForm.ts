@@ -1,5 +1,5 @@
 // src/components/CarForm/useCarForm.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
@@ -27,6 +27,7 @@ export const useCarForm = (id?: string) => {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [newOption, setNewOption] = useState<string>('');
+  const initialFetchDone = useRef(false);
   
   // Get current date for defaults
   const currentDate = new Date();
@@ -54,7 +55,6 @@ export const useCarForm = (id?: string) => {
     make: '',
     model: '',
     variant: '',
-    // Removed year field
     first_registration_day: currentDay,
     first_registration_month: currentMonth,
     first_registration_year: currentYear,
@@ -178,26 +178,23 @@ export const useCarForm = (id?: string) => {
     }
   }, [token]);
 
-  useEffect(() => {
-    if (formData.make) {
-      fetchModels(formData.make);
-    }
-  }, [formData.make, fetchModels]);
-
+  // FIXED: Only fetch models when formData.make_id changes, not when formData changes
   useEffect(() => {
     if (formData.make_id) {
       fetchModels(formData.make_id.toString());
     }
   }, [formData.make_id, fetchModels]);
 
-  useEffect(() => {
-    if (formData.model_id) {
-      fetchVariants(formData.model_id.toString());
-    }
-  }, [formData.model_id, fetchVariants]);
+  // FIXED: This was redundant and contributing to the loop
+  // useEffect(() => {
+  //   if (formData.model_id) {
+  //     fetchVariants(formData.model_id.toString());
+  //   }
+  // }, [formData.model_id, fetchVariants]);
 
   const fetchCarDetails = useCallback(async () => {
-    if (!id) return;
+    if (!id || initialFetchDone.current) return;
+    
     setIsLoading(true);
     try {
       const response = await fetch(API_ENDPOINTS.CARS.GET(id), {
@@ -220,17 +217,18 @@ export const useCarForm = (id?: string) => {
         }));
       }
       
-      // Save the current data
+      // FIXED: Create a complete car data object instead of merging with current formData
       const carData = {
-        ...formData,
-        ...data,
-        make: data.make_id?.toString() || '',
-        model: data.model_id?.toString() || '',
-        variant: data.variant_id?.toString() || '',
-        exterior_color_id: data.exterior_color_id,
+        make_id: data.make,
+        model_id: data.model,
+        variant_id: data.variant,
+        make: data.make?.toString() || '',
+        model: data.model?.toString() || '',
+        variant: data.variant?.toString() || '',
+        exterior_color_id: data.exterior_color,
         exterior_color_name: data.exterior_color_name || '',
         exterior_color_hex: data.exterior_color_hex || '',
-        interior_color_id: data.interior_color_id,
+        interior_color_id: data.interior_color,
         interior_color_name: data.interior_color_name || '',
         interior_color_hex: data.interior_color_hex || '',
         upholstery_id: data.upholstery,  // Use the correct field from server response
@@ -241,8 +239,31 @@ export const useCarForm = (id?: string) => {
         first_registration_year: data.first_registration_year || currentYear,
         // Important: Map discussed_price (from backend) to discussedPrice (for frontend)
         discussedPrice: data.discussed_price || false,
+        price: data.price || 0,
+        description: data.description || '',
+        created_at: data.created_at || new Date().toISOString().split('T')[0],
+        body_type: data.body_type || 'Sedan',
+        is_used: data.is_used !== undefined ? data.is_used : true,
+        drivetrain: data.drivetrain || 'FWD',
+        seats: data.seats || 5,
+        doors: data.doors || 4,
+        mileage: data.mileage || 0,
+        general_inspection_date: data.general_inspection_date || '',
+        full_service_history: data.full_service_history || false,
+        customs_paid: data.customs_paid || false,
+        power: data.power || 100,
+        gearbox: data.gearbox || 'Manual',
+        engine_size: data.engine_size || 1.6,
+        gears: data.gears || 5,
+        cylinders: data.cylinders || 4,
+        weight: data.weight || 1200,
+        emission_class: data.emission_class || 'Euro 6',
+        fuel_type: data.fuel_type || 'Petrol',
+        images: data.images || [],
         // Make sure we have option_ids
         option_ids: data.options?.map((opt: any) => opt.id || opt) || [],
+        options: [],
+        image: null,
         // Save the slug
         slug: data.slug || ''
       };
@@ -250,16 +271,19 @@ export const useCarForm = (id?: string) => {
       setFormData(carData);
       
       // If we have a model, fetch the variants
-      if (carData.model) {
-        fetchVariants(carData.model);
+      if (carData.model_id) {
+        fetchVariants(carData.model_id.toString());
       }
+
+      // Mark that we've completed the initial fetch
+      initialFetchDone.current = true;
       
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error fetching car details');
     } finally {
       setIsLoading(false);
     }
-  }, [id, token, fetchVariants, currentDay, currentMonth, currentYear, formData]);
+  }, [id, token, fetchVariants, currentDay, currentMonth, currentYear]);
 
   // Improved form data preparation for submission to handle all fields properly
   const prepareFormDataForSubmission = useCallback((data: CarFormData) => {
@@ -435,24 +459,50 @@ export const useCarForm = (id?: string) => {
               }));
             }
             
+            // FIXED: Using a function version of setFormData to avoid dependency on current formData
             setFormData({
-              ...updatedCar,
-              make: updatedCar.make_id?.toString() || '',
-              model: updatedCar.model_id?.toString() || '',
-              variant: updatedCar.variant_id?.toString() || '',
-              exterior_color_id: updatedCar.exterior_color_id,
+              make_id: updatedCar.make,
+              model_id: updatedCar.model,
+              variant_id: updatedCar.variant,
+              make: updatedCar.make?.toString() || '',
+              model: updatedCar.model?.toString() || '',
+              variant: updatedCar.variant?.toString() || '',
+              exterior_color_id: updatedCar.exterior_color,
               exterior_color_name: updatedCar.exterior_color_name || '',
               exterior_color_hex: updatedCar.exterior_color_hex || '',
-              interior_color_id: updatedCar.interior_color_id,
+              interior_color_id: updatedCar.interior_color,
               interior_color_name: updatedCar.interior_color_name || '',
               interior_color_hex: updatedCar.interior_color_hex || '',
-              upholstery_id: updatedCar.upholstery,  // This is the field that was causing the error
+              upholstery_id: updatedCar.upholstery,
               upholstery_name: updatedCar.upholstery_name || '',
               first_registration_day: updatedCar.first_registration_day || currentDay,
               first_registration_month: updatedCar.first_registration_month || currentMonth,
               first_registration_year: updatedCar.first_registration_year || currentYear,
               discussedPrice: updatedCar.discussed_price || false,
+              price: updatedCar.price || 0,
+              description: updatedCar.description || '',
+              image: null,
+              created_at: updatedCar.created_at || new Date().toISOString().split('T')[0],
+              body_type: updatedCar.body_type || 'Sedan',
+              is_used: updatedCar.is_used !== undefined ? updatedCar.is_used : true,
+              drivetrain: updatedCar.drivetrain || 'FWD',
+              seats: updatedCar.seats || 5,
+              doors: updatedCar.doors || 4,
+              mileage: updatedCar.mileage || 0,
+              general_inspection_date: updatedCar.general_inspection_date || '',
+              full_service_history: updatedCar.full_service_history || false,
+              customs_paid: updatedCar.customs_paid || false,
+              power: updatedCar.power || 100,
+              gearbox: updatedCar.gearbox || 'Manual',
+              engine_size: updatedCar.engine_size || 1.6,
+              gears: updatedCar.gears || 5,
+              cylinders: updatedCar.cylinders || 4,
+              weight: updatedCar.weight || 1200,
+              emission_class: updatedCar.emission_class || 'Euro 6',
+              fuel_type: updatedCar.fuel_type || 'Petrol',
+              images: updatedCar.images || [],
               option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
+              options: [],
               slug: updatedCar.slug
             });
           }
@@ -472,11 +522,14 @@ export const useCarForm = (id?: string) => {
     }
   }, [formData, id, prepareFormDataForSubmission, tempImages, token, uploadTempImages, currentDay, currentMonth, currentYear]);
 
-  // Add initial setup effect - ONLY runs on mount
+  // FIXED: Add dependency array and use useRef to track initial load
   useEffect(() => {
     fetchMakes();
-    fetchUpholsteryTypes(); // Call the upholstery types fetch
-    if (id) fetchCarDetails();
+    fetchUpholsteryTypes();
+    
+    if (id && !initialFetchDone.current) {
+      fetchCarDetails();
+    }
     
     // Cleanup function to revoke object URLs
     return () => {
