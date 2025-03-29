@@ -150,7 +150,7 @@ const ColorManagementPage: React.FC = () => {
 
     try {
       const response = await axios.post(
-        API_ENDPOINTS.EXTERIOR_COLORS + '/add/', 
+        API_ENDPOINTS.EXTERIOR_COLORS + 'add/', 
         newExteriorColor, 
         {
           headers: {
@@ -186,7 +186,7 @@ const ColorManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`${API_ENDPOINTS.EXTERIOR_COLORS}/delete/${id}/`, {
+      await axios.delete(`${API_ENDPOINTS.EXTERIOR_COLORS}delete/${id}/`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -199,6 +199,9 @@ const ColorManagementPage: React.FC = () => {
       console.error('Error deleting exterior color:', err);
       if (err.response?.status === 401) {
         handleAuthError();
+      } else if (err.response?.status === 400) {
+        // Specific error for color in use
+        setError(err.response?.data?.error || 'This color is in use by one or more cars and cannot be deleted');
       } else {
         setError(err.response?.data?.error || 'Failed to delete exterior color');
       }
@@ -221,7 +224,7 @@ const ColorManagementPage: React.FC = () => {
 
     try {
       const response = await axios.post(
-        `${API_ENDPOINTS.INTERIOR_COLORS}/add/`, 
+        `${API_ENDPOINTS.INTERIOR_COLORS}add/`, 
         newInteriorColor, 
         {
           headers: {
@@ -257,7 +260,7 @@ const ColorManagementPage: React.FC = () => {
     }
 
     try {
-      await axios.delete(`${API_ENDPOINTS.INTERIOR_COLORS}/delete/${id}/`, {
+      await axios.delete(`${API_ENDPOINTS.INTERIOR_COLORS}delete/${id}/`, {
         headers: {
           'Authorization': `Token ${token}`
         }
@@ -270,6 +273,9 @@ const ColorManagementPage: React.FC = () => {
       console.error('Error deleting interior color:', err);
       if (err.response?.status === 401) {
         handleAuthError();
+      } else if (err.response?.status === 400) {
+        // Specific error for color in use
+        setError(err.response?.data?.error || 'This color is in use by one or more cars and cannot be deleted');
       } else {
         setError(err.response?.data?.error || 'Failed to delete interior color');
       }
@@ -289,7 +295,7 @@ const ColorManagementPage: React.FC = () => {
       setNewUpholstery('');
       setMessage('Upholstery type added successfully');
       setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding upholstery:', err);
       setError('Failed to add upholstery type');
     }
@@ -305,9 +311,14 @@ const ColorManagementPage: React.FC = () => {
       await deleteUpholsteryType(id);
       setMessage(`Upholstery type "${name}" deleted successfully`);
       setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting upholstery:', err);
-      setError('Failed to delete upholstery type');
+      // Check for 400 error which indicates the upholstery is in use
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.error || 'This upholstery type is in use by one or more cars and cannot be deleted');
+      } else {
+        setError('Failed to delete upholstery type');
+      }
     }
   };
 
@@ -434,6 +445,9 @@ const ColorManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 text-sm text-gray-600">
+            Note: Colors that are in use by cars cannot be deleted.
+          </div>
         </div>
         
         {/* Interior Colors Section */}
@@ -522,6 +536,9 @@ const ColorManagementPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 text-sm text-gray-600">
+            Note: Colors that are in use by cars cannot be deleted.
+          </div>
         </div>
         
         {/* Upholstery Management Section */}
@@ -579,6 +596,9 @@ const ColorManagementPage: React.FC = () => {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 text-sm text-gray-600">
+            Note: Upholstery types that are in use by cars cannot be deleted.
           </div>
         </div>
       </div>
