@@ -37,8 +37,47 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const fetchCars = async (page: number = 1) => {
     setIsLoading(true);
     try {
+      // First, fetch without pagination to get total count
+      if (page === 1 || totalCars === 0) {
+        try {
+          const countResponse = await fetch(`${API_BASE_URL}/api/cars/`, {
+            headers: {
+              Authorization: `Token ${token}`,
+            },
+          });
+          
+          if (countResponse.ok) {
+            const countData = await countResponse.json();
+            let totalCount = 0;
+            
+            if ('count' in countData) {
+              totalCount = countData.count;
+            } else if (Array.isArray(countData)) {
+              totalCount = countData.length;
+            }
+            
+            setTotalCars(totalCount);
+            const maxPages = Math.ceil(totalCount / carsPerPage);
+            setTotalPages(maxPages);
+            
+            // If requested page exceeds max pages, adjust it
+            if (page > maxPages && maxPages > 0) {
+              console.warn(`Page ${page} exceeds max pages (${maxPages}), adjusting to page ${maxPages}`);
+              setCurrentPage(maxPages);
+              page = maxPages;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching total car count:', error);
+        }
+      }
+      
+      // Calculate offset-based pagination manually
+      const offset = (page - 1) * carsPerPage;
+      
+      // Use offset-based request instead of page-based
       const queryParams = new URLSearchParams();
-      queryParams.append('page', page.toString());
+      queryParams.append('offset', offset.toString());
       queryParams.append('limit', carsPerPage.toString());
       
       const response = await fetch(`${API_BASE_URL}/api/cars/?${queryParams}`, {
@@ -49,12 +88,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       
       // If response is not ok, handle the error appropriately
       if (!response.ok) {
-        // If we get a 404 on a page beyond page 1, it means we're trying to access a non-existent page
-        if (response.status === 404 && page > 1) {
-          console.warn("Page not found, reverting to page 1");
+        // For any error, try falling back to first page
+        if (page > 1) {
+          console.warn(`Error fetching page ${page}, reverting to page 1`);
           setCurrentPage(1);
-          // Fetch page 1 instead
-          const newResponse = await fetch(`${API_BASE_URL}/api/cars/?page=1&limit=${carsPerPage}`, {
+          // Fetch page 1 instead (offset 0)
+          const newResponse = await fetch(`${API_BASE_URL}/api/cars/?offset=0&limit=${carsPerPage}`, {
             headers: {
               Authorization: `Token ${token}`,
             },
@@ -75,8 +114,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
     } catch (error) {
       console.error('Error fetching cars:', error);
       setCars([]);
-      setTotalPages(1);
-      setTotalCars(0);
+      // Don't reset totalPages and totalCars here, as they might be correct
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +157,11 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
 
   // Generate pagination numbers
   const getPaginationNumbers = () => {
+    // If there are no pages or only one page, return an empty array
+    if (totalPages <= 1) {
+      return [];
+    }
+    
     const pages = [];
     
     // Always include first page
@@ -143,7 +186,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       pages.push('...');
     }
     
-    // Add last page if there's more than one page
+    // Add last page if different from first page
     if (totalPages > 1) {
       pages.push(totalPages);
     }
@@ -430,9 +473,9 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                   {/* Next page button */}
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === totalPages || totalPages === 0}
                     className={`px-3 md:px-4 py-2 rounded-r-lg ${
-                      currentPage === totalPages
+                      currentPage === totalPages || totalPages === 0
                         ? 'text-gray-400 cursor-not-allowed' 
                         : 'text-blue-600 hover:bg-blue-50'
                     }`}
@@ -443,10 +486,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                 </nav>
               </div>
               
-              {/* Results summary */}
-              <div className="mt-4 text-center text-gray-500 text-sm">
-                <p>Showing {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} cars</p>
-              </div>
+              {/* Results summary - only show if we have data */}
+              {cars.length > 0 && (
+                <div className="mt-4 text-center text-gray-500 text-sm">
+                  <p>Showing {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} cars</p>
+                </div>
+              )}
             </div>
           )}
         </div>
