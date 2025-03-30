@@ -32,7 +32,7 @@ const ModelsPage: React.FC = () => {
 
   const fetchMakeDetails = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.MAKES, {
+      const response = await fetch(`${API_ENDPOINTS.MAKES}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -48,11 +48,11 @@ const ModelsPage: React.FC = () => {
       if (currentMake) {
         setMake(currentMake);
       } else {
-        navigate('/auth/makes');
+        navigate('/auth/makes?admin=true');
       }
     } catch (error) {
       console.error('Error fetching make details:', error);
-      navigate('/auth/makes');
+      navigate('/auth/makes?admin=true');
     }
   };
 
@@ -65,7 +65,6 @@ const ModelsPage: React.FC = () => {
         },
       });
   
-
       if (!response.ok) {
         throw new Error('Failed to fetch models');
       }
@@ -76,7 +75,7 @@ const ModelsPage: React.FC = () => {
       const modelsWithVariantCounts = await Promise.all(
         data.map(async (model: Model) => {
           try {
-            const variantsResponse = await fetch(API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(model.id.toString()), {
+            const variantsResponse = await fetch(`${API_ENDPOINTS.VARIANTS.LIST_BY_MODEL(model.id.toString())}?admin=true`, {
               headers: {
                 Authorization: `Token ${token}`,
               },
@@ -219,7 +218,7 @@ const ModelsPage: React.FC = () => {
   );
 
   const handleViewVariants = (modelId: number) => {
-    navigate(`/auth/makes/${makeId}/models/${modelId}/variants`);
+    navigate(`/auth/makes/${makeId}/models/${modelId}/variants?admin=true`);
   };
 
   if (loading) {
@@ -230,7 +229,7 @@ const ModelsPage: React.FC = () => {
     <div className="p-4">
       <div className="flex items-center mb-6">
         <button 
-          onClick={() => navigate('/auth/makes')} 
+          onClick={() => navigate('/auth/makes?admin=true')} 
           className="mr-4 flex items-center text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft size={18} className="mr-1" /> Back to Makes

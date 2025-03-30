@@ -30,7 +30,7 @@ const VariantsPage: React.FC = () => {
   const fetchMakeAndModelDetails = async () => {
     try {
       // Fetch make details
-      const makeResponse = await fetch(API_ENDPOINTS.MAKES, {
+      const makeResponse = await fetch(`${API_ENDPOINTS.MAKES}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -46,12 +46,12 @@ const VariantsPage: React.FC = () => {
       if (currentMake) {
         setMake(currentMake);
       } else {
-        navigate('/auth/makes');
+        navigate('/auth/makes?admin=true');
         return;
       }
 
       // Fetch model details
-      const modelResponse = await fetch(API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || ''), {
+      const modelResponse = await fetch(`${API_ENDPOINTS.MODELS.LIST_BY_MAKE(makeId || '')}?admin=true`, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -67,11 +67,11 @@ const VariantsPage: React.FC = () => {
       if (currentModel) {
         setModel(currentModel);
       } else {
-        navigate(`/auth/makes/${makeId}/models`);
+        navigate(`/auth/makes/${makeId}/models?admin=true`);
       }
     } catch (error) {
       console.error('Error fetching make and model details:', error);
-      navigate('/auth/makes');
+      navigate('/auth/makes?admin=true');
     }
   };
 
@@ -194,7 +194,7 @@ const VariantsPage: React.FC = () => {
     <div className="p-4">
       <div className="flex items-center mb-6">
         <button 
-          onClick={() => navigate(`/auth/makes/${makeId}/models`)} 
+          onClick={() => navigate(`/auth/makes/${makeId}/models?admin=true`)} 
           className="mr-4 flex items-center text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft size={18} className="mr-1" /> Back to Models
