@@ -46,25 +46,32 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
           Authorization: `Token ${token}`,
         },
       });
-      const data = await response.json();
-
-      // Handle both paginated and direct array responses
-      if ('results' in data && Array.isArray(data.results)) {
-        setCars(data.results);
-        // Calculate total pages and set total car count
-        const totalCount = data.count || 0;
-        setTotalCars(totalCount);
-        setTotalPages(Math.ceil(totalCount / carsPerPage));
-      } else if (Array.isArray(data)) {
-        setCars(data);
-        setTotalCars(data.length);
-        setTotalPages(Math.ceil(data.length / carsPerPage));
-      } else {
-        setCars([]);
-        setTotalPages(1);
-        setTotalCars(0);
-        console.error("Unexpected response format:", data);
+      
+      // If response is not ok, handle the error appropriately
+      if (!response.ok) {
+        // If we get a 404 on a page beyond page 1, it means we're trying to access a non-existent page
+        if (response.status === 404 && page > 1) {
+          console.warn("Page not found, reverting to page 1");
+          setCurrentPage(1);
+          // Fetch page 1 instead
+          const newResponse = await fetch(`${API_BASE_URL}/api/cars/?page=1&limit=${carsPerPage}`, {
+            headers: {
+              Authorization: `Token ${token}`,
+            },
+          });
+          if (!newResponse.ok) {
+            throw new Error(`API responded with status: ${newResponse.status}`);
+          }
+          const data = await newResponse.json();
+          processResponseData(data);
+          return;
+        } else {
+          throw new Error(`API responded with status: ${response.status}`);
+        }
       }
+      
+      const data = await response.json();
+      processResponseData(data);
     } catch (error) {
       console.error('Error fetching cars:', error);
       setCars([]);
@@ -72,6 +79,27 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       setTotalCars(0);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Helper function to process response data
+  const processResponseData = (data: any) => {
+    // Handle both paginated and direct array responses
+    if ('results' in data && Array.isArray(data.results)) {
+      setCars(data.results);
+      // Calculate total pages and set total car count
+      const totalCount = data.count || 0;
+      setTotalCars(totalCount);
+      setTotalPages(Math.ceil(totalCount / carsPerPage));
+    } else if (Array.isArray(data)) {
+      setCars(data);
+      setTotalCars(data.length);
+      setTotalPages(Math.ceil(data.length / carsPerPage));
+    } else {
+      setCars([]);
+      setTotalPages(1);
+      setTotalCars(0);
+      console.error("Unexpected response format:", data);
     }
   };
 
@@ -84,6 +112,9 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       top: 0,
       behavior: 'smooth'
     });
+    
+    // Don't call fetchCars directly - it will be triggered by the useEffect
+    // when currentPage changes
   };
 
   // Generate pagination numbers
@@ -140,7 +171,9 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       });
 
       if (response.ok) {
-        setCars(cars.filter(c => c.id !== carToDelete.id));
+        // Close the modal
+        setDeleteModalOpen(false);
+        setCarToDelete(null);
         
         // Refresh the current page, or go to previous page if this was the last item
         if (cars.length === 1 && currentPage > 1) {
@@ -258,6 +291,13 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
       </div>
+      
+      {/* Summary of displayed cars if there is pagination */}
+      {totalCars > 0 && (
+        <div className="mb-4 text-gray-600">
+          Showing {cars.length > 0 ? ((currentPage - 1) * carsPerPage) + 1 : 0} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} total cars
+        </div>
+      )}
 
       {/* Analytics Dashboard Section */}
       {showAnalytics && <AnalyticsDashboard />}
