@@ -447,11 +447,11 @@ const CarDetail: React.FC = () => {
                 </div>
               </div>
               
-              {/* Price now on the left */}
-              <h2 className="text-lg font-semibold text-blue-600">
+              {/* Price now on the right */}
+              <h2 className="text-lg font-semibold text-blue-600 text-right">
                 {car.discussed_price ? 
                   "I diskutueshem" : 
-                  `$${typeof car.price === 'number' 
+                  `${typeof car.price === 'number' 
                     ? car.price.toLocaleString() 
                     : Number(car.price).toLocaleString()}`
                 }
