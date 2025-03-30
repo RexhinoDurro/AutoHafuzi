@@ -56,6 +56,7 @@ export interface CarImage {
   public_id?: string;  // Cloudinary public ID
   is_primary: boolean;
   order: number;
+  tempPreview?: string;
 }
 
 export interface TempImage {

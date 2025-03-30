@@ -128,12 +128,17 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     }
   }, [tempImages, isInitialized]);
   
-  // Save next temp ID to localStorage when it changes
-  useEffect(() => {
-    if (isInitialized && nextTempId < 0) {
-      saveNextTempIdToStorage(nextTempId);
-    }
-  }, [nextTempId, isInitialized]);
+
+// Save temp images to localStorage when they change - improve to always save
+useEffect(() => {
+  if (isInitialized) {
+    // Always save when tempImages changes regardless of loading state
+    saveTempImagesToStorage(tempImages);
+    console.log(`Saved ${tempImages.length} temporary images to localStorage`);
+  }
+}, [tempImages, isInitialized]);
+
+
 
   // Validate images before adding them to tempImages
   const validateImages = useCallback((files: FileList, currentImagesCount: number): string | null => {
@@ -342,7 +347,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       // Add session ID to help with debugging
       imageFormData.append('session_id', sessionId.current);
       
-      console.log(`Starting upload of ${tempImages.length} images for car ${carSlug}`);
+      console.log(`Starting upload of ${tempImages.length} images for car slug: ${carSlug}`);
       
       // Upload the images
       const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug), {

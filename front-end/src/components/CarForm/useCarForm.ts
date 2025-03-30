@@ -44,6 +44,7 @@ export const useCarForm = (id?: string) => {
     uploadError,
     handleImageUpload,
     handleImageDelete,
+    handleImageUpdate,
     setTempImages,
     setNextTempId,
     uploadTempImages,
@@ -657,6 +658,8 @@ export const useCarForm = (id?: string) => {
     // Export the clearTempImagesStorage function
     clearTempImagesStorage,
     // Add handleImageUpdate function
-    CarhandleImageUpdate
+    CarhandleImageUpdate,
+    // Add handleImageUpdate (from useCarFormImageUpload)
+    handleImageUpdate
   };
 };

@@ -38,42 +38,43 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   };
   
   // Helper to get the correct image URL
-  const getImageUrl = (image: CarImage | TempImage): string => {
-    // First, handle temporary images
-    if (isTempImage(image)) {
-      return image.preview;
+  // In ImageGallery.tsx, modify the getImageUrl function
+const getImageUrl = (image: CarImage | TempImage): string => {
+  // First, handle temporary images
+  if (isTempImage(image)) {
+    return image.preview;
+  }
+  
+  // For server images with temp previews (from local editing)
+  if ('tempPreview' in image && image.tempPreview) {
+    return image.tempPreview;
+  }
+  
+  // For Cloudinary-stored images
+  if ('url' in image && image.url) {
+    if (image.url.includes('cloudinary.com')) {
+      return getCloudinaryUrl(image.url, 800, 600, 'auto');
     }
-    
-    // For Cloudinary-stored images - this is the primary way now
-    if ('url' in image && image.url) {
-      // Apply Cloudinary optimizations for better loading
-      if (image.url.includes('cloudinary.com')) {
-        return getCloudinaryUrl(image.url, 800, 600, 'auto');
+    return image.url;
+  }
+  
+  // Handle images with direct paths
+  if ('image' in image && image.image) {
+    if (typeof image.image === 'string') {
+      if (image.image.includes('cloudinary.com')) {
+        return getCloudinaryUrl(image.image, 800, 600, 'auto');
       }
-      return image.url;
-    }
-    
-    // Handle images with direct paths
-    if ('image' in image && image.image) {
-      if (typeof image.image === 'string') {
-        // Apply Cloudinary optimizations
-        if (image.image.includes('cloudinary.com')) {
-          return getCloudinaryUrl(image.image, 800, 600, 'auto');
-        }
-        
-        // Handle direct URLs
-        if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
-          return image.image;
-        }
-        
-        // Handle relative paths
-        return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+      
+      if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
+        return image.image;
       }
+      
+      return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
     }
-    
-    // Last resort fallback - rarely needed with Cloudinary
-    return fallbackImageUrl;
-  };
+  }
+  
+  return fallbackImageUrl;
+};
   
   // Calculate the aspect ratio styles based on selectedAspectRatio
   const getAspectRatioStyles = () => {

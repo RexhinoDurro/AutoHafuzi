@@ -18,7 +18,8 @@ import {
   ASPECT_RATIO_OPTIONS,
   getAspectRatioByValue,
   saveSelectedAspectRatio,
-  loadSelectedAspectRatio
+  loadSelectedAspectRatio,
+  saveTempImagesToStorage
 } from './persistentImageStorage';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -44,7 +45,8 @@ const CarForm = () => {
     handleImageDelete: hookHandleImageDelete,
     tempImages: hookTempImages,
     handleImageUpload: hookHandleImageUpload,
-    clearTempImagesStorage
+    clearTempImagesStorage,
+    setTempImages
   } = useCarForm(id);
 
   // Local form state that doesn't trigger API calls until necessary
@@ -54,7 +56,8 @@ const CarForm = () => {
   const [localImages, setLocalImages] = useState<CarImage[]>([]);
   const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
-  const setIsLocalLoading = useState(false)[1];
+  const [imagesToUpdate, setImagesToUpdate] = useState<Map<number, Blob>>(new Map());
+
 
   // State for the selected aspect ratio
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(() => {
@@ -72,7 +75,11 @@ const CarForm = () => {
     if (serverFormData.images) {
       setLocalImages(serverFormData.images);
     }
+    
+    // Keep local temp images in sync with hook's temp images
     setLocalTempImages(hookTempImages);
+    
+    console.log(`Synced ${hookTempImages.length} temporary images from hook to local state`);
   }, [serverFormData.images, hookTempImages]);
 
   // State for form validation errors
@@ -126,8 +133,15 @@ const CarForm = () => {
           URL.revokeObjectURL(image.preview);
         }
       });
+      
+      // Revoke any temporary preview URLs for server images
+      localImages.forEach(image => {
+        if ('tempPreview' in image && image.tempPreview) {
+          URL.revokeObjectURL(image.tempPreview);
+        }
+      });
     };
-  }, [localTempImages]);
+  }, [localTempImages, localImages]);
 
   // Initialize formatted values when localFormData changes
   useEffect(() => {
@@ -259,8 +273,7 @@ const CarForm = () => {
     try {
       // Handle differently based on whether it's a temp image or server image
       if (imageId < 0) {
-        // It's a temporary image - update it locally
-        // Create a file from the blob
+        // It's a temporary image - update it locally only
         const file = new File([imageBlob], `cropped-image-${Date.now()}.jpg`, {
           type: 'image/jpeg',
           lastModified: Date.now()
@@ -268,6 +281,8 @@ const CarForm = () => {
         
         // Create a new preview URL
         const preview = URL.createObjectURL(file);
+        
+        console.log(`Updating temporary image ${imageId} with new preview`);
         
         // Update the local temp images
         setLocalTempImages(prev => {
@@ -285,53 +300,55 @@ const CarForm = () => {
         });
         
         // Also update the hook's temp images for consistency
-        // Since we don't have direct access to the setTempImages function from useCarForm
-        // We'll create a new file and preview URL
+        // This is the key change to ensure synchronization
+        const updatedTempImage = {
+          id: imageId,
+          file: file,
+          preview: preview
+        };
         
-        
-        // We don't have direct access to setTempImages from the hook
-        // This workaround is not ideal but necessary for the current structure
-        // In a real application, you would refactor the hook to expose this functionality
-      } else {
-        // It's a server image - need to update on the server
-        // Create FormData with the image blob
-        const formData = new FormData();
-        formData.append('image', imageBlob, `cropped-image-${Date.now()}.jpg`);
-        formData.append('replace_id', imageId.toString());
-        
-        // Show loading state
-        setIsLocalLoading(true);
-        
-        // Use the appropriate API endpoint to update the image
-        const { token } = getStoredAuth();
-        const response = await fetch(`${API_BASE_URL}/api/cars/images/${imageId}/`, {
-          method: 'PUT',
-          headers: { Authorization: `Token ${token}` },
-          body: formData
+        // Update hook's temp images using the exposed setTempImages function
+        setTempImages(prev => {
+          const updated = prev.map(img => {
+            if (img.id === imageId) {
+              return updatedTempImage;
+            }
+            return img;
+          });
+          // Ensure localStorage is updated
+          saveTempImagesToStorage(updated);
+          return updated;
         });
+      } else {
+        // For server images, store the updated blob locally instead of uploading immediately
+        // We'll add it to a map of pending updates
+        const pendingUpdates = new Map(imagesToUpdate);
+        pendingUpdates.set(imageId, imageBlob);
+        setImagesToUpdate(pendingUpdates);
         
-        if (!response.ok) {
-          throw new Error(`Failed to update image: ${response.status}`);
-        }
+        console.log(`Stored update for server image ${imageId} to apply on form submission`);
         
-        // Get the updated image data
-        const updatedImage = await response.json();
+        // Update local display of the image for immediate feedback
+        const objectUrl = URL.createObjectURL(imageBlob);
         
-        // Update the local images array
+        // Update the local images array with the new preview
         setLocalImages(prev => {
           return prev.map(img => {
             if (img.id === imageId) {
+              // Revoke previous temp preview if it exists
+              if ('tempPreview' in img && img.tempPreview) {
+                URL.revokeObjectURL(img.tempPreview);
+              }
+              
+              // Create a temporary preview that will be used until server update
               return {
                 ...img,
-                url: updatedImage.url || img.url,
-                image: updatedImage.image || img.image
+                tempPreview: objectUrl 
               };
             }
             return img;
           });
         });
-        
-        setIsLocalLoading(false);
       }
     } catch (error) {
       console.error('Error updating image:', error);
@@ -347,12 +364,23 @@ const CarForm = () => {
       
       // Also call the hook handler to stay in sync
       hookHandleImageDelete(imageId);
+      
+      console.log(`Deleted temporary image ${imageId}`);
     } else {
       // It's a server image - remove from local display but don't call API yet
       setLocalImages(prev => prev.filter(img => img.id !== imageId));
       
       // Track that we should delete this on submit
       setImagesToDelete(prev => [...prev, imageId]);
+      
+      // If we have a pending update for this image, remove it
+      if (imagesToUpdate.has(imageId)) {
+        const newUpdates = new Map(imagesToUpdate);
+        newUpdates.delete(imageId);
+        setImagesToUpdate(newUpdates);
+      }
+      
+      console.log(`Marked server image ${imageId} for deletion on form submission`);
     }
   };
 
@@ -362,6 +390,8 @@ const CarForm = () => {
     const aspectRatio = getAspectRatioByValue(ratioValue);
     setSelectedAspectRatio(aspectRatio);
     saveSelectedAspectRatio(ratioValue);
+    
+    console.log(`Changed aspect ratio to ${ratioValue}`);
   };
 
   // Fetch exterior and interior colors
@@ -512,23 +542,57 @@ const CarForm = () => {
     
     // If there are validation errors, show them and stop submission
     if (Object.keys(errors).length > 0) {
-      // Scroll to the top to show errors
       window.scrollTo(0, 0);
       return;
     }
-  
-    // Process any pending image deletions
-    for (const imageId of imagesToDelete) {
-      await hookHandleImageDelete(imageId);
-    }
-    setImagesToDelete([]);
-  
-    // No need to sync with serverFormData first since we've been keeping them in sync
-    const success = await hookHandleSubmit(e);
-    if (success) {
-      // Clear temp images from storage after successful submission
-      clearTempImagesStorage();
-      navigate('/auth/dashboard');
+    
+    try {
+      // Process any pending image deletions
+      for (const imageId of imagesToDelete) {
+        await hookHandleImageDelete(imageId);
+      }
+      
+      // Process any pending image updates - but only if we have an ID
+      if (id) {
+        console.log(`Processing ${imagesToUpdate.size} pending image updates`);
+        
+        for (const [imageId, blob] of imagesToUpdate.entries()) {
+          const formData = new FormData();
+          formData.append('image', blob, `updated-image-${Date.now()}.jpg`);
+          formData.append('replace_id', imageId.toString());
+          
+          const { token } = getStoredAuth();
+          const response = await fetch(`${API_BASE_URL}/api/cars/images/${imageId}/`, {
+            method: 'PUT',
+            headers: { Authorization: `Token ${token}` },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to update image: ${response.status}`);
+          }
+          
+          console.log(`Updated server image ${imageId}`);
+        }
+      }
+      
+      // Clear the pending update and delete trackers
+      setImagesToDelete([]);
+      setImagesToUpdate(new Map());
+      
+      // Submit the form data and temporary images
+      const success = await hookHandleSubmit(e);
+      if (success) {
+        // Clear temp images from storage after successful submission
+        clearTempImagesStorage();
+        navigate('/auth/dashboard');
+      }
+    } catch (error) {
+      console.error('Error during form submission:', error);
+      setValidationErrors({
+        submission: error instanceof Error ? error.message : 'Error submitting form'
+      });
+      window.scrollTo(0, 0);
     }
   };
 
