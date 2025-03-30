@@ -238,10 +238,12 @@ const CarForm = () => {
   // Local image handlers (fixes image refresh issue)
   const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Call the hook's handler but store temporarily 
+      console.log(`Local image upload triggered with ${e.target.files.length} files`);
+      
+      // Call the hook's handler directly with the event
       hookHandleImageUpload(e);
       
-      // The hook will update hookTempImages which will feed into our localTempImages via the useEffect
+      console.log('Image upload initiated');
     }
   };
 

@@ -557,7 +557,7 @@ export const useCarForm = (id?: string) => {
     tempImages, 
     handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        handleImageUpload(e.target.files);
+        handleImageUpload(e);
         // Reset the input value after handling the files
         e.target.value = '';
       }

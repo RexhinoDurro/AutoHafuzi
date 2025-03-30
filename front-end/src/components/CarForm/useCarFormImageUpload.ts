@@ -1,4 +1,4 @@
-// Modified version of useCarFormImageUpload.ts with fixed function name references
+// Fixed useCarFormImageUpload.ts with TypeScript fixes
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
@@ -6,7 +6,7 @@ import { prepareImagesForUpload, getImageDimensions } from '../../utils/imageSer
 import {
   saveTempImagesToStorage,
   loadTempImagesFromStorage,
-  saveNextTempIdToStorage,  // Corrected name
+  saveNextTempIdToStorage,
   loadNextTempIdFromStorage,
   clearTempImagesFromStorage,
   getFormSessionId
@@ -31,7 +31,7 @@ interface UseCarFormImageUploadResult {
   nextTempId: number;
   isUploading: boolean;
   uploadError: string | null;
-  handleImageUpload: (files: FileList) => Promise<void>;
+  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleImageDelete: (imageId: number) => Promise<boolean>;
   setTempImages: React.Dispatch<React.SetStateAction<TempImage[]>>;
   setNextTempId: React.Dispatch<React.SetStateAction<number>>;
@@ -171,7 +171,8 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       return `Maximum ${MAX_IMAGES} images allowed`;
     }
   
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       if (file.size > MAX_FILE_SIZE) {
         return 'Image size should not exceed 5MB';
       }
@@ -186,7 +187,8 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       const currentRatio = parseFloat(detectedAspectRatio);
       
       // Check each new file for consistent aspect ratio
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const isConsistent = await isAspectRatioConsistent(file, currentRatio);
         if (!isConsistent) {
           return 'All images must have the same aspect ratio';
@@ -198,69 +200,86 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   }, [detectedAspectRatio]);
 
   // Enhanced image upload with better error handling and aspect ratio validation
-  const handleImageUpload = useCallback(async (files: FileList) => {
-    setUploadError(null);
-    
-    const validationError = await validateImages(files, tempImages.length);
-    if (validationError) {
-      setUploadError(validationError);
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      console.log('No files provided for upload');
       return;
     }
     
-    try {
-      // Convert FileList to array and compress images
-      const filesArray = Array.from(files);
-      const compressedFiles = await prepareImagesForUpload(filesArray, {
-        maxWidth: 1920,
-        maxHeight: 1080,
-        quality: 0.85,
-        format: 'auto'
-      });
-      
-      let currentTempId = nextTempId;
-      const newTempImages: TempImage[] = [];
-      
-      for (const file of compressedFiles) {
-        const imageId = currentTempId;
-        currentTempId -= 1;
-        
-        // Create object URL for preview
-        const preview = URL.createObjectURL(file);
-        
-        newTempImages.push({
-          id: imageId,
-          file,
-          preview
-        });
-      }
-      
-      // Detect aspect ratio from the first image if we don't have one yet
-      if (!detectedAspectRatio && newTempImages.length > 0) {
-        try {
-          const dimensions = await getImageDimensions(newTempImages[0].preview);
-          const ratio = dimensions.width / dimensions.height;
-          setDetectedAspectRatio(ratio.toFixed(2));
-        } catch (error) {
-          console.error('Failed to get dimensions of new image:', error);
+    const files = e.target.files;
+    console.log(`Attempting to upload ${files.length} files`);
+    
+    // Validate images
+    validateImages(files, tempImages.length)
+      .then(async (validationError) => {
+        if (validationError) {
+          console.error('Image validation error:', validationError);
+          setUploadError(validationError);
+          return;
         }
-      }
-      
-      // Update state with the new images
-      setTempImages(prev => {
-        const updatedImages = [...prev, ...newTempImages];
-        // Save to localStorage immediately
-        saveTempImagesToStorage(updatedImages);
-        return updatedImages;
+        
+        try {
+          // Convert FileList to array
+          const filesArray = Array.from(files);
+          console.log(`Preparing ${filesArray.length} images for upload`);
+          
+          // Compress images
+          const compressedFiles = await prepareImagesForUpload(filesArray, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.85,
+            format: 'auto'
+          });
+          
+          let currentTempId = nextTempId;
+          const newTempImages: TempImage[] = [];
+          
+          for (const file of compressedFiles) {
+            const imageId = currentTempId;
+            currentTempId -= 1;
+            
+            // Create object URL for preview
+            const preview = URL.createObjectURL(file);
+            console.log(`Created preview for image ${imageId}: ${preview.substring(0, 50)}...`);
+            
+            newTempImages.push({
+              id: imageId,
+              file,
+              preview
+            });
+          }
+          
+          // Detect aspect ratio from the first image if we don't have one yet
+          if (!detectedAspectRatio && newTempImages.length > 0) {
+            try {
+              const dimensions = await getImageDimensions(newTempImages[0].preview);
+              const ratio = dimensions.width / dimensions.height;
+              setDetectedAspectRatio(ratio.toFixed(2));
+              console.log(`Detected aspect ratio: ${ratio.toFixed(2)}`);
+            } catch (error) {
+              console.error('Failed to get dimensions of new image:', error);
+            }
+          }
+          
+          // Update state with the new images
+          setTempImages(prev => {
+            const updatedImages = [...prev, ...newTempImages];
+            console.log(`Updated temp images array: ${updatedImages.length} total images`);
+            
+            // Save to localStorage immediately
+            saveTempImagesToStorage(updatedImages);
+            return updatedImages;
+          });
+          
+          setNextTempId(currentTempId);
+          saveNextTempIdToStorage(currentTempId);
+          
+          console.log(`Added ${newTempImages.length} new temporary images, next ID: ${currentTempId}`);
+        } catch (error) {
+          console.error('Error handling image upload:', error);
+          setUploadError('Error processing images. Please try again.');
+        }
       });
-      
-      setNextTempId(currentTempId);
-      saveNextTempIdToStorage(currentTempId);  // Use the correct function name
-      
-      console.log(`Added ${newTempImages.length} new temporary images`);
-    } catch (error) {
-      console.error('Error handling image upload:', error);
-      setUploadError('Error processing images. Please try again.');
-    }
   }, [nextTempId, tempImages.length, validateImages, detectedAspectRatio]);
 
   // Enhanced delete function with better error handling
