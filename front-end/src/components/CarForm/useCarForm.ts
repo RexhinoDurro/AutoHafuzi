@@ -48,7 +48,7 @@ export const useCarForm = (id?: string) => {
     setNextTempId,
     uploadTempImages,
     clearTempImagesStorage,  // This is the function we need to expose
-    handleImageUpdate: originalHandleImageUpdate
+  
   } = useCarFormImageUpload();
 
   const [formData, setFormData] = useState<CarFormData>({
@@ -99,7 +99,7 @@ export const useCarForm = (id?: string) => {
   });
 
   // Enhanced image update function
-  const handleImageUpdate = async (imageId: number, imageBlob: Blob) => {
+  const CarhandleImageUpdate = async (imageId: number, imageBlob: Blob) => {
     try {
       if (imageId < 0) {
         // It's a temporary image
@@ -657,6 +657,6 @@ export const useCarForm = (id?: string) => {
     // Export the clearTempImagesStorage function
     clearTempImagesStorage,
     // Add handleImageUpdate function
-    handleImageUpdate
+    CarhandleImageUpdate
   };
 };

@@ -143,11 +143,23 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
             
             {/* Action buttons */}
             <div className="absolute top-2 right-2 flex space-x-1">
-              {/* Edit button */}
+              {/* Edit button - Now using Edit2 icon */}
               {isEditing && onUpdateImage && (
                 <button
                   onClick={() => handleOpenCropModal(image)}
                   className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600"
+                  type="button"
+                  aria-label="Edit image"
+                >
+                  <Edit2 size={16} />
+                </button>
+              )}
+              
+              {/* Crop button */}
+              {isEditing && onUpdateImage && (
+                <button
+                  onClick={() => handleOpenCropModal(image)}
+                  className="bg-green-500 text-white p-1 rounded-full hover:bg-green-600"
                   type="button"
                   aria-label="Crop image"
                 >
