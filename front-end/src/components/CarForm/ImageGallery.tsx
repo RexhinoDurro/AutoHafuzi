@@ -38,43 +38,42 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   };
   
   // Helper to get the correct image URL
-  // In ImageGallery.tsx, modify the getImageUrl function
-const getImageUrl = (image: CarImage | TempImage): string => {
-  // First, handle temporary images
-  if (isTempImage(image)) {
-    return image.preview;
-  }
-  
-  // For server images with temp previews (from local editing)
-  if ('tempPreview' in image && image.tempPreview) {
-    return image.tempPreview;
-  }
-  
-  // For Cloudinary-stored images
-  if ('url' in image && image.url) {
-    if (image.url.includes('cloudinary.com')) {
-      return getCloudinaryUrl(image.url, 800, 600, 'auto');
+  const getImageUrl = (image: CarImage | TempImage): string => {
+    // First, handle temporary images
+    if (isTempImage(image)) {
+      return image.preview;
     }
-    return image.url;
-  }
-  
-  // Handle images with direct paths
-  if ('image' in image && image.image) {
-    if (typeof image.image === 'string') {
-      if (image.image.includes('cloudinary.com')) {
-        return getCloudinaryUrl(image.image, 800, 600, 'auto');
-      }
-      
-      if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
-        return image.image;
-      }
-      
-      return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+    
+    // For server images with temp previews (from local editing)
+    if ('tempPreview' in image && image.tempPreview) {
+      return image.tempPreview;
     }
-  }
-  
-  return fallbackImageUrl;
-};
+    
+    // For Cloudinary-stored images
+    if ('url' in image && image.url) {
+      if (image.url.includes('cloudinary.com')) {
+        return getCloudinaryUrl(image.url, 800, 600, 'auto');
+      }
+      return image.url;
+    }
+    
+    // Handle images with direct paths
+    if ('image' in image && image.image) {
+      if (typeof image.image === 'string') {
+        if (image.image.includes('cloudinary.com')) {
+          return getCloudinaryUrl(image.image, 800, 600, 'auto');
+        }
+        
+        if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
+          return image.image;
+        }
+        
+        return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+      }
+    }
+    
+    return fallbackImageUrl;
+  };
   
   // Calculate the aspect ratio styles based on selectedAspectRatio
   const getAspectRatioStyles = () => {
@@ -100,19 +99,34 @@ const getImageUrl = (image: CarImage | TempImage): string => {
   const handleOpenCropModal = (image: CarImage | TempImage) => {
     if (!onUpdateImage) return; // Only proceed if update handler is provided
     
+    // Set the current image ID and URL
     setCurrentImageId(image.id);
     setCurrentImageUrl(getImageUrl(image));
     setCropModalOpen(true);
+
+    console.log(`Opening crop modal for image ID: ${image.id}`);
   };
 
-  // Handle crop completion
+  // Handle crop completion - FIXED to avoid affecting other images
   const handleCropComplete = async (croppedImageBlob: Blob) => {
     if (currentImageId === null || !onUpdateImage) return;
     
     try {
-      await onUpdateImage(currentImageId, croppedImageBlob);
+      console.log(`Completing crop for image ID: ${currentImageId}`);
+      
+      // Create an isolated copy of the blob to prevent reference sharing
+      const isolatedBlob = new Blob([await croppedImageBlob.arrayBuffer()], { 
+        type: croppedImageBlob.type 
+      });
+      
+      // Pass the blob to the parent component's update handler
+      await onUpdateImage(currentImageId, isolatedBlob);
+      
+      // Only close the modal after successful update
+      setCropModalOpen(false);
     } catch (error) {
       console.error('Error updating image after crop:', error);
+      alert('Failed to update image. Please try again.');
     }
   };
   
@@ -144,7 +158,7 @@ const getImageUrl = (image: CarImage | TempImage): string => {
             
             {/* Action buttons */}
             <div className="absolute top-2 right-2 flex space-x-1">
-              {/* Edit button - Now using Edit2 icon */}
+              {/* Edit button */}
               {isEditing && onUpdateImage && (
                 <button
                   onClick={() => handleOpenCropModal(image)}
@@ -199,6 +213,7 @@ const getImageUrl = (image: CarImage | TempImage): string => {
           imageUrl={currentImageUrl}
           onCropComplete={handleCropComplete}
           selectedAspectRatio={selectedAspectRatio}
+          currentImageId={currentImageId} // Pass image ID for better tracking
         />
       )}
     </>

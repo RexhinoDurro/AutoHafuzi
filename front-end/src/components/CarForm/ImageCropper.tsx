@@ -9,6 +9,7 @@ interface ImageCropperProps {
   imageUrl: string;
   onCropComplete: (croppedImageBlob: Blob) => Promise<void>;
   selectedAspectRatio?: AspectRatioOption;
+  currentImageId: number | null; // Added to track which image is being edited
 }
 
 interface CropArea {
@@ -23,7 +24,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   onClose,
   imageUrl,
   onCropComplete,
-  selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 }
+  selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 },
+  currentImageId = null
 }) => {
   const [cropArea, setCropArea] = useState<CropArea>({ x: 0, y: 0, width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -63,6 +65,9 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     setImageSize({ width: offsetWidth, height: offsetHeight });
     naturalImageSizeRef.current = { width: naturalWidth, height: naturalHeight };
     
+    console.log(`Image loaded - Display: ${offsetWidth}x${offsetHeight}, Natural: ${naturalWidth}x${naturalHeight}`);
+    console.log(`Working with image ID: ${currentImageId}`);
+    
     // Reset zoom and position
     setZoomLevel(1);
     setImagePosition({ x: 0, y: 0 });
@@ -95,7 +100,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       width: cropWidth,
       height: cropHeight
     });
-  }, [selectedAspectRatio]);
+  }, [selectedAspectRatio, currentImageId]);
 
   // Enforce aspect ratio during crop area changes
   const enforceCropAspectRatio = useCallback((newCrop: CropArea): CropArea => {
@@ -343,10 +348,11 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     };
   }, [isOpen, handleMouseMove, handleMouseUp, handleWheel]);
 
-  // Generate the cropped image, accounting for zoom and rotation
-  const generateCroppedImage = useCallback((): Promise<Blob | null> => {
+  // Generate the cropped image, accounting for zoom and rotation - FIXED to isolate the blob
+  const generateCroppedImage = useCallback(async (): Promise<Blob | null> => {
     if (!imageRef.current || !canvasRef.current) {
-      return Promise.resolve(null);
+      console.error('Missing image or canvas reference');
+      return null;
     }
     
     const img = imageRef.current;
@@ -354,8 +360,13 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     const ctx = canvas.getContext('2d');
     
     if (!ctx) {
-      return Promise.resolve(null);
+      console.error('Could not get canvas context');
+      return null;
     }
+    
+    console.log(`Generating cropped image for ID ${currentImageId}`);
+    console.log(`Crop settings: zoom=${zoomLevel}, rotation=${rotation}, position=(${imagePosition.x},${imagePosition.y})`);
+    console.log(`Crop area: x=${cropArea.x}, y=${cropArea.y}, w=${cropArea.width}, h=${cropArea.height}`);
     
     // Calculate the scaling factor between displayed image and natural image
     const scaleX = naturalImageSizeRef.current.width / img.width;
@@ -400,29 +411,57 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       canvas.height
     );
     
-    // Convert canvas to blob
+    // Convert canvas to blob and return a Promise
     return new Promise((resolve) => {
       canvas.toBlob(
-        (blob) => {
-          resolve(blob);
+        async (blob) => {
+          if (blob) {
+            console.log(`Created blob for image ID ${currentImageId}: ${blob.size} bytes`);
+            
+            // Create a new isolated blob to prevent reference sharing
+            // This is key to fixing the issue where all images update at once
+            const isolatedBlob = new Blob([await blob.arrayBuffer()], { 
+              type: 'image/jpeg' 
+            });
+            
+            resolve(isolatedBlob);
+          } else {
+            console.error('Failed to create blob from canvas');
+            resolve(null);
+          }
         },
         'image/jpeg',
         0.9 // quality
       );
     });
-  }, [cropArea, zoomLevel, rotation, imagePosition]);
+  }, [cropArea, zoomLevel, rotation, imagePosition, currentImageId]);
 
-  // Handle crop confirmation
+  // Handle crop confirmation - FIXED to properly isolate the blob
   const handleCropConfirm = async () => {
+    if (isCropping) return; // Prevent multiple simultaneous crop operations
+    
     setIsCropping(true);
     try {
+      console.log(`Starting crop confirmation for image ID: ${currentImageId}`);
+      
       const croppedBlob = await generateCroppedImage();
       if (croppedBlob) {
+        // Generate a unique identifier for this crop operation
+        const cropId = `crop-${currentImageId}-${Date.now()}`;
+        console.log(`Generated crop ID: ${cropId}`);
+        
+        // Apply the crop by calling the parent component's handler
         await onCropComplete(croppedBlob);
+        
+        // Close the modal after successful crop
         onClose();
+      } else {
+        console.error('Failed to generate cropped image');
+        alert('Failed to crop image. Please try again.');
       }
     } catch (error) {
-      console.error('Error cropping image:', error);
+      console.error('Error during crop operation:', error);
+      alert('Error cropping image. Please try again.');
     } finally {
       setIsCropping(false);
     }
@@ -487,10 +526,14 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       
       // Center handles for edge (non-corner) handles
       if (!isCorner) {
-        if (position === 'n' || position === 's') baseStyle.left = '50%';
-        if (position === 'n' || position === 's') baseStyle.transform = 'translateX(-50%)';
-        if (position === 'e' || position === 'w') baseStyle.top = '50%';
-        if (position === 'e' || position === 'w') baseStyle.transform = 'translateY(-50%)';
+        if (position === 'n' || position === 's') {
+          baseStyle.left = '50%';
+          baseStyle.transform = 'translateX(-50%)';
+        }
+        if (position === 'e' || position === 'w') {
+          baseStyle.top = '50%';
+          baseStyle.transform = 'translateY(-50%)';
+        }
       }
       
       return baseStyle;
@@ -538,8 +581,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
         </div>
       </div>
     );
-  };
-
+  }
+  // Add this return statement at the end of the ImageCropper component
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
@@ -549,6 +592,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
             aria-label="Close"
+            type="button"
           >
             &times;
           </button>
@@ -568,6 +612,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
                 onClick={() => handleZoom('out')}
                 className="p-2 bg-gray-200 rounded hover:bg-gray-300"
                 title="Zoom out"
+                type="button"
               >
                 <ZoomOut size={16} />
               </button>
@@ -576,6 +621,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
                 onClick={() => handleZoom('in')}
                 className="p-2 bg-gray-200 rounded hover:bg-gray-300"
                 title="Zoom in"
+                type="button"
               >
                 <ZoomIn size={16} />
               </button>
@@ -586,6 +632,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
                 onClick={() => handleRotate('ccw')}
                 className="p-2 bg-gray-200 rounded hover:bg-gray-300"
                 title="Rotate counter-clockwise"
+                type="button"
               >
                 <RotateCcw size={16} />
               </button>
@@ -594,6 +641,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
                 onClick={() => handleRotate('cw')}
                 className="p-2 bg-gray-200 rounded hover:bg-gray-300"
                 title="Rotate clockwise"
+                type="button"
               >
                 <RotateCw size={16} />
               </button>
@@ -659,6 +707,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
             disabled={isCropping}
+            type="button"
           >
             Cancel
           </button>
@@ -668,6 +717,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
               isCropping ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             disabled={isCropping}
+            type="button"
           >
             {isCropping ? 'Cropping...' : 'Apply Crop'}
           </button>
@@ -675,6 +725,6 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default ImageCropper;

@@ -217,33 +217,63 @@ useEffect(() => {
     setUploadError(null);
     
     try {
+      console.log(`Updating image with ID: ${imageId}`);
+      
+      // Create an isolated copy of the blob to prevent reference sharing
+      const blobCopy = new Blob([await newImageBlob.arrayBuffer()], { 
+        type: newImageBlob.type 
+      });
+      
       // Check if the image is a temporary one or server one
       if (imageId < 0) {
         // It's a temporary image, update it locally
-        const file = new File([newImageBlob], `cropped-image-${Date.now()}.jpg`, {
+        // Create a unique filename with timestamp and ID to prevent conflicts
+        const uniqueFilename = `cropped-image-${Date.now()}-${imageId}.jpg`;
+        
+        const file = new File([blobCopy], uniqueFilename, {
           type: 'image/jpeg',
           lastModified: Date.now()
         });
         
-        // Create a new preview URL
+        // Create a new unique preview URL for this file only
         const preview = URL.createObjectURL(file);
         
-        // Update the temp images array
+        console.log(`Created new preview URL for image ${imageId}`);
+        
+        // Update the temp images array - carefully to only modify the target image
         setTempImages(prev => {
+          // Create a map of existing IDs to detect and prevent duplicate updates
+          const idMap = new Map(prev.map(img => [img.id, true]));
+          
+          // Make sure the image exists
+          if (!idMap.has(imageId)) {
+            console.warn(`Attempted to update non-existent image ID: ${imageId}`);
+            return prev;
+          }
+          
           const updatedImages = prev.map(img => {
             if (img.id === imageId) {
-              // Revoke the old preview URL
+              // Revoke the old preview URL to prevent memory leaks
               if (img.preview) {
                 URL.revokeObjectURL(img.preview);
+                console.log(`Revoked old preview URL for ${imageId}`);
               }
-              // Return updated image
-              return { ...img, file, preview };
+              
+              // Return a completely new object with the updated file and preview
+              return { 
+                id: img.id, // Keep the same ID
+                file, // New file
+                preview // New preview URL
+              };
             }
+            
+            // Return all other images completely unchanged
             return img;
           });
           
-          // Also update localStorage
+          // Save the updated array to localStorage
           saveTempImagesToStorage(updatedImages);
+          console.log(`Saved updated image ${imageId} to localStorage`);
           
           return updatedImages;
         });
@@ -253,8 +283,10 @@ useEffect(() => {
           throw new Error('Authentication token missing');
         }
         
+        console.log(`Updating server image with ID: ${imageId}`);
+        
         const formData = new FormData();
-        formData.append('image', newImageBlob, `cropped-image-${Date.now()}.jpg`);
+        formData.append('image', blobCopy, `cropped-server-${imageId}-${Date.now()}.jpg`);
         
         // Use a generic endpoint that updates any image by its ID
         const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPDATE(imageId), {
@@ -272,8 +304,9 @@ useEffect(() => {
     } catch (error) {
       console.error('Error updating image:', error);
       setUploadError(error instanceof Error ? error.message : 'Error updating image');
+      throw error; // Re-throw to allow the caller to handle it
     }
-  }, [token]);
+  }, [token, setTempImages]);
 
   // Enhanced delete function with better error handling
   const handleImageDelete = useCallback(async (imageId: number): Promise<boolean> => {

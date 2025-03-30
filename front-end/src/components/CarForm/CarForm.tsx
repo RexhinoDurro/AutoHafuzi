@@ -271,87 +271,111 @@ const CarForm = () => {
   // Handle local image update after cropping
   const handleLocalImageUpdate = async (imageId: number, imageBlob: Blob) => {
     try {
+      console.log(`Started update for image with ID: ${imageId}`);
+      
+      // Create an isolated copy of the blob to ensure no reference sharing happens
+      const blobCopy = new Blob([await imageBlob.arrayBuffer()], { 
+        type: imageBlob.type 
+      });
+      
       // Handle differently based on whether it's a temp image or server image
       if (imageId < 0) {
-        // It's a temporary image - update it locally only
-        const file = new File([imageBlob], `cropped-image-${Date.now()}.jpg`, {
+        // It's a temporary image - create a unique identifiable filename
+        const uniqueFilename = `cropped-temp-${Date.now()}-${imageId}.jpg`;
+        console.log(`Creating new file with name: ${uniqueFilename}`);
+        
+        const file = new File([blobCopy], uniqueFilename, {
           type: 'image/jpeg',
           lastModified: Date.now()
         });
         
-        // Create a new preview URL
+        // Create a new preview URL specifically for this image
         const preview = URL.createObjectURL(file);
         
         console.log(`Updating temporary image ${imageId} with new preview`);
         
-        // Update the local temp images
+        // Update ONLY the targeted image in the local temp images array
         setLocalTempImages(prev => {
           return prev.map(img => {
             if (img.id === imageId) {
               // Revoke the old preview URL to prevent memory leaks
               if (img.preview) {
                 URL.revokeObjectURL(img.preview);
+                console.log(`Revoked old preview URL for image ${imageId}`);
               }
-              // Return updated image
-              return { ...img, file, preview };
+              // Return updated image with the new file and preview
+              return { id: img.id, file, preview };
             }
+            // Leave all other images completely untouched
             return img;
           });
         });
         
-        // Also update the hook's temp images for consistency
-        // This is the key change to ensure synchronization
+        // Create an updated temp image for the hook
         const updatedTempImage = {
           id: imageId,
           file: file,
           preview: preview
         };
         
-        // Update hook's temp images using the exposed setTempImages function
+        // Update the hook's temp images to ensure synchronization
         setTempImages(prev => {
           const updated = prev.map(img => {
+            // Only update the specific image we're working with
             if (img.id === imageId) {
+              // Revoke the old preview URL
+              if (img.preview) {
+                URL.revokeObjectURL(img.preview);
+              }
               return updatedTempImage;
             }
+            // Leave all other images completely untouched
             return img;
           });
-          // Ensure localStorage is updated
+          
+          // Ensure localStorage is updated with the new array
           saveTempImagesToStorage(updated);
+          console.log(`Updated temporary image ${imageId} in local storage`);
           return updated;
         });
       } else {
-        // For server images, store the updated blob locally instead of uploading immediately
-        // We'll add it to a map of pending updates
+        // For server images, store the updated blob locally
         const pendingUpdates = new Map(imagesToUpdate);
-        pendingUpdates.set(imageId, imageBlob);
+        
+        // Store a fresh copy of the blob for this specific image
+        pendingUpdates.set(imageId, blobCopy);
         setImagesToUpdate(pendingUpdates);
         
         console.log(`Stored update for server image ${imageId} to apply on form submission`);
         
-        // Update local display of the image for immediate feedback
-        const objectUrl = URL.createObjectURL(imageBlob);
+        // Create a unique object URL for immediate visual feedback
+        const objectUrl = URL.createObjectURL(blobCopy);
         
-        // Update the local images array with the new preview
+        // Update only the specific image in the local images array
         setLocalImages(prev => {
           return prev.map(img => {
             if (img.id === imageId) {
               // Revoke previous temp preview if it exists
               if ('tempPreview' in img && img.tempPreview) {
                 URL.revokeObjectURL(img.tempPreview);
+                console.log(`Revoked old temp preview for server image ${imageId}`);
               }
               
-              // Create a temporary preview that will be used until server update
+              // Create a temporary preview URL that will be used until server update
               return {
                 ...img,
                 tempPreview: objectUrl 
               };
             }
+            // Leave all other images untouched
             return img;
           });
         });
       }
+      
+      console.log(`Successfully updated image with ID: ${imageId}`);
     } catch (error) {
-      console.error('Error updating image:', error);
+      console.error(`Error updating image ${imageId}:`, error);
       alert('Failed to update image. Please try again.');
     }
   };
