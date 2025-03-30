@@ -92,17 +92,17 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Bottom Bar */}
+        {/* Bottom Bar - Updated URLs for Privacy and Terms */}
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
               © {new Date().getFullYear()} Hafuzi Auto. Të gjitha të drejtat e rezervuara.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link to="/privacy" className="text-gray-400 text-sm hover:text-white transition-colors">
+              <Link to="/privatesia" className="text-gray-400 text-sm hover:text-white transition-colors">
                 Politika e Privatësisë
               </Link>
-              <Link to="/terms" className="text-gray-400 text-sm hover:text-white transition-colors">
+              <Link to="/kushtet" className="text-gray-400 text-sm hover:text-white transition-colors">
                 Kushtet e Shërbimit
               </Link>
             </div>

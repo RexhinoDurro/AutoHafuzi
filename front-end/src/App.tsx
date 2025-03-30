@@ -38,6 +38,8 @@ const CarHolder = lazy(() => import('./pages/CarHolder'));
 const CarDetail = lazy(() => import('./pages/CarDetail'));
 const FavoritesPage = lazy(() => import('./pages/FavouritesPage'));
 const ContactPage = lazy(() => import('./pages/Contact'));
+const PrivatesiaPage = lazy(() => import('./pages/Privatesia')); // Privacy Policy page
+const KushtetPage = lazy(() => import('./pages/Kushtet')); // Terms of Service page
 
 // Admin components - load these last as they are less frequently used
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
@@ -168,6 +170,36 @@ function App() {
                 <ContactPage />
               </MainLayout>
             }
+          />
+          
+          {/* New Privacy and Terms routes */}
+          <Route
+            path="/privatesia"
+            element={
+              <MainLayout pageName="Politika e Privatësisë">
+                <PrivatesiaPage />
+              </MainLayout>
+            }
+          />
+          
+          <Route
+            path="/kushtet"
+            element={
+              <MainLayout pageName="Kushtet e Shërbimit">
+                <KushtetPage />
+              </MainLayout>
+            }
+          />
+          
+          {/* Legacy routes that redirect to new ones */}
+          <Route
+            path="/privacy"
+            element={<Navigate to="/privatesia" replace />}
+          />
+          
+          <Route
+            path="/terms"
+            element={<Navigate to="/kushtet" replace />}
           />
           
           {/* Auth routes */}
