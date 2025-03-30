@@ -1,11 +1,10 @@
-// First, let's create a utility for persistent image storage
-// Create this as src/utils/persistentImageStorage.ts
-
+// front-end/src/components/CarForm/persistentImageStorage.ts - Enhanced version
 import { TempImage } from './useCarFormImageUpload'
 
 const TEMP_IMAGES_STORAGE_KEY = 'carform_temp_images';
 const NEXT_TEMP_ID_STORAGE_KEY = 'carform_next_temp_id';
 const SELECTED_ASPECT_RATIO_KEY = 'carform_aspect_ratio';
+const CAR_FORM_SESSION_KEY = 'carform_session_id'; // Add session ID to prevent conflicts
 
 // Define aspect ratio types
 export type AspectRatioOption = {
@@ -25,7 +24,23 @@ export const ASPECT_RATIO_OPTIONS: AspectRatioOption[] = [
   { label: '9:16 (Mobile)', value: '9:16', width: 9, height: 16 },
 ];
 
-// Save temporary images to localStorage
+// Generate a unique session ID or use existing one
+export const getFormSessionId = (): string => {
+  let sessionId = localStorage.getItem(CAR_FORM_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem(CAR_FORM_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+};
+
+// Create a better storage key that includes the session ID to prevent conflicts
+const getStorageKey = (baseKey: string): string => {
+  const sessionId = getFormSessionId();
+  return `${baseKey}_${sessionId}`;
+};
+
+// Enhanced function to save temporary images to localStorage with error handling and retry
 export const saveTempImagesToStorage = (images: TempImage[]): void => {
   try {
     // We can't directly store File objects in localStorage, so we need to
@@ -35,49 +50,100 @@ export const saveTempImagesToStorage = (images: TempImage[]): void => {
       preview: img.preview,
       originalName: img.file.name,
       type: img.file.type,
-      lastModified: img.file.lastModified
+      lastModified: img.file.lastModified,
+      size: img.file.size,
+      timestamp: Date.now() // Add timestamp for ordering and debugging
     }));
     
-    localStorage.setItem(TEMP_IMAGES_STORAGE_KEY, JSON.stringify(serializedImages));
+    // Use a session-specific key
+    const storageKey = getStorageKey(TEMP_IMAGES_STORAGE_KEY);
+    
+    // Check if we'll exceed localStorage limits and handle accordingly
+    // (localStorage typically has a 5MB limit)
+    const jsonData = JSON.stringify(serializedImages);
+    if (jsonData.length > 4 * 1024 * 1024) { // 4MB to be safe
+      console.warn('Image data too large for localStorage. Storing essential information only.');
+      // Store minimal data - just IDs and metadata without previews
+      const minimalData = serializedImages.map(img => ({
+        id: img.id,
+        originalName: img.originalName,
+        type: img.type,
+        lastModified: img.lastModified,
+        size: img.size,
+        timestamp: img.timestamp
+      }));
+      localStorage.setItem(storageKey, JSON.stringify(minimalData));
+    } else {
+      localStorage.setItem(storageKey, jsonData);
+    }
+    
+    console.log(`Saved ${images.length} temporary images to localStorage with key ${storageKey}`);
   } catch (error) {
     console.error('Error saving temp images to storage:', error);
+    try {
+      // Backup attempt - store just the IDs if JSON serialization fails
+      const ids = images.map(img => img.id);
+      localStorage.setItem(getStorageKey(`${TEMP_IMAGES_STORAGE_KEY}_backup`), JSON.stringify(ids));
+    } catch (backupError) {
+      console.error('Backup storage also failed:', backupError);
+    }
   }
 };
 
-// Load temporary images from localStorage
+// Enhanced load function with better error handling and fallbacks
 export const loadTempImagesFromStorage = async (): Promise<TempImage[]> => {
   try {
-    const serializedImagesJson = localStorage.getItem(TEMP_IMAGES_STORAGE_KEY);
-    if (!serializedImagesJson) return [];
+    const storageKey = getStorageKey(TEMP_IMAGES_STORAGE_KEY);
+    const serializedImagesJson = localStorage.getItem(storageKey);
+    if (!serializedImagesJson) {
+      console.log(`No temporary images found in localStorage with key ${storageKey}`);
+      return [];
+    }
     
+    console.log(`Loading temporary images from localStorage with key ${storageKey}`);
     const serializedImages = JSON.parse(serializedImagesJson);
+    if (!Array.isArray(serializedImages) || serializedImages.length === 0) {
+      return [];
+    }
     
     // Create new TempImage objects from the serialized data
     const loadedImages: TempImage[] = [];
-    
-    for (const img of serializedImages) {
+    const loadPromises = serializedImages.map(async (img) => {
       try {
-        // Fetch the image from the preview URL
-        const response = await fetch(img.preview);
-        const blob = await response.blob();
-        
-        // Create a new File object
-        const file = new File([blob], img.originalName, {
-          type: img.type,
-          lastModified: img.lastModified
-        });
-        
-        // Create a TempImage object
-        loadedImages.push({
-          id: img.id,
-          file,
-          preview: img.preview
-        });
+        // Check if we have a preview URL
+        if (img.preview) {
+          // Fetch the image from the preview URL
+          const response = await fetch(img.preview);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch image from preview URL: ${response.status}`);
+          }
+          const blob = await response.blob();
+          
+          // Create a new File object
+          const file = new File([blob], img.originalName, {
+            type: img.type,
+            lastModified: img.lastModified
+          });
+          
+          // Create a new object URL for the blob
+          const preview = URL.createObjectURL(blob);
+          
+          // Create a TempImage object
+          loadedImages.push({
+            id: img.id,
+            file,
+            preview
+          });
+        }
       } catch (fetchError) {
         console.error('Error loading image from preview URL:', fetchError);
       }
-    }
+    });
     
+    // Wait for all promises to settle
+    await Promise.allSettled(loadPromises);
+    
+    console.log(`Successfully loaded ${loadedImages.length} of ${serializedImages.length} temporary images`);
     return loadedImages;
   } catch (error) {
     console.error('Error loading temp images from storage:', error);
@@ -88,7 +154,7 @@ export const loadTempImagesFromStorage = async (): Promise<TempImage[]> => {
 // Save next temp ID to localStorage
 export const saveNextTempIdToStorage = (nextId: number): void => {
   try {
-    localStorage.setItem(NEXT_TEMP_ID_STORAGE_KEY, nextId.toString());
+    localStorage.setItem(getStorageKey(NEXT_TEMP_ID_STORAGE_KEY), nextId.toString());
   } catch (error) {
     console.error('Error saving next temp ID to storage:', error);
   }
@@ -97,7 +163,7 @@ export const saveNextTempIdToStorage = (nextId: number): void => {
 // Load next temp ID from localStorage
 export const loadNextTempIdFromStorage = (): number => {
   try {
-    const nextIdStr = localStorage.getItem(NEXT_TEMP_ID_STORAGE_KEY);
+    const nextIdStr = localStorage.getItem(getStorageKey(NEXT_TEMP_ID_STORAGE_KEY));
     if (!nextIdStr) return -1;
     return parseInt(nextIdStr, 10);
   } catch (error) {
@@ -106,12 +172,37 @@ export const loadNextTempIdFromStorage = (): number => {
   }
 };
 
-// Clear temporary images from localStorage
+// Clear temporary images from localStorage but only for the current session
 export const clearTempImagesFromStorage = (): void => {
   try {
-    localStorage.removeItem(TEMP_IMAGES_STORAGE_KEY);
+    // Only remove items for the current session
+    const storageKey = getStorageKey(TEMP_IMAGES_STORAGE_KEY);
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(getStorageKey(NEXT_TEMP_ID_STORAGE_KEY));
+    console.log(`Cleared temporary images from localStorage with key ${storageKey}`);
   } catch (error) {
     console.error('Error clearing temp images from storage:', error);
+  }
+};
+
+// Clear ALL car form session data, including images - use with caution
+export const clearAllCarFormData = (): void => {
+  try {
+    // Remove all CarForm-related localStorage items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith('carform_temp_images') || 
+        key.startsWith('carform_next_temp_id') ||
+        key.startsWith('carform_aspect_ratio') ||
+        key === CAR_FORM_SESSION_KEY
+      )) {
+        localStorage.removeItem(key);
+      }
+    }
+    console.log('Cleared all CarForm data from localStorage');
+  } catch (error) {
+    console.error('Error clearing all CarForm data:', error);
   }
 };
 

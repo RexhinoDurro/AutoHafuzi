@@ -1,5 +1,5 @@
-// front-end/src/components/CarForm/useCarFormImageUpload.ts
-import { useState, useCallback, useEffect } from 'react';
+// front-end/src/components/CarForm/useCarFormImageUpload.ts - Enhanced version
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
 import { prepareImagesForUpload } from '../../utils/imageService';
@@ -8,7 +8,8 @@ import {
   loadTempImagesFromStorage,
   saveNextTempIdToStorage,
   loadNextTempIdFromStorage,
-  clearTempImagesFromStorage
+  clearTempImagesFromStorage,
+  getFormSessionId
 } from './persistentImageStorage';
 
 export interface TempImage {
@@ -25,7 +26,6 @@ export interface UploadedImage {
   order?: number;
 }
 
-// No props needed for this hook
 interface UseCarFormImageUploadResult {
   tempImages: TempImage[];
   nextTempId: number;
@@ -51,19 +51,49 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  
+  // Use a ref to track if image loading is in progress
+  const isLoadingImages = useRef(false);
+  
+  // Get session ID for consistent storage
+  const sessionId = useRef(getFormSessionId());
 
-  // Initialize from localStorage on mount
+  // Initialize from localStorage on mount with retry logic
   useEffect(() => {
     const initFromStorage = async () => {
+      if (isLoadingImages.current) return;
+      isLoadingImages.current = true;
+      
       try {
-        // Load next temp ID from localStorage
+        console.log('Initializing image storage with session ID:', sessionId.current);
+        
+        // First, load the next temp ID
         const storedNextTempId = loadNextTempIdFromStorage();
         if (storedNextTempId < 0) {
           setNextTempId(storedNextTempId);
         }
         
-        // Load temp images from localStorage
-        const storedTempImages = await loadTempImagesFromStorage();
+        // Then load temp images with retry logic
+        let attempts = 0;
+        const maxAttempts = 3;
+        let storedTempImages: TempImage[] = [];
+        
+        while (attempts < maxAttempts) {
+          try {
+            storedTempImages = await loadTempImagesFromStorage();
+            if (storedTempImages.length > 0) {
+              console.log(`Successfully loaded ${storedTempImages.length} images from localStorage`);
+              break;
+            }
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 300)); // Short delay before retry
+          } catch (err) {
+            console.error(`Attempt ${attempts + 1} failed:`, err);
+            attempts++;
+            if (attempts >= maxAttempts) throw err;
+          }
+        }
+        
         if (storedTempImages.length > 0) {
           setTempImages(storedTempImages);
         }
@@ -72,6 +102,8 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       } catch (error) {
         console.error('Error initializing from storage:', error);
         setIsInitialized(true);
+      } finally {
+        isLoadingImages.current = false;
       }
     };
     
@@ -79,6 +111,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     
     // Clean up function
     return () => {
+      console.log('Cleaning up image previews');
       // Revoke object URLs when component unmounts
       tempImages.forEach(img => {
         if (img.preview) {
@@ -90,7 +123,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   
   // Save temp images to localStorage when they change
   useEffect(() => {
-    if (isInitialized && tempImages.length > 0) {
+    if (isInitialized && !isLoadingImages.current) {
       saveTempImagesToStorage(tempImages);
     }
   }, [tempImages, isInitialized]);
@@ -119,7 +152,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     return null;
   }, []);
 
-  // Handle image upload with compression
+  // Enhanced image upload with better error handling
   const handleImageUpload = useCallback(async (files: FileList) => {
     setUploadError(null);
     
@@ -140,22 +173,34 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       });
       
       let currentTempId = nextTempId;
-      const newTempImages = compressedFiles.map(file => {
+      const newTempImages: TempImage[] = [];
+      
+      for (const file of compressedFiles) {
         const imageId = currentTempId;
         currentTempId -= 1;
         
         // Create object URL for preview
         const preview = URL.createObjectURL(file);
         
-        return {
+        newTempImages.push({
           id: imageId,
           file,
           preview
-        };
+        });
+      }
+      
+      // Update state with the new images
+      setTempImages(prev => {
+        const updatedImages = [...prev, ...newTempImages];
+        // Save to localStorage immediately
+        saveTempImagesToStorage(updatedImages);
+        return updatedImages;
       });
       
-      setTempImages(prev => [...prev, ...newTempImages]);
       setNextTempId(currentTempId);
+      saveNextTempIdToStorage(currentTempId);
+      
+      console.log(`Added ${newTempImages.length} new temporary images`);
     } catch (error) {
       console.error('Error handling image upload:', error);
       setUploadError('Error processing images. Please try again.');
@@ -205,10 +250,9 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
         
         const formData = new FormData();
         formData.append('image', newImageBlob, `cropped-image-${Date.now()}.jpg`);
-        formData.append('replace_id', imageId.toString());
         
         // Use a generic endpoint that updates any image by its ID
-        const response = await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
+        const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPDATE(imageId), {
           method: 'PUT', // Use PUT to update
           headers: { Authorization: `Token ${token}` },
           body: formData
@@ -218,7 +262,6 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
           throw new Error(`Failed to update image: ${response.status}`);
         }
         
-        // You might want to refresh the parent component after this
         console.log('Server image updated successfully');
       }
     } catch (error) {
@@ -227,28 +270,27 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     }
   }, [token]);
 
-  // Delete temporary or server-side image
+  // Enhanced delete function with better error handling
   const handleImageDelete = useCallback(async (imageId: number): Promise<boolean> => {
     try {
       // If it's a temp image (negative ID), just remove it locally
       if (imageId < 0) {
         setTempImages(prev => {
-          const filtered = prev.filter(img => img.id !== imageId);
+          // Find the image to remove
+          const imageToRemove = prev.find(img => img.id === imageId);
           
-          // Revoke object URL for the removed image
-          const removedImage = prev.find(img => img.id === imageId);
-          if (removedImage?.preview) {
-            URL.revokeObjectURL(removedImage.preview);
+          // Revoke object URL for the removed image to prevent memory leaks
+          if (imageToRemove?.preview) {
+            URL.revokeObjectURL(imageToRemove.preview);
           }
+          
+          // Filter out the image
+          const filteredImages = prev.filter(img => img.id !== imageId);
           
           // After filtering, update localStorage
-          if (filtered.length === 0) {
-            clearTempImagesFromStorage();
-          } else {
-            saveTempImagesToStorage(filtered);
-          }
+          saveTempImagesToStorage(filteredImages);
           
-          return filtered;
+          return filteredImages;
         });
         return true;
       }
@@ -276,7 +318,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     }
   }, [token]);
 
-  // Upload temporary images to the server
+  // Enhanced upload function with progress tracking
   const uploadTempImages = useCallback(async (carSlug: string): Promise<UploadedImage[]> => {
     if (!tempImages.length) {
       return [];
@@ -291,11 +333,18 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
     setUploadError(null);
     
     try {
+      // Create FormData with all images
       const imageFormData = new FormData();
       tempImages.forEach(img => {
         imageFormData.append('images', img.file);
       });
       
+      // Add session ID to help with debugging
+      imageFormData.append('session_id', sessionId.current);
+      
+      console.log(`Starting upload of ${tempImages.length} images for car ${carSlug}`);
+      
+      // Upload the images
       const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug), {
         method: 'POST',
         headers: { Authorization: `Token ${token}` },
@@ -310,16 +359,27 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       const data = await response.json();
       const uploadedImages = data.uploaded || [];
       
+      console.log(`Successfully uploaded ${uploadedImages.length} images`);
+      
       // Clear temp images after successful upload
       tempImages.forEach(img => {
         if (img.preview) {
           URL.revokeObjectURL(img.preview);
         }
       });
-      setTempImages([]);
       
-      // Clear the localStorage cache
-      clearTempImagesFromStorage();
+      // Clear the localStorage cache, but delay it to ensure no conflicts
+      setTimeout(() => {
+        if (uploadedImages.length === tempImages.length) {
+          // If all uploaded successfully, clear temporary images
+          setTempImages([]);
+          clearTempImagesFromStorage();
+          console.log('Cleared temporary images after successful upload');
+        } else {
+          // If some failed, keep the ones that didn't upload
+          console.log(`Not all images uploaded (${uploadedImages.length}/${tempImages.length}), keeping remaining in local storage`);
+        }
+      }, 1000);
       
       return uploadedImages;
     } catch (error) {
@@ -335,13 +395,17 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   
   // Helper function to clear temp images from storage
   const clearTempImagesStorage = useCallback(() => {
-    clearTempImagesFromStorage();
+    // Revoke object URLs first to prevent memory leaks
     tempImages.forEach(img => {
       if (img.preview) {
         URL.revokeObjectURL(img.preview);
       }
     });
+    
+    // Clear storage and state
+    clearTempImagesFromStorage();
     setTempImages([]);
+    console.log('Manually cleared temporary images storage');
   }, [tempImages]);
 
   return {

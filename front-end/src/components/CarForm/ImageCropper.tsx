@@ -1,6 +1,7 @@
-// src/components/CarForm/ImageCropper.tsx
+// src/components/CarForm/ImageCropper.tsx - Enhanced version with zoom
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AspectRatioOption } from './persistentImageStorage';
+import { ZoomIn, ZoomOut, RotateCcw, RotateCw } from 'lucide-react';
 
 interface ImageCropperProps {
   isOpen: boolean;
@@ -31,8 +32,23 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   const [resizeHandle, setResizeHandle] = useState('');
   const [isCropping, setIsCropping] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  // We'll use this to keep track of the original image dimensions
+  const naturalImageSizeRef = useRef({ width: 0, height: 0 });
   
+  // Zoom state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStartPos, setPanStartPos] = useState({ x: 0, y: 0 });
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  
+  // Min and max zoom levels
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 5;
+  const ZOOM_STEP = 0.1;
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -41,13 +57,20 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     if (!imageRef.current) return;
     
     const img = imageRef.current;
-    const { width, height } = img;
+    const { offsetWidth, offsetHeight, naturalWidth, naturalHeight } = img;
     
-    setImageSize({ width, height });
+    // Store both displayed and natural sizes
+    setImageSize({ width: offsetWidth, height: offsetHeight });
+    naturalImageSizeRef.current = { width: naturalWidth, height: naturalHeight };
+    
+    // Reset zoom and position
+    setZoomLevel(1);
+    setImagePosition({ x: 0, y: 0 });
+    setRotation(0);
     
     // Calculate initial crop area (centered, 80% of image)
-    let cropWidth = width * 0.8;
-    let cropHeight = height * 0.8;
+    let cropWidth = offsetWidth * 0.8;
+    let cropHeight = offsetHeight * 0.8;
     
     // Apply aspect ratio if specified
     if (selectedAspectRatio.value !== 'original' && selectedAspectRatio.width && selectedAspectRatio.height) {
@@ -63,8 +86,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     }
     
     // Center the crop area
-    const x = (width - cropWidth) / 2;
-    const y = (height - cropHeight) / 2;
+    const x = (offsetWidth - cropWidth) / 2;
+    const y = (offsetHeight - cropHeight) / 2;
     
     setCropArea({
       x,
@@ -95,6 +118,78 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     return { x, y, width, height };
   }, [resizeHandle, selectedAspectRatio]);
 
+  // Handle zoom in/out
+  const handleZoom = useCallback((direction: 'in' | 'out', amount: number = ZOOM_STEP) => {
+    setZoomLevel(prevZoom => {
+      let newZoom;
+      if (direction === 'in') {
+        newZoom = Math.min(prevZoom + amount, MAX_ZOOM);
+      } else {
+        newZoom = Math.max(prevZoom - amount, MIN_ZOOM);
+      }
+      
+      return newZoom;
+    });
+  }, []);
+
+  // Handle mouse wheel for zooming
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (!containerRef.current) return;
+    
+    e.preventDefault();
+    
+    // Zoom in or out based on wheel direction
+    const direction = e.deltaY < 0 ? 'in' : 'out';
+    handleZoom(direction);
+  }, [handleZoom]);
+
+  // Handle rotation
+  const handleRotate = useCallback((direction: 'cw' | 'ccw') => {
+    setRotation(prev => {
+      let newRotation = prev;
+      if (direction === 'cw') {
+        newRotation = (prev + 90) % 360;
+      } else {
+        newRotation = (prev - 90 + 360) % 360;
+      }
+      return newRotation;
+    });
+  }, []);
+
+  // Handle image panning (moving the image within the container)
+  const handlePanStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (e.target !== imageRef.current) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+    const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+    
+    setIsPanning(true);
+    setPanStartPos({
+      x: pageX - imagePosition.x,
+      y: pageY - imagePosition.y
+    });
+  }, [imagePosition]);
+
+  // Handle panning movement
+  const handlePanMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isPanning) return;
+    
+    const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+    const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
+    
+    // Calculate new position
+    const newX = pageX - panStartPos.x;
+    const newY = pageY - panStartPos.y;
+    
+    setImagePosition({
+      x: newX,
+      y: newY
+    });
+  }, [isPanning, panStartPos]);
+
   // Handle mouse/touch down for dragging
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, action: string) => {
     e.preventDefault();
@@ -118,8 +213,13 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     }
   };
 
-  // Handle mouse/touch move for dragging or resizing
+  // Handle mouse/touch move for dragging, resizing, or panning
   const handleMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (isPanning) {
+      handlePanMove(e);
+      return;
+    }
+    
     if (!isDragging && !isResizing) return;
     
     const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
@@ -130,9 +230,18 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       let newX = pageX - dragStartPos.x;
       let newY = pageY - dragStartPos.y;
       
-      // Constrain to image boundaries
-      newX = Math.max(0, Math.min(newX, imageSize.width - cropArea.width));
-      newY = Math.max(0, Math.min(newY, imageSize.height - cropArea.height));
+      // Get the effective image size (accounting for zoom)
+      const effectiveWidth = imageSize.width * zoomLevel;
+      const effectiveHeight = imageSize.height * zoomLevel;
+      
+      // Constrain to image boundaries, accounting for zoom and position
+      const leftBound = Math.max(0, -imagePosition.x / zoomLevel);
+      const topBound = Math.max(0, -imagePosition.y / zoomLevel);
+      const rightBound = Math.min(imageSize.width, (effectiveWidth - imagePosition.x) / zoomLevel);
+      const bottomBound = Math.min(imageSize.height, (effectiveHeight - imagePosition.y) / zoomLevel);
+      
+      newX = Math.max(leftBound, Math.min(newX, rightBound - cropArea.width));
+      newY = Math.max(topBound, Math.min(newY, bottomBound - cropArea.height));
       
       setCropArea(prev => ({
         ...prev,
@@ -180,19 +289,29 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       // Enforce aspect ratio if needed
       newCrop = enforceCropAspectRatio(newCrop);
       
-      // Constrain to image boundaries
-      newCrop.x = Math.max(0, Math.min(newCrop.x, imageSize.width - newCrop.width));
-      newCrop.y = Math.max(0, Math.min(newCrop.y, imageSize.height - newCrop.height));
+      // Get the effective image size (accounting for zoom)
+      const effectiveWidth = imageSize.width * zoomLevel;
+      const effectiveHeight = imageSize.height * zoomLevel;
+      
+      // Constrain to image boundaries, accounting for zoom and position
+      const leftBound = Math.max(0, -imagePosition.x / zoomLevel);
+      const topBound = Math.max(0, -imagePosition.y / zoomLevel);
+      const rightBound = Math.min(imageSize.width, (effectiveWidth - imagePosition.x) / zoomLevel);
+      const bottomBound = Math.min(imageSize.height, (effectiveHeight - imagePosition.y) / zoomLevel);
+      
+      newCrop.x = Math.max(leftBound, Math.min(newCrop.x, rightBound - newCrop.width));
+      newCrop.y = Math.max(topBound, Math.min(newCrop.y, bottomBound - newCrop.height));
       
       setCropArea(newCrop);
       setDragStartPos({ x: pageX, y: pageY });
     }
-  }, [isDragging, isResizing, cropArea, dragStartPos, imageSize, resizeHandle, enforceCropAspectRatio]);
+  }, [isDragging, isResizing, isPanning, cropArea, dragStartPos, imageSize, zoomLevel, imagePosition, handlePanMove, resizeHandle, enforceCropAspectRatio]);
 
-  // Handle mouse/touch up to end dragging or resizing
+  // Handle mouse/touch up to end dragging, resizing, or panning
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     setIsResizing(false);
+    setIsPanning(false);
   }, []);
 
   // Add and remove event listeners
@@ -202,6 +321,12 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       window.addEventListener('touchmove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       window.addEventListener('touchend', handleMouseUp);
+      
+      // Add wheel event listener for zooming, but only if container is available
+      const container = containerRef.current;
+      if (container) {
+        container.addEventListener('wheel', handleWheel, { passive: false });
+      }
     }
     
     return () => {
@@ -209,10 +334,16 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       window.removeEventListener('touchmove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchend', handleMouseUp);
+      
+      // Remove wheel event listener
+      const container = containerRef.current;
+      if (container) {
+        container.removeEventListener('wheel', handleWheel);
+      }
     };
-  }, [isOpen, handleMouseMove, handleMouseUp]);
+  }, [isOpen, handleMouseMove, handleMouseUp, handleWheel]);
 
-  // Generate the cropped image
+  // Generate the cropped image, accounting for zoom and rotation
   const generateCroppedImage = useCallback((): Promise<Blob | null> => {
     if (!imageRef.current || !canvasRef.current) {
       return Promise.resolve(null);
@@ -227,20 +358,42 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     }
     
     // Calculate the scaling factor between displayed image and natural image
-    const scaleX = img.naturalWidth / img.width;
-    const scaleY = img.naturalHeight / img.height;
+    const scaleX = naturalImageSizeRef.current.width / img.width;
+    const scaleY = naturalImageSizeRef.current.height / img.height;
     
-    // Set canvas size to match the crop area in original image dimensions
-    canvas.width = cropArea.width * scaleX;
-    canvas.height = cropArea.height * scaleY;
+    // Calculate the actual crop area in the original image coordinates
+    // accounting for zoom, rotation and position
+    const adjustedCropArea = {
+      x: (cropArea.x * scaleX - imagePosition.x) / zoomLevel,
+      y: (cropArea.y * scaleY - imagePosition.y) / zoomLevel,
+      width: cropArea.width * scaleX / zoomLevel,
+      height: cropArea.height * scaleY / zoomLevel
+    };
+    
+    // Set canvas size to match the crop area
+    canvas.width = adjustedCropArea.width;
+    canvas.height = adjustedCropArea.height;
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Handle rotation if needed
+    if (rotation !== 0) {
+      // Translate to center of canvas
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      // Rotate
+      ctx.rotate((rotation * Math.PI) / 180);
+      // Translate back
+      ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    }
     
     // Draw the cropped portion of the image to the canvas
     ctx.drawImage(
       img,
-      cropArea.x * scaleX,
-      cropArea.y * scaleY,
-      cropArea.width * scaleX,
-      cropArea.height * scaleY,
+      adjustedCropArea.x,
+      adjustedCropArea.y,
+      adjustedCropArea.width,
+      adjustedCropArea.height,
       0,
       0,
       canvas.width,
@@ -257,7 +410,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
         0.9 // quality
       );
     });
-  }, [cropArea]);
+  }, [cropArea, zoomLevel, rotation, imagePosition]);
 
   // Handle crop confirmation
   const handleCropConfirm = async () => {
@@ -276,6 +429,9 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Calculate image transform style
+  const imageTransform = `translate(${imagePosition.x}px, ${imagePosition.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`;
 
   // Render the crop overlay with handles
   const renderCropOverlay = () => {
@@ -404,23 +560,91 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
               ? `Aspect Ratio: ${selectedAspectRatio.width}:${selectedAspectRatio.height}` 
               : 'Free crop (no fixed aspect ratio)'}
           </p>
+          
+          {/* Zoom and rotation controls */}
+          <div className="flex space-x-4 mb-3">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleZoom('out')}
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300"
+                title="Zoom out"
+              >
+                <ZoomOut size={16} />
+              </button>
+              <span className="text-sm font-medium">{Math.round(zoomLevel * 100)}%</span>
+              <button
+                onClick={() => handleZoom('in')}
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300"
+                title="Zoom in"
+              >
+                <ZoomIn size={16} />
+              </button>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleRotate('ccw')}
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300"
+                title="Rotate counter-clockwise"
+              >
+                <RotateCcw size={16} />
+              </button>
+              <span className="text-sm font-medium">{rotation}°</span>
+              <button
+                onClick={() => handleRotate('cw')}
+                className="p-2 bg-gray-200 rounded hover:bg-gray-300"
+                title="Rotate clockwise"
+              >
+                <RotateCw size={16} />
+              </button>
+            </div>
+          </div>
+          
+          <p className="text-sm text-gray-500">
+            Tip: Use mouse wheel or pinch to zoom, hold Alt key to pan the image.
+          </p>
         </div>
         
         <div className="flex justify-center mb-4 overflow-hidden">
           <div 
             ref={containerRef} 
             className="relative"
-            style={{ maxHeight: '60vh', maxWidth: '100%' }}
+            style={{ 
+              maxHeight: '60vh', 
+              maxWidth: '100%', 
+              overflow: 'hidden',
+              touchAction: 'none' // Prevent browser default touch actions
+            }}
           >
-            <img
-              ref={imageRef}
-              src={imageUrl}
-              alt="Crop preview"
-              onLoad={handleImageLoad}
-              className="max-h-[60vh] max-w-full"
-              style={{ display: 'block' }}
-            />
-            {renderCropOverlay()}
+            <div
+              ref={wrapperRef}
+              className="relative"
+              style={{
+                width: imageSize.width ? `${imageSize.width}px` : '100%',
+                height: imageSize.height ? `${imageSize.height}px` : 'auto',
+                overflow: 'visible'
+              }}
+            >
+              <img
+                ref={imageRef}
+                src={imageUrl}
+                alt="Crop preview"
+                onLoad={handleImageLoad}
+                style={{
+                  display: 'block',
+                  transformOrigin: 'center',
+                  transform: imageTransform,
+                  maxHeight: '60vh',
+                  maxWidth: '100%',
+                  cursor: 'grab',
+                  userSelect: 'none'
+                }}
+                onMouseDown={handlePanStart}
+                onTouchStart={handlePanStart}
+                draggable={false}
+              />
+              {renderCropOverlay()}
+            </div>
           </div>
         </div>
         
