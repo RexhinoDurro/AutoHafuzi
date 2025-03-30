@@ -1,4 +1,4 @@
-// src/components/CarForm/CarForm.tsx - Enhanced version with persistent image storage and aspect ratio selector
+// src/components/CarForm/CarForm.tsx - Enhanced version with fixed image handling
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
@@ -57,7 +57,6 @@ const CarForm = () => {
   const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
   const [imagesToUpdate, setImagesToUpdate] = useState<Map<number, Blob>>(new Map());
-
 
   // State for the selected aspect ratio
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(() => {
@@ -268,20 +267,24 @@ const CarForm = () => {
     }
   };
 
-  // Handle local image update after cropping
-  const handleLocalImageUpdate = async (imageId: number, imageBlob: Blob) => {
+  // FIXED: Handle local image update after cropping with proper isolation
+  const handleLocalImageUpdate = async (imageId: number, imageBlob: Blob): Promise<boolean> => {
     try {
-      console.log(`Started update for image with ID: ${imageId}`);
+      console.log(`Started update for image with ID: ${imageId}, Size: ${imageBlob.size} bytes`);
       
       // Create an isolated copy of the blob to ensure no reference sharing happens
       const blobCopy = new Blob([await imageBlob.arrayBuffer()], { 
         type: imageBlob.type 
       });
       
+      // Generate a unique operation ID for tracking
+      const operationId = `update-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      console.log(`Operation ID: ${operationId}`);
+      
       // Handle differently based on whether it's a temp image or server image
       if (imageId < 0) {
         // It's a temporary image - create a unique identifiable filename
-        const uniqueFilename = `cropped-temp-${Date.now()}-${imageId}.jpg`;
+        const uniqueFilename = `cropped-temp-${Date.now()}-${Math.abs(imageId)}.jpg`;
         console.log(`Creating new file with name: ${uniqueFilename}`);
         
         const file = new File([blobCopy], uniqueFilename, {
@@ -296,7 +299,16 @@ const CarForm = () => {
         
         // Update ONLY the targeted image in the local temp images array
         setLocalTempImages(prev => {
-          return prev.map(img => {
+          // First make a map of existing IDs to verify the target exists
+          const idMap = new Map(prev.map(img => [img.id, true]));
+          
+          if (!idMap.has(imageId)) {
+            console.warn(`Attempted to update non-existent temp image with ID: ${imageId}`);
+            return prev;
+          }
+          
+          // Map through and only update the specific image
+          const updatedImages = prev.map(img => {
             if (img.id === imageId) {
               // Revoke the old preview URL to prevent memory leaks
               if (img.preview) {
@@ -309,17 +321,17 @@ const CarForm = () => {
             // Leave all other images completely untouched
             return img;
           });
+          
+          // Save the updated array to localStorage via the hook
+          saveTempImagesToStorage(updatedImages);
+          console.log(`Updated temporary image ${imageId} in local storage`);
+          
+          return updatedImages;
         });
-        
-        // Create an updated temp image for the hook
-        const updatedTempImage = {
-          id: imageId,
-          file: file,
-          preview: preview
-        };
         
         // Update the hook's temp images to ensure synchronization
         setTempImages(prev => {
+          // Create fresh array with the updated image
           const updated = prev.map(img => {
             // Only update the specific image we're working with
             if (img.id === imageId) {
@@ -327,7 +339,12 @@ const CarForm = () => {
               if (img.preview) {
                 URL.revokeObjectURL(img.preview);
               }
-              return updatedTempImage;
+              // Return complete new temp image object with new file and preview
+              return { 
+                id: imageId,
+                file: file,
+                preview: preview
+              };
             }
             // Leave all other images completely untouched
             return img;
@@ -335,7 +352,8 @@ const CarForm = () => {
           
           // Ensure localStorage is updated with the new array
           saveTempImagesToStorage(updated);
-          console.log(`Updated temporary image ${imageId} in local storage`);
+          console.log(`Updated temporary image ${imageId} in hook`);
+          
           return updated;
         });
       } else {
@@ -367,17 +385,25 @@ const CarForm = () => {
                 tempPreview: objectUrl 
               };
             }
-            // Leave all other images untouched
+            // Leave all other images completely untouched
             return img;
           });
         });
       }
       
-      console.log(`Successfully updated image with ID: ${imageId}`);
+      console.log(`Successfully updated image with ID: ${imageId}, Operation: ${operationId}`);
+      return true;
     } catch (error) {
       console.error(`Error updating image ${imageId}:`, error);
       alert('Failed to update image. Please try again.');
+      return false;
     }
+  };
+
+  // Wrapper function that adapts handleLocalImageUpdate to return void
+  const handleLocalImageUpdateWrapper = async (imageId: number, imageBlob: Blob): Promise<void> => {
+    await handleLocalImageUpdate(imageId, imageBlob);
+    // No return value, converting the Promise<boolean> to Promise<void>
   };
 
   const handleLocalImageDelete = (imageId: number) => {
@@ -557,6 +583,7 @@ const CarForm = () => {
     return errors;
   };
 
+  // FIXED: Enhanced onSubmit function with proper image update handling
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
   
@@ -571,32 +598,45 @@ const CarForm = () => {
     }
     
     try {
-      // Process any pending image deletions
+      // Process any pending image deletions first
       for (const imageId of imagesToDelete) {
         await hookHandleImageDelete(imageId);
       }
       
-      // Process any pending image updates - but only if we have an ID
+      // FIXED: Process any pending image updates sequentially
       if (id) {
         console.log(`Processing ${imagesToUpdate.size} pending image updates`);
         
+        // Process each update in sequence rather than in parallel
         for (const [imageId, blob] of imagesToUpdate.entries()) {
-          const formData = new FormData();
-          formData.append('image', blob, `updated-image-${Date.now()}.jpg`);
-          formData.append('replace_id', imageId.toString());
-          
-          const { token } = getStoredAuth();
-          const response = await fetch(`${API_BASE_URL}/api/cars/images/${imageId}/`, {
-            method: 'PUT',
-            headers: { Authorization: `Token ${token}` },
-            body: formData
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Failed to update image: ${response.status}`);
+          try {
+            console.log(`Updating server image ${imageId}`);
+            
+            // Create a fresh copy of the blob to ensure isolation
+            const blobCopy = new Blob([await blob.arrayBuffer()], { 
+              type: blob.type || 'image/jpeg'
+            });
+            
+            const formData = new FormData();
+            formData.append('image', blobCopy, `updated-image-${imageId}-${Date.now()}.jpg`);
+            formData.append('replace_id', imageId.toString());
+            
+            const { token } = getStoredAuth();
+            const response = await fetch(`${API_BASE_URL}/api/cars/images/${imageId}/`, {
+              method: 'PUT',
+              headers: { Authorization: `Token ${token}` },
+              body: formData
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Failed to update image: ${response.status}`);
+            }
+            
+            console.log(`Successfully updated server image ${imageId}`);
+          } catch (updateError) {
+            console.error(`Error updating image ${imageId}:`, updateError);
+            // Continue with the next image even if one fails
           }
-          
-          console.log(`Updated server image ${imageId}`);
         }
       }
       
@@ -1050,13 +1090,13 @@ return (
   {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
   {(localImages.length > 0 || localTempImages.length > 0) && (
     <ImageGallery
-      images={[...localImages, ...localTempImages]}
-      onDeleteImage={handleLocalImageDelete}
-      onUpdateImage={handleLocalImageUpdate}
-      isEditing={true}
-      baseUrl={API_BASE_URL}
-      selectedAspectRatio={selectedAspectRatio}
-    />
+    images={[...localImages, ...localTempImages]}
+    onDeleteImage={handleLocalImageDelete}
+    onUpdateImage={handleLocalImageUpdateWrapper} // Use the wrapper here
+    isEditing={true}
+    baseUrl={API_BASE_URL}
+    selectedAspectRatio={selectedAspectRatio}
+  />
   )}
 </div>
 

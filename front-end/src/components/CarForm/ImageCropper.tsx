@@ -1,6 +1,6 @@
-// src/components/CarForm/ImageCropper.tsx - Enhanced version with zoom
+// src/components/CarForm/ImageCropper.tsx - Enhanced version with better integration
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { AspectRatioOption } from './persistentImageStorage';
+import { AspectRatioOption, saveSelectedAspectRatio, getFormSessionId } from './persistentImageStorage';
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw } from 'lucide-react';
 
 interface ImageCropperProps {
@@ -9,7 +9,8 @@ interface ImageCropperProps {
   imageUrl: string;
   onCropComplete: (croppedImageBlob: Blob) => Promise<void>;
   selectedAspectRatio?: AspectRatioOption;
-  currentImageId: number | null; // Added to track which image is being edited
+  currentImageId: number | null; // Used to track which image is being edited
+  isTempImage?: boolean; // Flag to identify if the image is temporary or from server
 }
 
 interface CropArea {
@@ -25,7 +26,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   imageUrl,
   onCropComplete,
   selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 },
-  currentImageId = null
+  currentImageId = null,
+  isTempImage = false
 }) => {
   const [cropArea, setCropArea] = useState<CropArea>({ x: 0, y: 0, width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -43,6 +45,9 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panStartPos, setPanStartPos] = useState({ x: 0, y: 0 });
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  
+  // Session ID for better tracking and debugging
+  const sessionIdRef = useRef(getFormSessionId());
   
   // Min and max zoom levels
   const MIN_ZOOM = 0.5;
@@ -66,7 +71,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     naturalImageSizeRef.current = { width: naturalWidth, height: naturalHeight };
     
     console.log(`Image loaded - Display: ${offsetWidth}x${offsetHeight}, Natural: ${naturalWidth}x${naturalHeight}`);
-    console.log(`Working with image ID: ${currentImageId}`);
+    console.log(`Working with image ID: ${currentImageId}, Temp image: ${isTempImage}`);
+    console.log(`Session ID: ${sessionIdRef.current}`);
     
     // Reset zoom and position
     setZoomLevel(1);
@@ -100,7 +106,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       width: cropWidth,
       height: cropHeight
     });
-  }, [selectedAspectRatio, currentImageId]);
+  }, [selectedAspectRatio, currentImageId, isTempImage]);
 
   // Enforce aspect ratio during crop area changes
   const enforceCropAspectRatio = useCallback((newCrop: CropArea): CropArea => {
@@ -348,7 +354,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     };
   }, [isOpen, handleMouseMove, handleMouseUp, handleWheel]);
 
-  // Generate the cropped image, accounting for zoom and rotation - FIXED to isolate the blob
+  // Enhanced generate the cropped image function with better error handling
   const generateCroppedImage = useCallback(async (): Promise<Blob | null> => {
     if (!imageRef.current || !canvasRef.current) {
       console.error('Missing image or canvas reference');
@@ -364,79 +370,96 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       return null;
     }
     
-    console.log(`Generating cropped image for ID ${currentImageId}`);
+    // Add enhanced logging for debugging
+    console.log(`===== CROP OPERATION START =====`);
+    console.log(`Image ID: ${currentImageId} (${isTempImage ? 'Temporary' : 'Server'} image)`);
+    console.log(`Session ID: ${sessionIdRef.current}`);
     console.log(`Crop settings: zoom=${zoomLevel}, rotation=${rotation}, position=(${imagePosition.x},${imagePosition.y})`);
     console.log(`Crop area: x=${cropArea.x}, y=${cropArea.y}, w=${cropArea.width}, h=${cropArea.height}`);
+    console.log(`Natural image dimensions: ${naturalImageSizeRef.current.width}x${naturalImageSizeRef.current.height}`);
+    console.log(`Displayed image dimensions: ${img.width}x${img.height}`);
     
-    // Calculate the scaling factor between displayed image and natural image
-    const scaleX = naturalImageSizeRef.current.width / img.width;
-    const scaleY = naturalImageSizeRef.current.height / img.height;
-    
-    // Calculate the actual crop area in the original image coordinates
-    // accounting for zoom, rotation and position
-    const adjustedCropArea = {
-      x: (cropArea.x * scaleX - imagePosition.x) / zoomLevel,
-      y: (cropArea.y * scaleY - imagePosition.y) / zoomLevel,
-      width: cropArea.width * scaleX / zoomLevel,
-      height: cropArea.height * scaleY / zoomLevel
-    };
-    
-    // Set canvas size to match the crop area
-    canvas.width = adjustedCropArea.width;
-    canvas.height = adjustedCropArea.height;
-    
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Handle rotation if needed
-    if (rotation !== 0) {
-      // Translate to center of canvas
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      // Rotate
-      ctx.rotate((rotation * Math.PI) / 180);
-      // Translate back
-      ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    }
-    
-    // Draw the cropped portion of the image to the canvas
-    ctx.drawImage(
-      img,
-      adjustedCropArea.x,
-      adjustedCropArea.y,
-      adjustedCropArea.width,
-      adjustedCropArea.height,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-    
-    // Convert canvas to blob and return a Promise
-    return new Promise((resolve) => {
-      canvas.toBlob(
-        async (blob) => {
-          if (blob) {
-            console.log(`Created blob for image ID ${currentImageId}: ${blob.size} bytes`);
-            
-            // Create a new isolated blob to prevent reference sharing
-            // This is key to fixing the issue where all images update at once
-            const isolatedBlob = new Blob([await blob.arrayBuffer()], { 
-              type: 'image/jpeg' 
-            });
-            
-            resolve(isolatedBlob);
-          } else {
-            console.error('Failed to create blob from canvas');
-            resolve(null);
-          }
-        },
-        'image/jpeg',
-        0.9 // quality
+    try {
+      // Calculate the scaling factor between displayed image and natural image
+      const scaleX = naturalImageSizeRef.current.width / img.width;
+      const scaleY = naturalImageSizeRef.current.height / img.height;
+      
+      // Calculate the actual crop area in the original image coordinates
+      // accounting for zoom, rotation and position
+      const adjustedCropArea = {
+        x: (cropArea.x * scaleX - imagePosition.x) / zoomLevel,
+        y: (cropArea.y * scaleY - imagePosition.y) / zoomLevel,
+        width: cropArea.width * scaleX / zoomLevel,
+        height: cropArea.height * scaleY / zoomLevel
+      };
+      
+      console.log(`Adjusted crop area: x=${adjustedCropArea.x}, y=${adjustedCropArea.y}, w=${adjustedCropArea.width}, h=${adjustedCropArea.height}`);
+      
+      // Set canvas size to match the crop area
+      canvas.width = adjustedCropArea.width;
+      canvas.height = adjustedCropArea.height;
+      
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Handle rotation if needed
+      if (rotation !== 0) {
+        // Translate to center of canvas
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        // Rotate
+        ctx.rotate((rotation * Math.PI) / 180);
+        // Translate back
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+      }
+      
+      // Draw the cropped portion of the image to the canvas
+      ctx.drawImage(
+        img,
+        adjustedCropArea.x,
+        adjustedCropArea.y,
+        adjustedCropArea.width,
+        adjustedCropArea.height,
+        0,
+        0,
+        canvas.width,
+        canvas.height
       );
-    });
-  }, [cropArea, zoomLevel, rotation, imagePosition, currentImageId]);
+      
+      // Convert canvas to blob and return a Promise
+      return new Promise((resolve) => {
+        canvas.toBlob(
+          async (blob) => {
+            if (blob) {
+              console.log(`Created blob: ${blob.size} bytes, type: ${blob.type}`);
+              
+              // Create a completely isolated blob to prevent reference sharing
+              // This is critical to fixing the issue where all images update at once
+              const isolatedBlob = new Blob([await blob.arrayBuffer()], { 
+                type: 'image/jpeg' 
+              });
+              
+              console.log(`Created isolated blob: ${isolatedBlob.size} bytes`);
+              console.log(`===== CROP OPERATION COMPLETE =====`);
+              
+              resolve(isolatedBlob);
+            } else {
+              console.error('Failed to create blob from canvas');
+              console.log(`===== CROP OPERATION FAILED =====`);
+              resolve(null);
+            }
+          },
+          'image/jpeg',
+          0.9 // quality
+        );
+      });
+    } catch (error) {
+      console.error('Error generating cropped image:', error);
+      console.log(`===== CROP OPERATION ERROR =====`);
+      return null;
+    }
+  }, [cropArea, zoomLevel, rotation, imagePosition, currentImageId, isTempImage]);
 
-  // Handle crop confirmation - FIXED to properly isolate the blob
+  // Enhanced handle crop confirmation
   const handleCropConfirm = async () => {
     if (isCropping) return; // Prevent multiple simultaneous crop operations
     
@@ -447,11 +470,15 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       const croppedBlob = await generateCroppedImage();
       if (croppedBlob) {
         // Generate a unique identifier for this crop operation
-        const cropId = `crop-${currentImageId}-${Date.now()}`;
-        console.log(`Generated crop ID: ${cropId}`);
+        const cropOperationId = `crop-${currentImageId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        console.log(`Crop operation ID: ${cropOperationId}`);
         
         // Apply the crop by calling the parent component's handler
+        // This will either update a temp image or a server image
         await onCropComplete(croppedBlob);
+        
+        // Save the selected aspect ratio to localStorage for future use
+        saveSelectedAspectRatio(selectedAspectRatio.value);
         
         // Close the modal after successful crop
         onClose();
@@ -582,12 +609,12 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       </div>
     );
   }
-  // Add this return statement at the end of the ImageCropper component
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-auto">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Crop Image</h2>
+          <h2 className="text-xl font-semibold">Crop Image {isTempImage ? '(Preview)' : ''}</h2>
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -649,7 +676,13 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
           </div>
           
           <p className="text-sm text-gray-500">
-            Tip: Use mouse wheel or pinch to zoom, hold Alt key to pan the image.
+            Tip: Use mouse wheel or pinch to zoom, drag image to pan, and drag handles to adjust crop area.
+          </p>
+          
+          {/* Image ID info - helpful for debugging */}
+          <p className="text-xs text-gray-400 mt-1">
+            Image ID: {currentImageId !== null ? currentImageId : 'unknown'} 
+            {isTempImage ? ' (Temporary)' : ' (Server)'}
           </p>
         </div>
         

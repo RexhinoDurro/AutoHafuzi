@@ -1,4 +1,4 @@
-// src/components/CarForm/ImageGallery.tsx
+// src/components/CarForm/ImageGallery.tsx - Enhanced version
 import React, { useState } from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
@@ -11,7 +11,7 @@ import { Crop, Edit2 } from 'lucide-react';
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
   onDeleteImage: (id: number) => void;
-  onUpdateImage?: (id: number, imageBlob: Blob) => Promise<void>;
+  onUpdateImage?: (id: number, imageBlob: Blob) => Promise<void | boolean>; // <-- Allow Promise<void | boolean>
   isEditing: boolean;
   baseUrl?: string;
   selectedAspectRatio?: AspectRatioOption;
@@ -31,6 +31,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [currentImageId, setCurrentImageId] = useState<number | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
+  const [isCurrentImageTemp, setIsCurrentImageTemp] = useState(false);
   
   // Helper to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
@@ -99,25 +100,32 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   const handleOpenCropModal = (image: CarImage | TempImage) => {
     if (!onUpdateImage) return; // Only proceed if update handler is provided
     
-    // Set the current image ID and URL
+    const isTemp = isTempImage(image);
+    
+    // Set the current image ID, URL, and temp status
     setCurrentImageId(image.id);
     setCurrentImageUrl(getImageUrl(image));
+    setIsCurrentImageTemp(isTemp);
     setCropModalOpen(true);
 
-    console.log(`Opening crop modal for image ID: ${image.id}`);
+    console.log(`Opening crop modal for image ID: ${image.id} (${isTemp ? 'Temporary' : 'Server'} image)`);
   };
 
-  // Handle crop completion - FIXED to avoid affecting other images
-  const handleCropComplete = async (croppedImageBlob: Blob) => {
+  // Handle crop completion
+  const handleCropComplete = async (croppedImageBlob: Blob): Promise<void> => {
     if (currentImageId === null || !onUpdateImage) return;
     
     try {
-      console.log(`Completing crop for image ID: ${currentImageId}`);
+      console.log(`Completing crop for image ID: ${currentImageId} (${isCurrentImageTemp ? 'Temporary' : 'Server'} image)`);
       
       // Create an isolated copy of the blob to prevent reference sharing
       const isolatedBlob = new Blob([await croppedImageBlob.arrayBuffer()], { 
         type: croppedImageBlob.type 
       });
+      
+      // Generate a unique operation ID for tracing
+      const operationId = `crop-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      console.log(`Operation ID: ${operationId}`);
       
       // Pass the blob to the parent component's update handler
       await onUpdateImage(currentImageId, isolatedBlob);
@@ -201,11 +209,18 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 Preview
               </div>
             )}
+            
+            {/* Display image ID for debugging */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="absolute bottom-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-70">
+                ID: {image.id}
+              </div>
+            )}
           </div>
         ))}
       </div>
       
-      {/* Image cropper modal */}
+      {/* Image cropper modal with enhanced props */}
       {cropModalOpen && currentImageUrl && (
         <ImageCropper 
           isOpen={cropModalOpen}
@@ -213,7 +228,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
           imageUrl={currentImageUrl}
           onCropComplete={handleCropComplete}
           selectedAspectRatio={selectedAspectRatio}
-          currentImageId={currentImageId} // Pass image ID for better tracking
+          currentImageId={currentImageId}
+          isTempImage={isCurrentImageTemp}
         />
       )}
     </>
