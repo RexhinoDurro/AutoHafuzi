@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import CarImageCarousel from '../components/ImageGallery';
+import CarImageCarousel from '../components/ImageGalleryCarousel';
 import { Car } from '../types/car';
 import { Clock, Settings, Calendar, Fuel, Zap, Sofa, Music, Shield, Star, Eye, Phone, Mail } from 'lucide-react';
 import FavoriteButton from '../components/FavouriteButton';
@@ -453,7 +453,7 @@ const CarDetail: React.FC = () => {
                   "I diskutueshem" : 
                   `${typeof car.price === 'number' 
                     ? car.price.toLocaleString() 
-                    : Number(car.price).toLocaleString()}`
+                    : Number(car.price).toLocaleString()}€`
                 }
               </h2>
               
@@ -517,9 +517,9 @@ const CarDetail: React.FC = () => {
                 <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
                 {car.discussed_price ? 
                     "I diskutueshem" : 
-                    `$${typeof car.price === 'number' 
+                    `${typeof car.price === 'number' 
                       ? car.price.toLocaleString() 
-                      : Number(car.price).toLocaleString()}`
+                      : Number(car.price).toLocaleString()}€`
                   }
                 </h2>
                 <div className="flex items-center space-x-4">
