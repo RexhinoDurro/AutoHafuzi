@@ -3,11 +3,7 @@ import { CarImage } from '../types/car';
 import { API_BASE_URL } from '../config/api';
 import ResponsiveImage from './ResponsiveImage';
 import { getCloudinaryUrl } from '../utils/imageService';
-
-interface TempImage {
-  id: number;
-  preview: string;
-}
+import { TempImage } from './CarForm/useCarFormImageUpload';
 
 export interface CarImageCarouselProps {
   images: (CarImage | TempImage)[];
@@ -15,7 +11,7 @@ export interface CarImageCarouselProps {
   isMobile?: boolean; // Kept for backward compatibility
   onImageChange?: (index: number) => void;
   initialIndex?: number;
-  detectedAspectRatio?: string | null; // Added aspect ratio prop
+  detectedAspectRatio?: number | null; // Changed from string to number
 }
 
 const CarImageCarousel: React.FC<CarImageCarouselProps> = ({ 
@@ -106,35 +102,83 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return getImageUrl(image, 100, 100);
   }, [getImageUrl]);
 
-  // Calculate appropriate image classes based on detected aspect ratio
-  const getImageClasses = useCallback((): string => {
+  // Calculate appropriate image styles based on detected aspect ratio
+  const getImageStyles = useCallback((): React.CSSProperties => {
     if (!detectedAspectRatio) {
-      return "w-full h-full object-cover";
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const
+      };
     }
     
-    const ratio = parseFloat(detectedAspectRatio);
+    // Now we can use detectedAspectRatio directly since it's a number
+    const ratio = detectedAspectRatio;
     
-    // Determine best classes based on aspect ratio
     if (ratio >= 1.7 && ratio <= 1.8) {
       // 16:9 ratio (1.77)
-      return "w-full h-full object-contain";
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain' as const
+      };
     } else if (ratio >= 1.3 && ratio <= 1.4) {
       // 4:3 ratio (1.33)
-      return "w-full h-full object-contain";
+      return {
+        width: '100%', 
+        height: '100%',
+        objectFit: 'contain' as const
+      };
     } else if (ratio >= 0.9 && ratio <= 1.1) {
       // 1:1 ratio (square)
-      return "w-full h-full object-contain";
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain' as const
+      };
     } else if (ratio < 0.8) {
       // Portrait/vertical images
-      return "w-auto h-full object-contain";
+      return {
+        width: 'auto',
+        height: '100%',
+        objectFit: 'contain' as const,
+        maxWidth: '100%'
+      };
     } else if (ratio > 2.0) {
       // Ultra-wide images
-      return "w-full h-auto max-h-full object-contain";
+      return {
+        width: '100%',
+        height: 'auto',
+        objectFit: 'contain' as const,
+        maxHeight: '100%'
+      };
     } else {
       // Default for other ratios
-      return "w-full h-full object-contain";
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain' as const
+      };
     }
   }, [detectedAspectRatio]);
+
+  // Get the objectFit value for ResponsiveImage component
+  const getObjectFitValue = useCallback((): "fill" | "contain" | "cover" | "none" | "scale-down" => {
+    const styles = getImageStyles();
+    // Convert the objectFit from the style to one of the allowed values
+    switch (styles.objectFit) {
+      case 'contain':
+        return 'contain';
+      case 'cover':
+        return 'cover';
+      case 'none':
+        return 'none';
+      case 'scale-down':
+        return 'scale-down';
+      default:
+        return 'contain'; // Default fallback
+    }
+  }, [getImageStyles]);
   
   // Preload images function
   const preloadImages = useCallback(() => {
@@ -272,8 +316,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   // Always show thumbnails, regardless of device
   const shouldShowThumbnails = images.length > 1;
 
-  // Get appropriate image classes based on aspect ratio
-  const imageClasses = getImageClasses();
+  // Get objectFit value only (not using imageStyles directly)
+  const objectFitValue = getObjectFitValue();
 
   return (
     <div className="w-full space-y-2">
@@ -299,9 +343,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
             alt={`Car view ${selectedIndex + 1}`}
             width={800}
             height={600}
-            className={imageClasses}
+            objectFit={objectFitValue}
             onLoad={() => {/* Optional loading callback */}}
-            objectFit="contain"
             placeholder={FALLBACK_IMAGE_URL}
           />
         </div>
@@ -340,7 +383,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         {/* Aspect ratio info if available - only in development mode */}
         {detectedAspectRatio && process.env.NODE_ENV === 'development' && (
           <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
-            Ratio: {detectedAspectRatio}:1
+            Ratio: {detectedAspectRatio.toFixed(2)}:1
           </div>
         )}
       </div>
@@ -363,8 +406,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 width={100}
                 height={100}
                 lazy={true}
-                className={imageClasses}
-                objectFit="contain"
+                objectFit={objectFitValue}
                 onLoad={() => {/* Optional loading callback */}}
               />
             </div>

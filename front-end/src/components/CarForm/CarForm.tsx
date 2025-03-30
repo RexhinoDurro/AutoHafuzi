@@ -1,4 +1,4 @@
-// src/components/CarForm/CarForm.tsx - Enhanced version with persistent image storage and aspect ratio selector
+// src/components/CarForm/CarForm.tsx - Enhanced version with automatic aspect ratio detection
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
@@ -13,12 +13,6 @@ import {
   EMISSION_CLASSES,
 } from './constants';
 import { TempImage } from './useCarFormImageUpload';
-import {
-  ASPECT_RATIO_OPTIONS,
-  getAspectRatioByValue,
-  saveSelectedAspectRatio,
-  loadSelectedAspectRatio
-} from './persistentImageStorage';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 10;
@@ -43,7 +37,10 @@ const CarForm = () => {
     handleImageDelete: hookHandleImageDelete,
     tempImages: hookTempImages,
     handleImageUpload: hookHandleImageUpload,
-    clearTempImagesStorage
+    clearTempImagesStorage,
+    detectedAspectRatio,
+    formatAspectRatio,
+    uploadError
   } = useCarForm(id);
 
   // Local form state that doesn't trigger API calls until necessary
@@ -53,12 +50,6 @@ const CarForm = () => {
   const [localImages, setLocalImages] = useState<CarImage[]>([]);
   const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
-
-  // State for the selected aspect ratio
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState(() => {
-    const savedRatio = loadSelectedAspectRatio();
-    return getAspectRatioByValue(savedRatio);
-  });
 
   // Update local form state when server data changes (initial load or after submit)
   useEffect(() => {
@@ -237,22 +228,29 @@ const CarForm = () => {
       
       return newData;
     });
-    
-    // No need to call fetchModels/fetchVariants directly
-    // The useEffect hooks in useCarForm will handle this based on formData changes
   }, [setServerFormData]);
   
   // Local image handlers (fixes image refresh issue)
   const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Call the hook's handler but store temporarily 
-      hookHandleImageUpload(e);
-      
-      // The hook will update hookTempImages which will feed into our localTempImages via the useEffect
+      // Call the hook's handler but preserve existing images
+      hookHandleImageUpload(e.target.files).then(() => {
+        // We don't need to do anything with newImages - the hook updates tempImages already
+        
+        // Clear the file input so the same files can be selected again if needed
+        e.target.value = '';
+      }).catch(error => {
+        console.error('Error uploading images:', error);
+        // Clear the file input on error too
+        e.target.value = '';
+      });
     }
   };
 
   const handleLocalImageDelete = (imageId: number) => {
+    // Make a copy of current form data to preserve it
+    const currentFormData = { ...localFormData };
+    
     // Handle locally based on image type
     if (imageId < 0) {
       // It's a temporary image
@@ -267,14 +265,10 @@ const CarForm = () => {
       // Track that we should delete this on submit
       setImagesToDelete(prev => [...prev, imageId]);
     }
-  };
-
-  // Handle aspect ratio change
-  const handleAspectRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const ratioValue = e.target.value;
-    const aspectRatio = getAspectRatioByValue(ratioValue);
-    setSelectedAspectRatio(aspectRatio);
-    saveSelectedAspectRatio(ratioValue);
+    
+    // Restore the form data to prevent clearing
+    setLocalFormData(currentFormData);
+    setServerFormData(currentFormData);
   };
 
   // Fetch exterior and interior colors
@@ -430,18 +424,23 @@ const CarForm = () => {
       return;
     }
   
-    // Process any pending image deletions
-    for (const imageId of imagesToDelete) {
-      await hookHandleImageDelete(imageId);
-    }
-    setImagesToDelete([]);
-  
-    // No need to sync with serverFormData first since we've been keeping them in sync
-    const success = await hookHandleSubmit(e);
-    if (success) {
-      // Clear temp images from storage after successful submission
-      clearTempImagesStorage();
-      navigate('/auth/dashboard');
+    try {
+      // Process any pending image deletions
+      for (const imageId of imagesToDelete) {
+        await hookHandleImageDelete(imageId);
+      }
+      setImagesToDelete([]);
+    
+      // No need to sync with serverFormData first since we've been keeping them in sync
+      const success = await hookHandleSubmit(e);
+      if (success) {
+        // Clear temp images from storage after successful submission
+        clearTempImagesStorage();
+        navigate('/auth/dashboard');
+      }
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      // Just log the error - we don't need to set any state
     }
   };
 
@@ -480,7 +479,9 @@ const CarForm = () => {
       label: String(year)
     };
   }).reverse(); // Most recent years first
- 
+
+
+
 return (
   <div className="max-w-4xl mx-auto p-6">
     <div className="flex items-center justify-between mb-6">
@@ -838,56 +839,46 @@ return (
         </div>
 
         {/* Image Upload */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
-          
-          {/* Image aspect ratio selector */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Image Aspect Ratio
-            </label>
-            <select
-              value={selectedAspectRatio.value}
-              onChange={handleAspectRatioChange}
-              className="w-full p-2 border rounded-lg"
-            >
-              {ASPECT_RATIO_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-sm text-gray-500">
-              {selectedAspectRatio.value !== 'original' 
-                ? `Selected ratio: ${selectedAspectRatio.width}:${selectedAspectRatio.height}` 
-                : 'Using original image dimensions'}
-            </p>
-          </div>
-          
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
-          </label>
-          <input
-            type="file"
-            accept={ALLOWED_FILE_TYPES.join(',')}
-            multiple
-            onChange={handleLocalImageUpload}
-            className="w-full border border-gray-300 p-2 rounded"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Max file size: 5MB. Supported formats: JPEG, PNG, WebP
-          </p>
-          {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
-          {(localImages.length > 0 || localTempImages.length > 0) && (
-            <ImageGallery
-              images={[...localImages, ...localTempImages]}
-              onDeleteImage={handleLocalImageDelete}
-              isEditing={true}
-              baseUrl={API_BASE_URL}
-              selectedAspectRatio={selectedAspectRatio}
-            />
-          )}
-        </div>
+<div>
+  <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
+  
+  {/* Detected aspect ratio display */}
+  {hookTempImages.length > 0 && (
+    <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded">
+      <p className="text-sm font-medium text-blue-800">
+        Detected aspect ratio: {formatAspectRatio()}
+      </p>
+      <p className="text-xs text-blue-600 mt-1">
+        All images must have the same aspect ratio. Images with different ratios will be skipped.
+      </p>
+    </div>
+  )}
+  
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
+  </label>
+  <input
+    type="file"
+    accept={ALLOWED_FILE_TYPES.join(',')}
+    multiple
+    onChange={handleLocalImageUpload}
+    className="w-full border border-gray-300 p-2 rounded"
+  />
+  <p className="mt-1 text-sm text-gray-500">
+    Max file size: 5MB. Supported formats: JPEG, PNG, WebP
+  </p>
+  {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+  {uploadError && <p className="mt-2 text-red-500">{uploadError}</p>}
+  {(localImages.length > 0 || localTempImages.length > 0) && (
+    <ImageGallery
+      images={[...localImages, ...localTempImages]}
+      onDeleteImage={handleLocalImageDelete}
+      isEditing={true}
+      baseUrl={API_BASE_URL}
+      detectedAspectRatio={detectedAspectRatio}
+    />
+  )}
+</div>
 
         {/* Vehicle Details */}
         <div>

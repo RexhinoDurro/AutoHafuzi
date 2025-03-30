@@ -1,17 +1,16 @@
-// src/components/CarForm/ImageGallery.tsx
+// Modified ImageGallery.tsx to support detected aspect ratio
 import React from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
 import { getCloudinaryUrl } from '../../utils/imageService';
 import { TempImage } from './useCarFormImageUpload';
-import { AspectRatioOption } from './persistentImageStorage';
 
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
   onDeleteImage: (id: number) => void;
   isEditing: boolean;
   baseUrl?: string;
-  selectedAspectRatio?: AspectRatioOption;
+  detectedAspectRatio?: number | null;
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
@@ -19,7 +18,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   onDeleteImage, 
   isEditing, 
   baseUrl = API_BASE_URL,
-  selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 }
+  detectedAspectRatio = null
 }) => {
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
   
@@ -66,11 +65,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     return fallbackImageUrl;
   };
   
-  // Calculate the aspect ratio styles based on selectedAspectRatio
+  // Calculate the aspect ratio styles based on detectedAspectRatio
   const getAspectRatioStyles = () => {
-    if (selectedAspectRatio.value === 'original') {
+    if (!detectedAspectRatio) {
       return {
-        aspectRatio: 'auto',
         objectFit: 'cover' as const,
         height: '100%',
         width: '100%'
@@ -78,12 +76,30 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
     
     // For specific aspect ratios
-    return {
-      aspectRatio: `${selectedAspectRatio.width} / ${selectedAspectRatio.height}`,
-      objectFit: 'cover' as const,
-      height: '100%',
-      width: '100%',
-    };
+    if (detectedAspectRatio >= 1.7) {
+      // Widescreen images (16:9, etc.)
+      return {
+        objectFit: 'contain' as const,
+        width: '100%',
+        height: 'auto',
+        maxHeight: '100%'
+      };
+    } else if (detectedAspectRatio <= 0.65) {
+      // Portrait/vertical images (9:16, etc.)
+      return {
+        objectFit: 'contain' as const,
+        height: '100%',
+        width: 'auto',
+        maxWidth: '100%'
+      };
+    } else {
+      // Standard images (4:3, 1:1, etc.)
+      return {
+        objectFit: 'contain' as const,
+        height: '100%',
+        width: '100%'
+      };
+    }
   };
   
   return (

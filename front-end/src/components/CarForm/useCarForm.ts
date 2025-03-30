@@ -1,10 +1,10 @@
-// src/components/CarForm/useCarForm.ts
+// src/components/CarForm/useCarForm.ts - Enhanced with aspect ratio detection
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
-import { useCarFormImageUpload} from './useCarFormImageUpload';
-import { getCloudinaryUrl } from '../../utils/imageService';
+import { useCarFormImageUpload } from './useCarFormImageUpload';
+import { getCloudinaryUrl, getImageDimensions } from '../../utils/imageService';
 
 const parseNumericValue = (value: string | number | null | undefined, defaultValue: number): number => {
   if (value === null || value === undefined || value === '') {
@@ -28,6 +28,7 @@ export const useCarForm = (id?: string) => {
   const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
   const [newOption, setNewOption] = useState<string>('');
   const initialFetchDone = useRef(false);
+  const [detectedAspectRatio, setDetectedAspectRatio] = useState<number | null>(null);
   
   // Get current date for defaults
   const currentDate = new Date();
@@ -35,19 +36,27 @@ export const useCarForm = (id?: string) => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentDay = currentDate.getDate();
 
-  // Integrate image upload functionality
+  // Integrate image upload functionality with enhanced aspect ratio detection
   const {
     tempImages,
     nextTempId,
     isUploading,
     uploadError,
-    handleImageUpload,
-    handleImageDelete,
+    handleImageUpload: hookHandleImageUpload,
+    handleImageDelete: hookHandleImageDelete,
     setTempImages,
     setNextTempId,
     uploadTempImages,
-    clearTempImagesStorage  // This is the function we need to expose
+    clearTempImagesStorage,
+    detectedAspectRatio: uploadDetectedAspectRatio
   } = useCarFormImageUpload();
+
+  // Sync the detected aspect ratio from the upload hook
+  useEffect(() => {
+    if (uploadDetectedAspectRatio !== null) {
+      setDetectedAspectRatio(uploadDetectedAspectRatio);
+    }
+  }, [uploadDetectedAspectRatio]);
 
   const [formData, setFormData] = useState<CarFormData>({
     make_id: undefined,
@@ -95,6 +104,58 @@ export const useCarForm = (id?: string) => {
     images: [],
     option_ids: []
   });
+
+  // Format the detected aspect ratio into a readable string
+  const formatAspectRatio = useCallback(() => {
+    if (!detectedAspectRatio) return "None detected";
+    
+    // Common aspect ratios with their names
+    const commonRatios = [
+      { ratio: 1, text: '1:1 (Square)' },
+      { ratio: 4/3, text: '4:3 (Standard)' },
+      { ratio: 3/2, text: '3:2 (Classic)' },
+      { ratio: 16/9, text: '16:9 (Widescreen)' },
+      { ratio: 3/4, text: '3:4 (Portrait)' },
+      { ratio: 2/3, text: '2:3 (Portrait)' },
+      { ratio: 9/16, text: '9:16 (Mobile)' },
+    ];
+    
+    // Find the closest common ratio
+    const closest = commonRatios.reduce((prev, curr) => {
+      return Math.abs(curr.ratio - detectedAspectRatio) < Math.abs(prev.ratio - detectedAspectRatio) ? curr : prev;
+    });
+    
+    // If it's close to a common ratio (within 5%), use that name
+    if (Math.abs(closest.ratio - detectedAspectRatio) <= 0.05 * detectedAspectRatio) {
+      return closest.text;
+    }
+    
+    // Otherwise, format as decimal with 2 digits of precision
+    return `${detectedAspectRatio.toFixed(2)}:1`;
+  }, [detectedAspectRatio]);
+
+  // Custom image upload handler that preserves existing images
+  const handleImageUpload = useCallback(async (files: FileList) => {
+    try {
+      // Use the hook's handler but make sure we're appending, not replacing
+      const newImages = await hookHandleImageUpload(files);
+      
+      // Try to detect aspect ratio from first image if not already set
+      if (!detectedAspectRatio && newImages && newImages.length > 0 && newImages[0].preview) {
+        try {
+          const dimensions = await getImageDimensions(newImages[0].preview);
+          setDetectedAspectRatio(dimensions.aspectRatio);
+        } catch (error) {
+          console.error('Error detecting aspect ratio:', error);
+        }
+      }
+      
+      return newImages;
+    } catch (error) {
+      console.error('Error in handleImageUpload:', error);
+      return [];
+    }
+  }, [hookHandleImageUpload, detectedAspectRatio]);
 
   const fetchMakes = useCallback(async () => {
     setIsMakesLoading(true);
@@ -216,6 +277,16 @@ export const useCarForm = (id?: string) => {
           // Optimize Cloudinary URLs if present
           url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
         }));
+
+        // Try to detect aspect ratio from the first image
+        if (data.images[0]?.url) {
+          try {
+            const dimensions = await getImageDimensions(data.images[0].url);
+            setDetectedAspectRatio(dimensions.aspectRatio);
+          } catch (error) {
+            console.error('Error detecting aspect ratio from image:', error);
+          }
+        }
       }
       
       // FIXED: Create a complete car data object instead of merging with current formData
@@ -554,14 +625,8 @@ export const useCarForm = (id?: string) => {
     newOption, 
     setNewOption, 
     tempImages, 
-    handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) {
-        handleImageUpload(e.target.files);
-        // Reset the input value after handling the files
-        e.target.value = '';
-      }
-    },
-    handleImageDelete, 
+    handleImageUpload, 
+    handleImageDelete: hookHandleImageDelete, 
     handleSubmit,
     fetchVariants,
     fetchModels,
@@ -573,6 +638,9 @@ export const useCarForm = (id?: string) => {
     isUploading,
     uploadError,
     // Export the clearTempImagesStorage function
-    clearTempImagesStorage
+    clearTempImagesStorage,
+    // Aspect ratio related
+    detectedAspectRatio,
+    formatAspectRatio
   };
 };

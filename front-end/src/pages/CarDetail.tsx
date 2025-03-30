@@ -54,6 +54,9 @@ const CarDetail: React.FC = () => {
   const [initialFetchDone, setInitialFetchDone] = useState(false);
   const [viewTracked, setViewTracked] = useState<boolean | null>(null);
   
+  // Add a state for the detected aspect ratio of images
+  const [detectedAspectRatio, setDetectedAspectRatio] = useState<number | null>(null);
+  
   // Add a media query hook to detect mobile screens
   const isMobile = useMediaQuery('(max-width: 768px)');
   
@@ -66,8 +69,24 @@ const CarDetail: React.FC = () => {
       setError(null);
       setInitialFetchDone(false);
       setViewTracked(null);
+      setDetectedAspectRatio(null);
     }
   }, [id]); // Only re-run when id changes
+
+  // Detect aspect ratio from first image when car data loads
+  useEffect(() => {
+    if (car && car.images && car.images.length > 0) {
+      // Try to detect aspect ratio from the first image
+      const firstImage = car.images[0];
+      if (firstImage && 'width' in firstImage && 'height' in firstImage) {
+        const width = Number(firstImage.width);
+        const height = Number(firstImage.height);
+        if (width && height && height > 0) {
+          setDetectedAspectRatio(width / height);
+        }
+      }
+    }
+  }, [car]);
 
   // Check if tracking should be disabled based on navigation source
   useEffect(() => {
@@ -471,6 +490,7 @@ const CarDetail: React.FC = () => {
             <CarImageCarousel 
                   images={car.images || []} 
                   isMobile={isMobile} 
+                  detectedAspectRatio={detectedAspectRatio} // Pass the number directly
                   onImageChange={(index) => console.log(`Viewing image ${index + 1}`)}
             />
             
