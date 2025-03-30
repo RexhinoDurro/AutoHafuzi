@@ -7,6 +7,7 @@ import { Eye, Trash, Edit, BarChart2 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 import DeleteConfirmationModal from './DeleteConfirmation'
+import React from 'react';
 
 const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const navigate = useNavigate();
@@ -17,6 +18,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [carToDelete, setCarToDelete] = useState<Car | null>(null);
   const { token } = getStoredAuth();
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCars, setTotalCars] = useState<number>(0);
+  const carsPerPage = 10; // Number of cars to display per page
 
   useEffect(() => {
     if (!token) {
@@ -24,13 +31,17 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       return;
     }
 
-    fetchCars();
-  }, [token, navigate]);
+    fetchCars(currentPage);
+  }, [token, navigate, currentPage]);
 
-  const fetchCars = async () => {
+  const fetchCars = async (page: number = 1) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cars/`, {
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('limit', carsPerPage.toString());
+      
+      const response = await fetch(`${API_BASE_URL}/api/cars/?${queryParams}`, {
         headers: {
           Authorization: `Token ${token}`,
         },
@@ -40,18 +51,73 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       // Handle both paginated and direct array responses
       if ('results' in data && Array.isArray(data.results)) {
         setCars(data.results);
+        // Calculate total pages and set total car count
+        const totalCount = data.count || 0;
+        setTotalCars(totalCount);
+        setTotalPages(Math.ceil(totalCount / carsPerPage));
       } else if (Array.isArray(data)) {
         setCars(data);
+        setTotalCars(data.length);
+        setTotalPages(Math.ceil(data.length / carsPerPage));
       } else {
         setCars([]);
+        setTotalPages(1);
+        setTotalCars(0);
         console.error("Unexpected response format:", data);
       }
     } catch (error) {
       console.error('Error fetching cars:', error);
       setCars([]);
+      setTotalPages(1);
+      setTotalCars(0);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    setCurrentPage(page);
+    
+    // Scroll to top of listing when changing pages
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  // Generate pagination numbers
+  const getPaginationNumbers = () => {
+    const pages = [];
+    
+    // Always include first page
+    pages.push(1);
+    
+    // Calculate range to show around current page
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+    
+    // Add ellipsis after first page if needed
+    if (start > 2) {
+      pages.push('...');
+    }
+    
+    // Add pages around current page
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    // Add ellipsis before last page if needed
+    if (end < totalPages - 1) {
+      pages.push('...');
+    }
+    
+    // Add last page if there's more than one page
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   const handleDeleteClick = (car: Car) => {
@@ -75,6 +141,13 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
 
       if (response.ok) {
         setCars(cars.filter(c => c.id !== carToDelete.id));
+        
+        // Refresh the current page, or go to previous page if this was the last item
+        if (cars.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        } else {
+          fetchCars(currentPage);
+        }
       } else {
         // Handle error response
         const errorText = await response.text();
@@ -273,6 +346,69 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex justify-center">
+                <nav className="inline-flex items-center bg-white rounded-lg shadow-md overflow-x-auto" aria-label="Pagination">
+                  {/* Previous page button */}
+                  <button 
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 md:px-4 py-2 rounded-l-lg border-r ${
+                      currentPage === 1 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-blue-600 hover:bg-blue-50'
+                    }`}
+                    aria-label="Previous page"
+                  >
+                    &laquo;
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {getPaginationNumbers().map((page, index) => (
+                    <React.Fragment key={index}>
+                      {page === '...' ? (
+                        <span className="px-3 md:px-4 py-2 border-r text-gray-500">...</span>
+                      ) : (
+                        <button
+                          onClick={() => typeof page === 'number' && handlePageChange(page)}
+                          className={`px-3 md:px-4 py-2 border-r ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'text-blue-600 hover:bg-blue-50'
+                          }`}
+                          aria-current={currentPage === page ? 'page' : undefined}
+                        >
+                          {page}
+                        </button>
+                      )}
+                    </React.Fragment>
+                  ))}
+                  
+                  {/* Next page button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 md:px-4 py-2 rounded-r-lg ${
+                      currentPage === totalPages
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-blue-600 hover:bg-blue-50'
+                    }`}
+                    aria-label="Next page"
+                  >
+                    &raquo;
+                  </button>
+                </nav>
+              </div>
+              
+              {/* Results summary */}
+              <div className="mt-4 text-center text-gray-500 text-sm">
+                <p>Showing {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} cars</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
