@@ -1,9 +1,9 @@
-// src/components/CarForm/useCarForm.ts - Modified with aspect ratio support
+// src/components/CarForm/useCarForm.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
-import { useCarFormImageUpload } from './useCarFormImageUpload';
+import { useCarFormImageUpload} from './useCarFormImageUpload';
 import { getCloudinaryUrl } from '../../utils/imageService';
 
 const parseNumericValue = (value: string | number | null | undefined, defaultValue: number): number => {
@@ -35,7 +35,7 @@ export const useCarForm = (id?: string) => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentDay = currentDate.getDate();
 
-  // Integrate image upload functionality with aspect ratio support
+  // Integrate image upload functionality
   const {
     tempImages,
     nextTempId,
@@ -46,8 +46,7 @@ export const useCarForm = (id?: string) => {
     setTempImages,
     setNextTempId,
     uploadTempImages,
-    clearTempImagesStorage,
-    detectedAspectRatio // Include the detected aspect ratio
+    clearTempImagesStorage  // This is the function we need to expose
   } = useCarFormImageUpload();
 
   const [formData, setFormData] = useState<CarFormData>({
@@ -557,7 +556,7 @@ export const useCarForm = (id?: string) => {
     tempImages, 
     handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        handleImageUpload(e);
+        handleImageUpload(e.target.files);
         // Reset the input value after handling the files
         e.target.value = '';
       }
@@ -574,8 +573,6 @@ export const useCarForm = (id?: string) => {
     isUploading,
     uploadError,
     // Export the clearTempImagesStorage function
-    clearTempImagesStorage,
-    // Add detectedAspectRatio
-    detectedAspectRatio
+    clearTempImagesStorage
   };
 };
