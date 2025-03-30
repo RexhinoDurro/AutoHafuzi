@@ -425,6 +425,47 @@ const CarDetail: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         {/* Updated grid for better mobile responsiveness */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6">
+          {/* Title shown above image gallery on mobile */}
+          {isMobile && (
+            <div className="space-y-4">
+              {/* Add H1 tag for better SEO */}
+              <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
+              
+              {/* Price with favorite button and view counter */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
+                {car.discussed_price ? 
+                    "I diskutueshem" : 
+                    `$${typeof car.price === 'number' 
+                      ? car.price.toLocaleString() 
+                      : Number(car.price).toLocaleString()}`
+                  }
+                </h2>
+                <div className="flex items-center space-x-4">
+                  {/* View Counter */}
+                  <div className="flex items-center text-gray-500" title="Number of views">
+                    <Eye size={18} className="mr-1" />
+                    <span>{car.view_count}</span>
+                  </div>
+                  
+                  {/* Tracking Status - only show in development */}
+                  {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
+                    <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {viewTracked ? 'View Tracked' : 'View Not Tracked'}
+                    </div>
+                  )}
+                  
+                  {/* Favorite Button */}
+                  <FavoriteButton 
+                    carId={car.id} 
+                    size={24} 
+                    className="p-2 hover:bg-gray-100 rounded-full"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4 md:space-y-6">
             {/* Pass the isMobile flag to the carousel */}
             <CarImageCarousel 
@@ -465,43 +506,46 @@ const CarDetail: React.FC = () => {
             </div>
           </div>
           
-          <div className="space-y-4">
-            {/* Add H1 tag for better SEO */}
-            <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
-            
-            {/* Price with favorite button and view counter */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
-              {car.discussed_price ? 
-                  "I diskutueshem" : 
-                  `$${typeof car.price === 'number' 
-                    ? car.price.toLocaleString() 
-                    : Number(car.price).toLocaleString()}`
-                }
-              </h2>
-              <div className="flex items-center space-x-4">
-                {/* View Counter */}
-                <div className="flex items-center text-gray-500" title="Number of views">
-                  <Eye size={18} className="mr-1" />
-                  <span>{car.view_count}</span>
-                </div>
-                
-                {/* Tracking Status - only show in development */}
-                {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
-                  <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {viewTracked ? 'View Tracked' : 'View Not Tracked'}
+          {/* Title and car details - hide on mobile as it's shown above */}
+          {!isMobile && (
+            <div className="space-y-4">
+              {/* Add H1 tag for better SEO */}
+              <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
+              
+              {/* Price with favorite button and view counter */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
+                {car.discussed_price ? 
+                    "I diskutueshem" : 
+                    `$${typeof car.price === 'number' 
+                      ? car.price.toLocaleString() 
+                      : Number(car.price).toLocaleString()}`
+                  }
+                </h2>
+                <div className="flex items-center space-x-4">
+                  {/* View Counter */}
+                  <div className="flex items-center text-gray-500" title="Number of views">
+                    <Eye size={18} className="mr-1" />
+                    <span>{car.view_count}</span>
                   </div>
-                )}
-                
-                {/* Favorite Button */}
-                <FavoriteButton 
-                  carId={car.id} 
-                  size={24} 
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                />
+                  
+                  {/* Tracking Status - only show in development */}
+                  {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
+                    <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {viewTracked ? 'View Tracked' : 'View Not Tracked'}
+                    </div>
+                  )}
+                  
+                  {/* Favorite Button */}
+                  <FavoriteButton 
+                    carId={car.id} 
+                    size={24} 
+                    className="p-2 hover:bg-gray-100 rounded-full"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-6 md:space-y-8">
             <section className="space-y-3 md:space-y-4">
@@ -514,6 +558,10 @@ const CarDetail: React.FC = () => {
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Lloji i karocerisë</p>
                   <p className="font-medium text-sm md:text-base">{car.body_type}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm md:text-base">Kilometrazhi</p>
+                  <p className="font-medium text-sm md:text-base">{car.mileage.toLocaleString()} km</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Gjendja</p>
@@ -577,8 +625,8 @@ const CarDetail: React.FC = () => {
                   <p className="font-medium text-sm md:text-base">{car.engine_size}L</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-sm md:text-base">Ingranazhet</p>
-                  <p className="font-medium text-sm md:text-base">{car.gears}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Fuqia</p>
+                  <p className="font-medium text-sm md:text-base">{car.power} kW ({Math.round(car.power * 1.36)} hp)</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Cilindrat</p>
@@ -593,8 +641,8 @@ const CarDetail: React.FC = () => {
                   <p className="font-medium text-sm md:text-base">{car.emission_class}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-sm md:text-base">Doganat e paguara</p>
-                  <p className="font-medium text-sm md:text-base">{car.customs_paid ? 'Po' : 'Jo'}</p>
+                  <p className="text-gray-600 text-sm md:text-base">Lloji i karburantit</p>
+                  <p className="font-medium text-sm md:text-base">{car.fuel_type}</p>
                 </div>
               </div>
             </section>
@@ -612,12 +660,12 @@ const CarDetail: React.FC = () => {
                   <p className="font-medium text-sm md:text-base">{car.doors}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600 text-sm md:text-base">Historiku i servisit</p>
-                  <p className="font-medium text-sm md:text-base">{car.full_service_history ? 'I plotë' : 'I pjesshëm'}</p>
-                </div>
-                <div>
                   <p className="text-gray-600 text-sm md:text-base">Sistemi i transmetimit</p>
                   <p className="font-medium text-sm md:text-base">{car.drivetrain}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600 text-sm md:text-base">Doganat e paguara</p>
+                  <p className="font-medium text-sm md:text-base">{car.customs_paid ? 'Po' : 'Jo'}</p>
                 </div>
               </div>
             </section>
