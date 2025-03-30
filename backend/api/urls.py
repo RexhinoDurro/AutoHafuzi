@@ -22,6 +22,7 @@ urlpatterns = [
     # Cloudinary image handling endpoints
     path('cars/<str:car_slug>/images/', cloudinary_views.add_car_images, name='add_car_images'),
     path('cars/images/<int:image_id>/', cloudinary_views.delete_car_image, name='delete_car_image'),
+    path('cars/images/update/<int:image_id>/', cloudinary_views.update_car_image, name='update_car_image'),
     path('cars/<str:car_slug>/images/<int:image_id>/primary/', cloudinary_views.set_primary_image, name='set_primary_image'),
     path('cars/<str:car_slug>/images/reorder/', cloudinary_views.reorder_car_images, name='reorder_car_images'),
     path('cars/<str:car_slug>/images/list/', cloudinary_views.get_car_images, name='get_car_images'),

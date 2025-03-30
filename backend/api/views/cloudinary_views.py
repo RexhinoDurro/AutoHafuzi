@@ -123,11 +123,14 @@ def add_car_images(request, car_slug):
         'details': errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['DELETE'])
+
+# Add this new function to api/views/cloudinary_views.py
+
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def delete_car_image(request, image_id):
+def update_car_image(request, image_id):
     """
-    Delete a car image from Cloudinary
+    Update/replace a car image with a new one
     """
     if not request.user.is_staff:
         return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
@@ -138,8 +141,25 @@ def delete_car_image(request, image_id):
         return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
     
     try:
-        # Get the public_id from the image
-        public_id = image.public_id
+        # Get the car the image belongs to
+        car = image.car
+        
+        # Get the image from the request
+        new_image_file = request.FILES.get('image')
+        if not new_image_file:
+            return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate file size (5MB limit)
+        if new_image_file.size > 5 * 1024 * 1024:  # 5MB
+            return Response({'error': 'Image exceeds 5MB size limit'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+        if new_image_file.content_type not in allowed_types:
+            return Response({'error': 'Invalid file type. Allowed: JPEG, PNG, WebP'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Extract the current public_id for deletion later
+        old_public_id = image.public_id
         
         # Configure Cloudinary
         cloudinary.config(
@@ -149,18 +169,151 @@ def delete_car_image(request, image_id):
             secure=settings.CLOUDINARY_STORAGE.get('SECURE', True)
         )
         
-        # Delete the image from Cloudinary
-        if public_id:
-            cloudinary.uploader.destroy(public_id)
+        # Generate a unique folder path for this car and a new unique ID
+        folder_path = f"autohafuzi/cars/{car.id}"
+        unique_id = uuid.uuid4().hex[:8]
         
-        # Delete the image record
-        image.delete()
+        # Upload the new image to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            new_image_file,
+            folder=folder_path,
+            public_id=unique_id,
+            overwrite=True,
+            resource_type="image",
+            transformation=[
+                {'quality': 'auto:good'},
+                {'format': 'auto'}
+            ]
+        )
         
-        return Response({'message': 'Image deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        # Delete the old image from Cloudinary if it exists
+        if old_public_id:
+            try:
+                cloudinary.uploader.destroy(old_public_id)
+            except Exception as e:
+                logger.error(f"Error deleting old image from Cloudinary: {str(e)}")
+        
+        # Update the image object with new values
+        image.image = upload_result['public_id']
+        image.public_id = upload_result['public_id']
+        image.save()
+        
+        # Prepare response
+        image_data = CarImageSerializer(image).data
+        # Add URL from upload result
+        image_data['url'] = upload_result.get('secure_url', '')
+        
+        return Response(image_data, status=status.HTTP_200_OK)
     
     except Exception as e:
-        logger.error(f"Error deleting image from Cloudinary: {str(e)}")
-        return Response({'error': f'Failed to delete image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"Error updating image: {str(e)}")
+        return Response({'error': f'Failed to update image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE', 'PUT'])
+@permission_classes([IsAuthenticated])
+def delete_car_image(request, image_id):
+    """
+    DELETE: Delete a car image from Cloudinary
+    PUT: Update/replace a car image with a new one
+    """
+    if not request.user.is_staff:
+        return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        image = CarImage.objects.get(id=image_id)
+    except CarImage.DoesNotExist:
+        return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Configure Cloudinary
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=settings.CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=settings.CLOUDINARY_STORAGE['API_SECRET'],
+        secure=settings.CLOUDINARY_STORAGE.get('SECURE', True)
+    )
+    
+    if request.method == 'DELETE':
+        try:
+            # Get the public_id from the image
+            public_id = image.public_id
+            
+            # Delete the image from Cloudinary
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+            
+            # Delete the image record
+            image.delete()
+            
+            return Response({'message': 'Image deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        
+        except Exception as e:
+            logger.error(f"Error deleting image from Cloudinary: {str(e)}")
+            return Response({'error': f'Failed to delete image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    elif request.method == 'PUT':
+        try:
+            # Get the car the image belongs to
+            car = image.car
+            
+            # Get the image from the request
+            new_image_file = request.FILES.get('image')
+            replace_id = request.POST.get('replace_id')
+            
+            if not new_image_file:
+                return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate file size (5MB limit)
+            if new_image_file.size > 5 * 1024 * 1024:  # 5MB
+                return Response({'error': 'Image exceeds 5MB size limit'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate file type
+            allowed_types = ['image/jpeg', 'image/png', 'image/webp']
+            if new_image_file.content_type not in allowed_types:
+                return Response({'error': 'Invalid file type. Allowed: JPEG, PNG, WebP'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Extract the current public_id for deletion later
+            old_public_id = image.public_id
+            
+            # Generate a unique folder path for this car and a new unique ID
+            folder_path = f"autohafuzi/cars/{car.id}"
+            unique_id = uuid.uuid4().hex[:8]
+            
+            # Upload the new image to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                new_image_file,
+                folder=folder_path,
+                public_id=unique_id,
+                overwrite=True,
+                resource_type="image",
+                transformation=[
+                    {'quality': 'auto:good'},
+                    {'format': 'auto'}
+                ]
+            )
+            
+            # Delete the old image from Cloudinary if it exists
+            if old_public_id:
+                try:
+                    cloudinary.uploader.destroy(old_public_id)
+                except Exception as e:
+                    logger.error(f"Error deleting old image from Cloudinary: {str(e)}")
+            
+            # Update the image object with new values
+            image.image = upload_result['public_id']
+            image.public_id = upload_result['public_id']
+            image.save()
+            
+            # Prepare response
+            image_data = CarImageSerializer(image).data
+            # Add URL from upload result
+            image_data['url'] = upload_result.get('secure_url', '')
+            
+            return Response(image_data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Error updating image: {str(e)}")
+            return Response({'error': f'Failed to update image: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

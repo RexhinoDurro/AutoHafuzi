@@ -2,7 +2,7 @@ from .auth_views import admin_login
 from .car_views import (
     get_cars, get_car, add_car, update_car, delete_car, about_page, get_site_analytics
 )
-from .cloudinary_views import add_car_images, delete_car_image, set_primary_image, get_car_images, reorder_car_images
+from .cloudinary_views import add_car_images, delete_car_image, set_primary_image, get_car_images, reorder_car_images, update_car_image
 from .make_model_views import (
     get_makes, get_models, get_variants, 
     add_make, update_make, delete_make,
@@ -65,4 +65,5 @@ __all__ = [
     'mark_message_as_read',
     'delete_message'
     'placeholder_image'
+    'update_car_image'
 ]

@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     IMAGES: {
       UPLOAD: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/images/`,
       DELETE: (imageId: number) => `${API_BASE_URL}/api/cars/images/${imageId}/`,
+      UPDATE: (imageId: number) => `${API_BASE_URL}/api/cars/images/update/${imageId}/`, // Updated path
       SET_PRIMARY: (slug: string | number, imageId: number) => `${API_BASE_URL}/api/cars/${slug}/images/${imageId}/primary/`,
       GET_LIST: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/images/list/`,
       REORDER: (slug: string | number) => `${API_BASE_URL}/api/cars/${slug}/images/reorder/`,
