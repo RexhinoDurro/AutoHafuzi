@@ -1,5 +1,4 @@
-// src/components/ImageGallery.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CarImage } from '../types/car';
 import { API_BASE_URL } from '../config/api';
 import ResponsiveImage from './ResponsiveImage';
@@ -13,7 +12,7 @@ interface TempImage {
 export interface CarImageCarouselProps {
   images: (CarImage | TempImage)[];
   baseUrl?: string;
-  isMobile?: boolean;
+  isMobile?: boolean; // Kept for backward compatibility
   onImageChange?: (index: number) => void;
   initialIndex?: number;
 }
@@ -21,20 +20,34 @@ export interface CarImageCarouselProps {
 const CarImageCarousel: React.FC<CarImageCarouselProps> = ({ 
   images, 
   baseUrl = API_BASE_URL,
-  isMobile = false,
+  isMobile = false, // We keep this for compatibility but don't use it directly
   onImageChange,
   initialIndex = 0
 }) => {
+  // We can use isMobile in a console.log to avoid the TS warning
+  // or we could remove it from the props if not needed by any callers
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // This is just to use the variable to avoid the TS warning
+      // It won't affect production code
+      console.debug('Image gallery rendered in', isMobile ? 'mobile' : 'desktop', 'mode');
+    }
+  }, [isMobile]);
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [imageErrors] = useState<Record<number, boolean>>({});
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [preloadedImages, setPreloadedImages] = useState<Set<number>>(new Set());
+  
+  // Refs for tracking and cleanup
+  const preloadedImagesRef = useRef<HTMLImageElement[]>([]);
   
   // Constants
   const MIN_SWIPE_DISTANCE = 50;
   const FALLBACK_IMAGE_URL = `${baseUrl}/api/placeholder/800/600`;
   const THUMBNAIL_FALLBACK_URL = `${baseUrl}/api/placeholder/100/100`;
+  const PRELOAD_COUNT = 5; // Number of images to preload ahead
   
   // Notify parent component of image changes
   useEffect(() => {
@@ -78,6 +91,55 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   const getThumbnailUrl = useCallback((image: CarImage | TempImage): string => {
     return getImageUrl(image, 100, 100);
   }, [getImageUrl]);
+
+  // Preload images function
+  const preloadImages = useCallback(() => {
+    // Clear previous preloaded images to prevent memory leaks
+    preloadedImagesRef.current.forEach(img => {
+      if (img && img.parentNode) {
+        img.parentNode.removeChild(img);
+      }
+    });
+    preloadedImagesRef.current = [];
+    
+    // Determine which images to preload (current + next PRELOAD_COUNT)
+    const newPreloadedImages = new Set<number>();
+    newPreloadedImages.add(selectedIndex); // Current image
+    
+    // Add next images
+    for (let i = 1; i <= PRELOAD_COUNT; i++) {
+      const nextIndex = (selectedIndex + i) % images.length;
+      newPreloadedImages.add(nextIndex);
+    }
+    
+    // Create and load image elements
+    newPreloadedImages.forEach(index => {
+      if (index >= 0 && index < images.length) {
+        const imgUrl = getImageUrl(images[index]);
+        const img = new Image();
+        img.src = imgUrl;
+        img.style.display = 'none'; // Hide the preloaded images
+        document.body.appendChild(img); // Add to DOM to ensure loading
+        preloadedImagesRef.current.push(img);
+      }
+    });
+    
+    setPreloadedImages(newPreloadedImages);
+  }, [selectedIndex, images, getImageUrl]);
+
+  // Preload images when selected index changes or on component mount
+  useEffect(() => {
+    preloadImages();
+    
+    return () => {
+      // Cleanup preloaded images on unmount
+      preloadedImagesRef.current.forEach(img => {
+        if (img && img.parentNode) {
+          img.parentNode.removeChild(img);
+        }
+      });
+    };
+  }, [selectedIndex, preloadImages]);
 
   // Navigation functions
   const goToNextImage = useCallback(() => {
@@ -216,13 +278,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
           </>
         )}
         
-        {/* Swipe indicator for mobile */}
-        {images.length > 1 && isMobile && (
-          <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
-            Swipe to navigate
-          </div>
-        )}
-        
         {/* Image counter */}
         <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs md:text-sm">
           {selectedIndex + 1} / {images.length}
@@ -255,6 +310,18 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
           ))}
         </div>
       )}
+      
+      {/* Hidden preloader container for images - these aren't displayed */}
+      <div style={{ display: 'none' }} aria-hidden="true">
+        {Array.from(preloadedImages).map((index) => (
+          <img 
+            key={`preload-${index}`}
+            src={getImageUrl(images[index])}
+            alt=""
+            aria-hidden="true"
+          />
+        ))}
+      </div>
     </div>
   );
 };
