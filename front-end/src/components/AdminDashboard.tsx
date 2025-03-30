@@ -6,7 +6,7 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import { Eye, Trash, Edit, BarChart2 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
-import DeleteConfirmationModal from './DeleteConfirmation'
+import DeleteConfirmationModal from './DeleteConfirmation';
 import React from 'react';
 
 const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
@@ -19,11 +19,12 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
   const [carToDelete, setCarToDelete] = useState<Car | null>(null);
   const { token } = getStoredAuth();
   
-  // Pagination state
+  // Pagination state - directly adapted from CarHolder
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCars, setTotalCars] = useState<number>(0);
   const carsPerPage = 10; // Number of cars to display per page
+  const [sortBy] = useState<string>('created_desc'); // Default sort
 
   useEffect(() => {
     if (!token) {
@@ -31,113 +32,47 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       return;
     }
 
-    fetchCars(currentPage);
-  }, [token, navigate, currentPage]);
+    fetchCars(currentPage, sortBy);
+  }, [token, navigate, currentPage, sortBy]);
 
-  const fetchCars = async (page: number = 1) => {
+  const fetchCars = async (page = 1, sort = sortBy) => {
     setIsLoading(true);
     try {
-      // First, fetch without pagination to get total count
-      if (page === 1 || totalCars === 0) {
-        try {
-          const countResponse = await fetch(`${API_BASE_URL}/api/cars/`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
-          
-          if (countResponse.ok) {
-            const countData = await countResponse.json();
-            let totalCount = 0;
-            
-            if ('count' in countData) {
-              totalCount = countData.count;
-            } else if (Array.isArray(countData)) {
-              totalCount = countData.length;
-            }
-            
-            setTotalCars(totalCount);
-            const maxPages = Math.ceil(totalCount / carsPerPage);
-            setTotalPages(maxPages);
-            
-            // If requested page exceeds max pages, adjust it
-            if (page > maxPages && maxPages > 0) {
-              console.warn(`Page ${page} exceeds max pages (${maxPages}), adjusting to page ${maxPages}`);
-              setCurrentPage(maxPages);
-              page = maxPages;
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching total car count:', error);
-        }
-      }
-      
-      // Calculate offset-based pagination manually
-      const offset = (page - 1) * carsPerPage;
-      
-      // Use offset-based request instead of page-based
+      // Build query parameters exactly like in CarHolder
       const queryParams = new URLSearchParams();
-      queryParams.append('offset', offset.toString());
+      queryParams.append('sort', sort);
+      queryParams.append('page', page.toString());
       queryParams.append('limit', carsPerPage.toString());
+
+      const url = `${API_ENDPOINTS.CARS.LIST}?${queryParams}`;
+      console.log('Fetching cars with URL:', url);
       
-      const response = await fetch(`${API_BASE_URL}/api/cars/?${queryParams}`, {
+      const response = await fetch(url, {
         headers: {
           Authorization: `Token ${token}`,
         },
       });
       
-      // If response is not ok, handle the error appropriately
-      if (!response.ok) {
-        // For any error, try falling back to first page
-        if (page > 1) {
-          console.warn(`Error fetching page ${page}, reverting to page 1`);
-          setCurrentPage(1);
-          // Fetch page 1 instead (offset 0)
-          const newResponse = await fetch(`${API_BASE_URL}/api/cars/?offset=0&limit=${carsPerPage}`, {
-            headers: {
-              Authorization: `Token ${token}`,
-            },
-          });
-          if (!newResponse.ok) {
-            throw new Error(`API responded with status: ${newResponse.status}`);
-          }
-          const data = await newResponse.json();
-          processResponseData(data);
-          return;
-        } else {
-          throw new Error(`API responded with status: ${response.status}`);
-        }
-      }
-      
+      if (!response.ok) throw new Error('Failed to fetch cars');
+
       const data = await response.json();
-      processResponseData(data);
-    } catch (error) {
-      console.error('Error fetching cars:', error);
-      setCars([]);
-      // Don't reset totalPages and totalCars here, as they might be correct
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Helper function to process response data
-  const processResponseData = (data: any) => {
-    // Handle both paginated and direct array responses
-    if ('results' in data && Array.isArray(data.results)) {
-      setCars(data.results);
-      // Calculate total pages and set total car count
+      setCars(data.results || []);
+      
+      // Calculate total pages
       const totalCount = data.count || 0;
       setTotalCars(totalCount);
       setTotalPages(Math.ceil(totalCount / carsPerPage));
-    } else if (Array.isArray(data)) {
-      setCars(data);
-      setTotalCars(data.length);
-      setTotalPages(Math.ceil(data.length / carsPerPage));
-    } else {
+      
+      // Update URL with current filters, sort and page
+      const newUrl = new URL(window.location.href);
+      newUrl.search = queryParams.toString();
+      window.history.pushState({ path: newUrl.href }, '', newUrl.href);
+      
+    } catch (error) {
+      console.error('Error fetching cars:', error);
       setCars([]);
-      setTotalPages(1);
-      setTotalCars(0);
-      console.error("Unexpected response format:", data);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -150,18 +85,10 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       top: 0,
       behavior: 'smooth'
     });
-    
-    // Don't call fetchCars directly - it will be triggered by the useEffect
-    // when currentPage changes
   };
 
-  // Generate pagination numbers
+  // Generate pagination numbers - copied directly from CarHolder
   const getPaginationNumbers = () => {
-    // If there are no pages or only one page, return an empty array
-    if (totalPages <= 1) {
-      return [];
-    }
-    
     const pages = [];
     
     // Always include first page
@@ -186,7 +113,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
       pages.push('...');
     }
     
-    // Add last page if different from first page
+    // Add last page if there's more than one page
     if (totalPages > 1) {
       pages.push(totalPages);
     }
@@ -334,8 +261,8 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
       </div>
-      
-      {/* Summary of displayed cars if there is pagination */}
+
+      {/* Car count display */}
       {totalCars > 0 && (
         <div className="mb-4 text-gray-600">
           Showing {cars.length > 0 ? ((currentPage - 1) * carsPerPage) + 1 : 0} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} total cars
@@ -430,7 +357,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
             </table>
           </div>
           
-          {/* Pagination */}
+          {/* Pagination - copied directly from CarHolder */}
           {totalPages > 1 && (
             <div className="p-4 border-t border-gray-200">
               <div className="flex justify-center">
@@ -473,9 +400,9 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                   {/* Next page button */}
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages || totalPages === 0}
+                    disabled={currentPage === totalPages}
                     className={`px-3 md:px-4 py-2 rounded-r-lg ${
-                      currentPage === totalPages || totalPages === 0
+                      currentPage === totalPages
                         ? 'text-gray-400 cursor-not-allowed' 
                         : 'text-blue-600 hover:bg-blue-50'
                     }`}
@@ -486,7 +413,7 @@ const AdminDashboard = ({ children }: { children?: React.ReactNode }) => {
                 </nav>
               </div>
               
-              {/* Results summary - only show if we have data */}
+              {/* Results summary */}
               {cars.length > 0 && (
                 <div className="mt-4 text-center text-gray-500 text-sm">
                   <p>Showing {((currentPage - 1) * carsPerPage) + 1} - {Math.min(currentPage * carsPerPage, totalCars)} of {totalCars} cars</p>
