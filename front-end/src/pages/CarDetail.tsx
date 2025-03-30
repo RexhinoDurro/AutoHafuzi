@@ -409,7 +409,7 @@ const CarDetail: React.FC = () => {
   
   
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-2 md:px-4 py-4 md:py-8">
       <div id="structured-data-container"></div>
       
       {/* Add breadcrumb navigation */}
@@ -417,56 +417,56 @@ const CarDetail: React.FC = () => {
       
       <button
         onClick={handleBackClick}
-        className="mb-6 text-blue-600 hover:text-blue-800"
+        className="mb-4 md:mb-6 text-blue-600 hover:text-blue-800"
       >
         ← Kthehu te listimi
       </button>
 
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Updated grid for better mobile responsiveness */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 md:p-6">
-          {/* Title shown above image gallery on mobile */}
+        {/* Updated grid for better mobile responsiveness with smaller margins */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6 p-2 md:p-6">
+          {/* Title shown above image gallery on mobile - MODIFIED LAYOUT */}
           {isMobile && (
-            <div className="space-y-4">
-              {/* Add H1 tag for better SEO */}
-              <h1 className="text-2xl md:text-3xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
-              
-              {/* Price with favorite button and view counter */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl md:text-2xl font-semibold text-blue-600">
-                {car.discussed_price ? 
-                    "I diskutueshem" : 
-                    `$${typeof car.price === 'number' 
-                      ? car.price.toLocaleString() 
-                      : Number(car.price).toLocaleString()}`
-                  }
-                </h2>
-                <div className="flex items-center space-x-4">
+            <div className="space-y-2 mb-2">
+              {/* Car title with view counter and favorite button */}
+              <div className="flex justify-between items-start">
+                <h1 className="text-xl font-bold">{car.brand} {car.model_name} {car.variant_name}</h1>
+                <div className="flex items-center space-x-2">
                   {/* View Counter */}
                   <div className="flex items-center text-gray-500" title="Number of views">
-                    <Eye size={18} className="mr-1" />
+                    <Eye size={16} className="mr-1" />
                     <span>{car.view_count}</span>
                   </div>
-                  
-                  {/* Tracking Status - only show in development */}
-                  {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
-                    <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                      {viewTracked ? 'View Tracked' : 'View Not Tracked'}
-                    </div>
-                  )}
                   
                   {/* Favorite Button */}
                   <FavoriteButton 
                     carId={car.id} 
-                    size={24} 
-                    className="p-2 hover:bg-gray-100 rounded-full"
+                    size={20} 
+                    className="hover:bg-gray-100 rounded-full"
                   />
                 </div>
               </div>
+              
+              {/* Price now on the left */}
+              <h2 className="text-lg font-semibold text-blue-600">
+                {car.discussed_price ? 
+                  "I diskutueshem" : 
+                  `$${typeof car.price === 'number' 
+                    ? car.price.toLocaleString() 
+                    : Number(car.price).toLocaleString()}`
+                }
+              </h2>
+              
+              {/* Tracking Status - only show in development */}
+              {process.env.NODE_ENV !== 'production' && viewTracked !== null && (
+                <div className={`text-xs px-2 py-1 rounded ${viewTracked ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {viewTracked ? 'View Tracked' : 'View Not Tracked'}
+                </div>
+              )}
             </div>
           )}
           
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-2 md:space-y-6">
             {/* Pass the isMobile flag to the carousel */}
             <CarImageCarousel 
                   images={car.images || []} 
@@ -474,9 +474,9 @@ const CarDetail: React.FC = () => {
                   onImageChange={(index) => console.log(`Viewing image ${index + 1}`)}
             />
             
-            {/* Key Specifications Box - made more mobile-friendly */}
-            <div className="bg-gray-100 p-3 md:p-4 rounded-lg">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+            {/* Key Specifications Box - made more mobile-friendly with smaller padding */}
+            <div className="bg-gray-100 p-2 md:p-4 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
                 <div className="flex flex-col items-center text-center">
                   <Clock className="text-blue-600 mb-1 md:mb-2" size={20} />
                   <p className="text-gray-600 text-xs md:text-sm">Kilometrazhi</p>
@@ -547,10 +547,10 @@ const CarDetail: React.FC = () => {
             </div>
           )}
 
-          <div className="space-y-6 md:space-y-8">
-            <section className="space-y-3 md:space-y-4">
+          <div className="space-y-4 md:space-y-8">
+            <section className="space-y-2 md:space-y-4">
               <h3 className="text-lg md:text-xl font-semibold">Informacione Bazë</h3>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 gap-2 md:gap-4">
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Viti i Regjistrimit</p>
                   <p className="font-medium text-sm md:text-base">{car.first_registration_year || 'N/A'}</p>
@@ -571,9 +571,9 @@ const CarDetail: React.FC = () => {
             </section>
 
             {/* Fixed Colors Section */}
-            <section className="space-y-3 md:space-y-4">
+            <section className="space-y-2 md:space-y-4">
               <h3 className="text-lg md:text-xl font-semibold">Ngjyrat</h3>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 gap-2 md:gap-4">
                 {/* Exterior Color */}
                 {car.exterior_color_name && (
                   <div>
@@ -617,9 +617,9 @@ const CarDetail: React.FC = () => {
             </section>
 
             {/* Technical Specifications */}
-            <section className="space-y-3 md:space-y-4">
+            <section className="space-y-2 md:space-y-4">
               <h3 className="text-lg md:text-xl font-semibold">Specifikimet Teknike</h3>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 gap-2 md:gap-4">
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Madhësia e motorit</p>
                   <p className="font-medium text-sm md:text-base">{car.engine_size}L</p>
@@ -648,9 +648,9 @@ const CarDetail: React.FC = () => {
             </section>
 
             {/* Vehicle Details */}
-            <section className="space-y-3 md:space-y-4">
+            <section className="space-y-2 md:space-y-4">
               <h3 className="text-lg md:text-xl font-semibold">Detajet e Automjetit</h3>
-              <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="grid grid-cols-2 gap-2 md:gap-4">
                 <div>
                   <p className="text-gray-600 text-sm md:text-base">Vendet</p>
                   <p className="font-medium text-sm md:text-base">{car.seats}</p>
@@ -672,13 +672,13 @@ const CarDetail: React.FC = () => {
 
             {/* Categorized Options - Updated to match backend structure */}
             {options.length > 0 && car.options && (
-              <section className="space-y-3 md:space-y-4">
+              <section className="space-y-2 md:space-y-4">
                 <h3 className="text-lg md:text-xl font-semibold">Veçoritë</h3>
                 
                 {/* Comfort & Convenience */}
                 {optionsByCategory['COMFORT'] && optionsByCategory['COMFORT'].length > 0 && (
-                  <div className="mb-3 md:mb-4">
-                    <div className="flex items-center mb-2">
+                  <div className="mb-2 md:mb-4">
+                    <div className="flex items-center mb-1 md:mb-2">
                       <Sofa className="text-blue-600 mr-2" size={18} />
                       <h4 className="font-medium text-sm md:text-base">{categoryLabels['COMFORT']}</h4>
                     </div>
@@ -692,8 +692,8 @@ const CarDetail: React.FC = () => {
                 
                 {/* Entertainment & Media */}
                 {optionsByCategory['ENTERTAINMENT'] && optionsByCategory['ENTERTAINMENT'].length > 0 && (
-                  <div className="mb-3 md:mb-4">
-                    <div className="flex items-center mb-2">
+                  <div className="mb-2 md:mb-4">
+                    <div className="flex items-center mb-1 md:mb-2">
                       <Music className="text-blue-600 mr-2" size={18} />
                       <h4 className="font-medium text-sm md:text-base">{categoryLabels['ENTERTAINMENT']}</h4>
                     </div>
@@ -707,8 +707,8 @@ const CarDetail: React.FC = () => {
                 
                 {/* Safety & Security */}
                 {optionsByCategory['SAFETY'] && optionsByCategory['SAFETY'].length > 0 && (
-                  <div className="mb-3 md:mb-4">
-                    <div className="flex items-center mb-2">
+                  <div className="mb-2 md:mb-4">
+                    <div className="flex items-center mb-1 md:mb-2">
                       <Shield className="text-blue-600 mr-2" size={18} />
                       <h4 className="font-medium text-sm md:text-base">{categoryLabels['SAFETY']}</h4>
                     </div>
@@ -722,8 +722,8 @@ const CarDetail: React.FC = () => {
                 
                 {/* Extras */}
                 {optionsByCategory['EXTRAS'] && optionsByCategory['EXTRAS'].length > 0 && (
-                  <div className="mb-3 md:mb-4">
-                    <div className="flex items-center mb-2">
+                  <div className="mb-2 md:mb-4">
+                    <div className="flex items-center mb-1 md:mb-2">
                       <Star className="text-blue-600 mr-2" size={18} />
                       <h4 className="font-medium text-sm md:text-base">Ekstra</h4>
                     </div>
@@ -739,36 +739,36 @@ const CarDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 md:p-6 border-t">
-          <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Përshkrimi</h3>
+        <div className="p-2 md:p-6 border-t">
+          <h3 className="text-lg md:text-xl font-semibold mb-2 md:mb-4">Përshkrimi</h3>
           <p className="text-gray-700 text-sm md:text-base whitespace-pre-line">{car.description}</p>
         </div>
       </div>
 
       {/* Contact section for this specific car - Added for better conversion */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-6 p-6">
-        <h3 className="text-lg md:text-xl font-semibold mb-4">Të interesuar për këtë makinë?</h3>
-        <p className="mb-4">Kontaktoni me ne për më shumë informacion ose për të rezervuar një provë.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden mt-4 md:mt-6 p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">Të interesuar për këtë makinë?</h3>
+        <p className="mb-3 md:mb-4">Kontaktoni me ne për më shumë informacion ose për të rezervuar një provë.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <a 
             href={`tel:069 931 1111`} 
-            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2 md:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <Phone size={20} />
+            <Phone size={18} className="md:size-20" />
             <span>Na telefononi: 069 931 1111</span>
           </a>
           <a 
             href={`mailto:info@hafuziauto.ch?subject=Interes për ${car.brand} ${car.model_name} ${car.variant_name || ''}&body=Përshëndetje, jam i interesuar për makinën ${car.brand} ${car.model_name} me ID: ${car.id}. Ju lutem më kontaktoni me informacione të mëtejshme.`} 
-            className="flex items-center justify-center gap-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center justify-center gap-2 bg-green-600 text-white py-2 md:py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
           >
-            <Mail size={20} />
+            <Mail size={18} className="md:size-20" />
             <span>Dërgoni email: info@hafuziauto.ch</span>
           </a>
         </div>
       </div>
 
       {/* Related cars section - Added for better internal linking and SEO */}
-      <div className="mt-12">
+      <div className="mt-8 md:mt-12">
         <RecommendedCars excludeCarIds={[Number(id)]} />
       </div>
     </div>

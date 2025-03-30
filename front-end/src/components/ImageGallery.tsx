@@ -163,8 +163,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     );
   }
 
-  // Determine if we should show thumbnails based on screen size or explicit prop
-  const shouldShowThumbnails = !isMobile && images.length > 1;
+  // Always show thumbnails, regardless of device
+  const shouldShowThumbnails = images.length > 1;
 
   return (
     <div className="w-full space-y-2">
@@ -190,8 +190,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
           />
         </div>
         
-        {/* Navigation arrows - show on desktop or when not mobile */}
-        {images.length > 1 && !isMobile && (
+        {/* Navigation arrows - show on all devices */}
+        {images.length > 1 && (
           <>
             <button
               onClick={(e) => {
@@ -229,14 +229,14 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         </div>
       </div>
       
-      {/* Thumbnails */}
+      {/* Thumbnails - show on all devices */}
       {shouldShowThumbnails && (
-        <div className="hidden md:flex space-x-2 overflow-x-auto py-2">
+        <div className="flex space-x-2 overflow-x-auto py-2">
           {images.map((image, index) => (
             <div 
               key={image.id}
               className={`
-                cursor-pointer flex-shrink-0 h-16 w-16 rounded overflow-hidden border-2 transition-all
+                cursor-pointer flex-shrink-0 h-14 w-14 md:h-16 md:w-16 rounded overflow-hidden border-2 transition-all
                 ${index === selectedIndex ? 'border-blue-500 scale-110' : 'border-transparent hover:border-gray-300'}
               `}
               onClick={() => handleThumbnailClick(index)}
@@ -252,23 +252,6 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 onLoad={() => {/* Optional loading callback */}}
               />
             </div>
-          ))}
-        </div>
-      )}
-      
-      {/* Mobile indicator dots */}
-      {images.length > 1 && isMobile && (
-        <div className="flex justify-center mt-2 md:hidden">
-          {images.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => handleThumbnailClick(index)}
-              className={`h-2 w-2 mx-1 rounded-full transition-colors ${
-                index === selectedIndex ? 'bg-blue-500' : 'bg-gray-300'
-              }`}
-              aria-label={`Go to image ${index + 1}`}
-              aria-current={index === selectedIndex ? 'true' : 'false'}
-            />
           ))}
         </div>
       )}
