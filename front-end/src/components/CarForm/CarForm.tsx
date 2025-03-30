@@ -287,12 +287,7 @@ const CarForm = () => {
         // Also update the hook's temp images for consistency
         // Since we don't have direct access to the setTempImages function from useCarForm
         // We'll create a new file and preview URL
-        const file2 = new File([imageBlob], `cropped-image-${Date.now()}.jpg`, {
-          type: 'image/jpeg',
-          lastModified: Date.now()
-        });
         
-        const preview2 = URL.createObjectURL(file2);
         
         // We don't have direct access to setTempImages from the hook
         // This workaround is not ideal but necessary for the current structure
