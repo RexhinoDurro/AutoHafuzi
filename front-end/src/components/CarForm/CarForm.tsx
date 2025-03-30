@@ -1,10 +1,9 @@
-// src/components/CarForm/CarForm.tsx - Enhanced version with fixed image handling
+// Modified CarForm.tsx with aspect ratio validation and without cropping
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ImageGallery } from './ImageGallery';
 import { useCarForm } from './useCarForm';
 import { API_BASE_URL } from '../../config/api';
-import { getStoredAuth } from '../../utils/auth';
 import { ExteriorColor, InteriorColor, CarImage } from '../../types/car';
 import {
   BODY_TYPES,
@@ -14,13 +13,6 @@ import {
   EMISSION_CLASSES,
 } from './constants';
 import { TempImage } from './useCarFormImageUpload';
-import {
-  ASPECT_RATIO_OPTIONS,
-  getAspectRatioByValue,
-  saveSelectedAspectRatio,
-  loadSelectedAspectRatio,
-  saveTempImagesToStorage
-} from './persistentImageStorage';
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 10;
@@ -46,7 +38,7 @@ const CarForm = () => {
     tempImages: hookTempImages,
     handleImageUpload: hookHandleImageUpload,
     clearTempImagesStorage,
-    setTempImages
+    detectedAspectRatio
   } = useCarForm(id);
 
   // Local form state that doesn't trigger API calls until necessary
@@ -56,13 +48,6 @@ const CarForm = () => {
   const [localImages, setLocalImages] = useState<CarImage[]>([]);
   const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
-  const [imagesToUpdate, setImagesToUpdate] = useState<Map<number, Blob>>(new Map());
-
-  // State for the selected aspect ratio
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState(() => {
-    const savedRatio = loadSelectedAspectRatio();
-    return getAspectRatioByValue(savedRatio);
-  });
 
   // Update local form state when server data changes (initial load or after submit)
   useEffect(() => {
@@ -132,15 +117,8 @@ const CarForm = () => {
           URL.revokeObjectURL(image.preview);
         }
       });
-      
-      // Revoke any temporary preview URLs for server images
-      localImages.forEach(image => {
-        if ('tempPreview' in image && image.tempPreview) {
-          URL.revokeObjectURL(image.tempPreview);
-        }
-      });
     };
-  }, [localTempImages, localImages]);
+  }, [localTempImages]);
 
   // Initialize formatted values when localFormData changes
   useEffect(() => {
@@ -267,145 +245,6 @@ const CarForm = () => {
     }
   };
 
-  // FIXED: Handle local image update after cropping with proper isolation
-  const handleLocalImageUpdate = async (imageId: number, imageBlob: Blob): Promise<boolean> => {
-    try {
-      console.log(`Started update for image with ID: ${imageId}, Size: ${imageBlob.size} bytes`);
-      
-      // Create an isolated copy of the blob to ensure no reference sharing happens
-      const blobCopy = new Blob([await imageBlob.arrayBuffer()], { 
-        type: imageBlob.type 
-      });
-      
-      // Generate a unique operation ID for tracking
-      const operationId = `update-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      console.log(`Operation ID: ${operationId}`);
-      
-      // Handle differently based on whether it's a temp image or server image
-      if (imageId < 0) {
-        // It's a temporary image - create a unique identifiable filename
-        const uniqueFilename = `cropped-temp-${Date.now()}-${Math.abs(imageId)}.jpg`;
-        console.log(`Creating new file with name: ${uniqueFilename}`);
-        
-        const file = new File([blobCopy], uniqueFilename, {
-          type: 'image/jpeg',
-          lastModified: Date.now()
-        });
-        
-        // Create a new preview URL specifically for this image
-        const preview = URL.createObjectURL(file);
-        
-        console.log(`Updating temporary image ${imageId} with new preview`);
-        
-        // Update ONLY the targeted image in the local temp images array
-        setLocalTempImages(prev => {
-          // First make a map of existing IDs to verify the target exists
-          const idMap = new Map(prev.map(img => [img.id, true]));
-          
-          if (!idMap.has(imageId)) {
-            console.warn(`Attempted to update non-existent temp image with ID: ${imageId}`);
-            return prev;
-          }
-          
-          // Map through and only update the specific image
-          const updatedImages = prev.map(img => {
-            if (img.id === imageId) {
-              // Revoke the old preview URL to prevent memory leaks
-              if (img.preview) {
-                URL.revokeObjectURL(img.preview);
-                console.log(`Revoked old preview URL for image ${imageId}`);
-              }
-              // Return updated image with the new file and preview
-              return { id: img.id, file, preview };
-            }
-            // Leave all other images completely untouched
-            return img;
-          });
-          
-          // Save the updated array to localStorage via the hook
-          saveTempImagesToStorage(updatedImages);
-          console.log(`Updated temporary image ${imageId} in local storage`);
-          
-          return updatedImages;
-        });
-        
-        // Update the hook's temp images to ensure synchronization
-        setTempImages(prev => {
-          // Create fresh array with the updated image
-          const updated = prev.map(img => {
-            // Only update the specific image we're working with
-            if (img.id === imageId) {
-              // Revoke the old preview URL
-              if (img.preview) {
-                URL.revokeObjectURL(img.preview);
-              }
-              // Return complete new temp image object with new file and preview
-              return { 
-                id: imageId,
-                file: file,
-                preview: preview
-              };
-            }
-            // Leave all other images completely untouched
-            return img;
-          });
-          
-          // Ensure localStorage is updated with the new array
-          saveTempImagesToStorage(updated);
-          console.log(`Updated temporary image ${imageId} in hook`);
-          
-          return updated;
-        });
-      } else {
-        // For server images, store the updated blob locally
-        const pendingUpdates = new Map(imagesToUpdate);
-        
-        // Store a fresh copy of the blob for this specific image
-        pendingUpdates.set(imageId, blobCopy);
-        setImagesToUpdate(pendingUpdates);
-        
-        console.log(`Stored update for server image ${imageId} to apply on form submission`);
-        
-        // Create a unique object URL for immediate visual feedback
-        const objectUrl = URL.createObjectURL(blobCopy);
-        
-        // Update only the specific image in the local images array
-        setLocalImages(prev => {
-          return prev.map(img => {
-            if (img.id === imageId) {
-              // Revoke previous temp preview if it exists
-              if ('tempPreview' in img && img.tempPreview) {
-                URL.revokeObjectURL(img.tempPreview);
-                console.log(`Revoked old temp preview for server image ${imageId}`);
-              }
-              
-              // Create a temporary preview URL that will be used until server update
-              return {
-                ...img,
-                tempPreview: objectUrl 
-              };
-            }
-            // Leave all other images completely untouched
-            return img;
-          });
-        });
-      }
-      
-      console.log(`Successfully updated image with ID: ${imageId}, Operation: ${operationId}`);
-      return true;
-    } catch (error) {
-      console.error(`Error updating image ${imageId}:`, error);
-      alert('Failed to update image. Please try again.');
-      return false;
-    }
-  };
-
-  // Wrapper function that adapts handleLocalImageUpdate to return void
-  const handleLocalImageUpdateWrapper = async (imageId: number, imageBlob: Blob): Promise<void> => {
-    await handleLocalImageUpdate(imageId, imageBlob);
-    // No return value, converting the Promise<boolean> to Promise<void>
-  };
-
   const handleLocalImageDelete = (imageId: number) => {
     // Handle locally based on image type
     if (imageId < 0) {
@@ -423,25 +262,8 @@ const CarForm = () => {
       // Track that we should delete this on submit
       setImagesToDelete(prev => [...prev, imageId]);
       
-      // If we have a pending update for this image, remove it
-      if (imagesToUpdate.has(imageId)) {
-        const newUpdates = new Map(imagesToUpdate);
-        newUpdates.delete(imageId);
-        setImagesToUpdate(newUpdates);
-      }
-      
       console.log(`Marked server image ${imageId} for deletion on form submission`);
     }
-  };
-
-  // Handle aspect ratio change
-  const handleAspectRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const ratioValue = e.target.value;
-    const aspectRatio = getAspectRatioByValue(ratioValue);
-    setSelectedAspectRatio(aspectRatio);
-    saveSelectedAspectRatio(ratioValue);
-    
-    console.log(`Changed aspect ratio to ${ratioValue}`);
   };
 
   // Fetch exterior and interior colors
@@ -583,7 +405,7 @@ const CarForm = () => {
     return errors;
   };
 
-  // FIXED: Enhanced onSubmit function with proper image update handling
+  // Form submission with image handling
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
   
@@ -603,46 +425,8 @@ const CarForm = () => {
         await hookHandleImageDelete(imageId);
       }
       
-      // FIXED: Process any pending image updates sequentially
-      if (id) {
-        console.log(`Processing ${imagesToUpdate.size} pending image updates`);
-        
-        // Process each update in sequence rather than in parallel
-        for (const [imageId, blob] of imagesToUpdate.entries()) {
-          try {
-            console.log(`Updating server image ${imageId}`);
-            
-            // Create a fresh copy of the blob to ensure isolation
-            const blobCopy = new Blob([await blob.arrayBuffer()], { 
-              type: blob.type || 'image/jpeg'
-            });
-            
-            const formData = new FormData();
-            formData.append('image', blobCopy, `updated-image-${imageId}-${Date.now()}.jpg`);
-            formData.append('replace_id', imageId.toString());
-            
-            const { token } = getStoredAuth();
-            const response = await fetch(`${API_BASE_URL}/api/cars/images/${imageId}/`, {
-              method: 'PUT',
-              headers: { Authorization: `Token ${token}` },
-              body: formData
-            });
-            
-            if (!response.ok) {
-              throw new Error(`Failed to update image: ${response.status}`);
-            }
-            
-            console.log(`Successfully updated server image ${imageId}`);
-          } catch (updateError) {
-            console.error(`Error updating image ${imageId}:`, updateError);
-            // Continue with the next image even if one fails
-          }
-        }
-      }
-      
-      // Clear the pending update and delete trackers
+      // Clear the pending delete tracker
       setImagesToDelete([]);
-      setImagesToUpdate(new Map());
       
       // Submit the form data and temporary images
       const success = await hookHandleSubmit(e);
@@ -688,651 +472,629 @@ const CarForm = () => {
     };
   }).reverse(); // Most recent years first
  
-return (
-  <div className="max-w-4xl mx-auto p-6">
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
-      <button
-        onClick={() => navigate('/auth/dashboard')}
-        className="text-gray-600 hover:text-gray-800"
-      >
-        Back to Dashboard
-      </button>
-    </div>
-
-    {error && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <strong className="font-bold">Error! </strong>
-        <span className="block sm:inline">{error}</span>
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">{id ? 'Edit' : 'Add'} Car</h2>
+        <button
+          onClick={() => navigate('/auth/dashboard')}
+          className="text-gray-600 hover:text-gray-800"
+        >
+          Back to Dashboard
+        </button>
       </div>
-    )}
 
-    {/* Form validation errors */}
-    {Object.keys(validationErrors).length > 0 && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <strong className="font-bold">Please fix the following errors: </strong>
-        <ul className="mt-2 list-disc list-inside">
-          {Object.values(validationErrors).map((error, index) => (
-            <li key={index}>{error}</li>
-          ))}
-        </ul>
-      </div>
-    )}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <strong className="font-bold">Error! </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
 
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
-        {/* Basic Information Section */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Make <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={localFormData.make_id || ''}
-                onChange={(e) => updateLocalFormDataForRelationships('make_id', parseInt(e.target.value))}
-                className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
-                required
-                disabled={isMakesLoading}
-              >
-                <option value="">Select Make</option>
-                {makes.map((make) => (
-                  <option key={make.id} value={make.id}>
-                    {make.name}
-                  </option>
-                ))}
-              </select>
-              {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Model <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={localFormData.model_id || ''}
-                onChange={(e) => updateLocalFormDataForRelationships('model_id', parseInt(e.target.value))}
-                className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
-                required
-                disabled={!localFormData.make_id || isModelsLoading}
-              >
-                <option value="">Select Model</option>
-                {models.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </select>
-              {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
-              {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
-            </div>
-          </div>
+      {/* Form validation errors */}
+      {Object.keys(validationErrors).length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+          <strong className="font-bold">Please fix the following errors: </strong>
+          <ul className="mt-2 list-disc list-inside">
+            {Object.values(validationErrors).map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Variant
-              </label>
-              <select
-                value={localFormData.variant_id || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  handleFieldChange('variant_id', value === '' ? undefined : parseInt(value));
-                }}
-                className="w-full p-2 border rounded-lg"
-                disabled={!localFormData.model_id || isVariantsLoading}
-              >
-                <option value="">Select Variant</option>
-                {variants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    {variant.name}
-                  </option>
-                ))}
-              </select>
-              {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
-            </div>
-          </div>
-
-          {/* First Registration Date Fields */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              First Registration <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-3 gap-4">
-              {/* Day field */}
-              <div>
-                <select
-                  value={localFormData.first_registration_day || ''}
-                  onChange={(e) => handleFieldChange('first_registration_day', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
-                  required={localFormData.is_used}
-                >
-                  <option value="">Day</option>
-                  {dayOptions.map(option => (
-                    <option key={`day-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_day && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
-                }
-              </div>
-              
-              {/* Month field */}
-              <div>
-                <select
-                  value={localFormData.first_registration_month || ''}
-                  onChange={(e) => handleFieldChange('first_registration_month', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
-                  required={localFormData.is_used}
-                >
-                  <option value="">Month</option>
-                  {monthOptions.map(option => (
-                    <option key={`month-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_month && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
-                }
-              </div>
-              
-              {/* Year field */}
-              <div>
-                <select
-                  value={localFormData.first_registration_year || ''}
-                  onChange={(e) => handleFieldChange('first_registration_year', e.target.value ? parseInt(e.target.value) : undefined)}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
-                  required={localFormData.is_used}
-                >
-                  <option value="">Year</option>
-                  {yearOptions.map(option => (
-                    <option key={`year-${option.value}`} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {validationErrors.first_registration_year && 
-                  <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
-                }
-              </div>
-            </div>
-          </div>
-
-          {/* Colors Section */}
-          <div className="mt-4">
-            <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {/* Exterior Color */}
+      <form onSubmit={onSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6 space-y-6">
+          {/* Basic Information Section */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Basic Information</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Exterior Color <span className="text-red-500">*</span>
+                  Make <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={localFormData.exterior_color_id || ''}
-                  onChange={(e) => {
-                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                    const selectedColor = exteriorColors.find(color => color.id === colorId);
-                    
-                    // Update multiple fields at once in local state
-                    setLocalFormData(prev => ({
-                      ...prev,
-                      exterior_color_id: colorId,
-                      exterior_color_name: selectedColor?.name,
-                      exterior_color_hex: selectedColor?.hex_code
-                    }));
-                    
-                    // Also update server form data
-                    setServerFormData(prev => ({
-                      ...prev,
-                      exterior_color_id: colorId,
-                      exterior_color_name: selectedColor?.name,
-                      exterior_color_hex: selectedColor?.hex_code
-                    }));
-                  }}
-                  className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                  value={localFormData.make_id || ''}
+                  onChange={(e) => updateLocalFormDataForRelationships('make_id', parseInt(e.target.value))}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.make ? 'border-red-500' : ''}`}
                   required
-                  disabled={isColorsLoading}
+                  disabled={isMakesLoading}
                 >
-                  <option value="">Select Exterior Color</option>
-                  {exteriorColors.map((color) => (
-                    <option key={color.id} value={color.id}>
-                      {color.name}
+                  <option value="">Select Make</option>
+                  {makes.map((make) => (
+                    <option key={make.id} value={make.id}>
+                      {make.name}
                     </option>
                   ))}
                 </select>
-                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
-                {localFormData.exterior_color_hex && (
-                  <div className="mt-2 flex items-center">
-                    <div 
-                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                      style={{ backgroundColor: localFormData.exterior_color_hex }}
-                    ></div>
-                    <span className="text-xs text-gray-500">{localFormData.exterior_color_hex}</span>
-                  </div>
-                )}
+                {validationErrors.make && <p className="text-red-500 text-xs mt-1">{validationErrors.make}</p>}
               </div>
               
-              {/* Interior Color */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Interior Color
+                  Model <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={localFormData.interior_color_id || ''}
+                  value={localFormData.model_id || ''}
+                  onChange={(e) => updateLocalFormDataForRelationships('model_id', parseInt(e.target.value))}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.model ? 'border-red-500' : ''}`}
+                  required
+                  disabled={!localFormData.make_id || isModelsLoading}
+                >
+                  <option value="">Select Model</option>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
+                {isModelsLoading && <span className="text-sm text-gray-500">Loading models...</span>}
+                {validationErrors.model && <p className="text-red-500 text-xs mt-1">{validationErrors.model}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Variant
+                </label>
+                <select
+                  value={localFormData.variant_id || ''}
                   onChange={(e) => {
-                    const colorId = e.target.value ? parseInt(e.target.value) : undefined;
-                    const selectedColor = interiorColors.find(color => color.id === colorId);
-                    
-                    // Update multiple fields at once in local state
-                    setLocalFormData(prev => ({
-                      ...prev,
-                      interior_color_id: colorId,
-                      interior_color_name: selectedColor?.name,
-                      interior_color_hex: selectedColor?.hex_code
-                    }));
-                    
-                    // Also update server form data
-                    setServerFormData(prev => ({
-                      ...prev,
-                      interior_color_id: colorId,
-                      interior_color_name: selectedColor?.name,
-                      interior_color_hex: selectedColor?.hex_code
-                    }));
+                    const value = e.target.value;
+                    handleFieldChange('variant_id', value === '' ? undefined : parseInt(value));
                   }}
                   className="w-full p-2 border rounded-lg"
-                  disabled={isColorsLoading}
+                  disabled={!localFormData.model_id || isVariantsLoading}
                 >
-                  <option value="">Select Interior Color</option>
-                  {interiorColors.map((color) => (
-                    <option key={color.id} value={color.id}>
-                      {color.name}
+                  <option value="">Select Variant</option>
+                  {variants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>
+                      {variant.name}
                     </option>
                   ))}
                 </select>
-                {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
-                {localFormData.interior_color_hex && (
-                  <div className="mt-2 flex items-center">
-                    <div 
-                      className="w-6 h-6 mr-2 border border-gray-300 rounded" 
-                      style={{ backgroundColor: localFormData.interior_color_hex }}
-                    ></div>
-                    <span className="text-xs text-gray-500">{localFormData.interior_color_hex}</span>
-                  </div>
-                )}
+                {isVariantsLoading && <span className="text-sm text-gray-500">Loading variants...</span>}
               </div>
-              
-              {/* Upholstery */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upholstery
-                </label>
-                <select
-                  value={localFormData.upholstery_id || ''}
+            </div>
+
+            {/* First Registration Date Fields */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                First Registration <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Day field */}
+                <div>
+                  <select
+                    value={localFormData.first_registration_day || ''}
+                    onChange={(e) => handleFieldChange('first_registration_day', e.target.value ? parseInt(e.target.value) : undefined)}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_day ? 'border-red-500' : ''}`}
+                    required={localFormData.is_used}
+                  >
+                    <option value="">Day</option>
+                    {dayOptions.map(option => (
+                      <option key={`day-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_day && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_day}</p>
+                  }
+                </div>
+                
+                {/* Month field */}
+                <div>
+                  <select
+                    value={localFormData.first_registration_month || ''}
+                    onChange={(e) => handleFieldChange('first_registration_month', e.target.value ? parseInt(e.target.value) : undefined)}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_month ? 'border-red-500' : ''}`}
+                    required={localFormData.is_used}
+                  >
+                    <option value="">Month</option>
+                    {monthOptions.map(option => (
+                      <option key={`month-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_month && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_month}</p>
+                  }
+                </div>
+                
+                {/* Year field */}
+                <div>
+                  <select
+                    value={localFormData.first_registration_year || ''}
+                    onChange={(e) => handleFieldChange('first_registration_year', e.target.value ? parseInt(e.target.value) : undefined)}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.first_registration_year ? 'border-red-500' : ''}`}
+                    required={localFormData.is_used}
+                  >
+                    <option value="">Year</option>
+                    {yearOptions.map(option => (
+                      <option key={`year-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {validationErrors.first_registration_year && 
+                    <p className="text-red-500 text-xs mt-1">{validationErrors.first_registration_year}</p>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Colors Section */}
+            <div className="mt-4">
+              <h3 className="text-lg font-medium text-gray-800 mb-3">Colors & Upholstery</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Exterior Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exterior Color <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={localFormData.exterior_color_id || ''}
+                    onChange={(e) => {
+                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedColor = exteriorColors.find(color => color.id === colorId);
+                      
+                      // Update multiple fields at once in local state
+                      setLocalFormData(prev => ({
+                        ...prev,
+                        exterior_color_id: colorId,
+                        exterior_color_name: selectedColor?.name,
+                        exterior_color_hex: selectedColor?.hex_code
+                      }));
+                      
+                      // Also update server form data
+                      setServerFormData(prev => ({
+                        ...prev,
+                        exterior_color_id: colorId,
+                        exterior_color_name: selectedColor?.name,
+                        exterior_color_hex: selectedColor?.hex_code
+                      }));
+                    }}
+                    className={`w-full p-2 border rounded-lg ${validationErrors.exterior_color ? 'border-red-500' : ''}`}
+                    required
+                    disabled={isColorsLoading}
+                  >
+                    <option value="">Select Exterior Color</option>
+                    {exteriorColors.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
+                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                  {validationErrors.exterior_color && <p className="text-red-500 text-xs mt-1">{validationErrors.exterior_color}</p>}
+                  {localFormData.exterior_color_hex && (
+                    <div className="mt-2 flex items-center">
+                      <div 
+                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                        style={{ backgroundColor: localFormData.exterior_color_hex }}
+                      ></div>
+                      <span className="text-xs text-gray-500">{localFormData.exterior_color_hex}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Interior Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Interior Color
+                  </label>
+                  <select
+                    value={localFormData.interior_color_id || ''}
+                    onChange={(e) => {
+                      const colorId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedColor = interiorColors.find(color => color.id === colorId);
+                      
+                      // Update multiple fields at once in local state
+                      setLocalFormData(prev => ({
+                        ...prev,
+                        interior_color_id: colorId,
+                        interior_color_name: selectedColor?.name,
+                        interior_color_hex: selectedColor?.hex_code
+                      }));
+                      
+                      // Also update server form data
+                      setServerFormData(prev => ({
+                        ...prev,
+                        interior_color_id: colorId,
+                        interior_color_name: selectedColor?.name,
+                        interior_color_hex: selectedColor?.hex_code
+                      }));
+                    }}
+                    className="w-full p-2 border rounded-lg"
+                    disabled={isColorsLoading}
+                  >
+                    <option value="">Select Interior Color</option>
+                    {interiorColors.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
+                  {isColorsLoading && <span className="text-sm text-gray-500">Loading colors...</span>}
+                  {localFormData.interior_color_hex && (
+                    <div className="mt-2 flex items-center">
+                      <div 
+                        className="w-6 h-6 mr-2 border border-gray-300 rounded" 
+                        style={{ backgroundColor: localFormData.interior_color_hex }}
+                      ></div>
+                      <span className="text-xs text-gray-500">{localFormData.interior_color_hex}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Upholstery */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Upholstery
+                  </label>
+                  <select
+                    value={localFormData.upholstery_id || ''}
+                    onChange={(e) => {
+                      const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
+                      const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
+                      
+                      setLocalFormData(prev => ({ 
+                        ...prev, 
+                        upholstery_id: upholsteryId,
+                        upholstery_name: selectedUpholstery?.name || ''
+                      }));
+                      
+                      setServerFormData(prev => ({ 
+                        ...prev, 
+                        upholstery_id: upholsteryId,
+                        upholstery_name: selectedUpholstery?.name || ''
+                      }));
+                    }}
+                    className="w-full p-2 border rounded-lg"
+                    disabled={isUpholsteryLoading}
+                  >
+                    <option value="">Select Upholstery</option>
+                    {upholsteryTypes.map((type) => (
+                      <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                  </select>
+                  {isUpholsteryLoading && <span className="text-sm text-gray-500">Loading upholstery types...</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price (€) {!localFormData.discussedPrice && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="text"
+                value={formattedPrice}
+                onChange={handlePriceChange}
+                className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
+                required={!localFormData.discussedPrice}
+                disabled={localFormData.discussedPrice}
+                placeholder={localFormData.discussedPrice ? 'Price will be discussed' : ''}
+              />
+              <div className="flex items-center mt-2">
+                <input
+                  type="checkbox"
+                  id="discussedPrice"
+                  checked={localFormData.discussedPrice || false}
                   onChange={(e) => {
-                    const upholsteryId = e.target.value ? parseInt(e.target.value) : undefined;
-                    const selectedUpholstery = upholsteryTypes.find(type => type.id === upholsteryId);
-                    
+                    const isChecked = e.target.checked;
                     setLocalFormData(prev => ({ 
                       ...prev, 
-                      upholstery_id: upholsteryId,
-                      upholstery_name: selectedUpholstery?.name || ''
+                      discussedPrice: isChecked,
+                      price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
                     }));
                     
                     setServerFormData(prev => ({ 
                       ...prev, 
-                      upholstery_id: upholsteryId,
-                      upholstery_name: selectedUpholstery?.name || ''
+                      discussedPrice: isChecked,
+                      price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
                     }));
                   }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
+                  Discussed price
+                </label>
+              </div>
+              {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
+            
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
+            </label>
+            <input
+              type="file"
+              accept={ALLOWED_FILE_TYPES.join(',')}
+              multiple
+              onChange={handleLocalImageUpload}
+              className="w-full border border-gray-300 p-2 rounded"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Max file size: 5MB. Supported formats: JPEG, PNG, WebP
+            </p>
+            {detectedAspectRatio && (
+              <p className="mt-1 text-sm text-gray-600">
+                <strong>Note:</strong> All uploaded images must have the same aspect ratio ({detectedAspectRatio}:1).
+              </p>
+            )}
+            {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+            {(localImages.length > 0 || localTempImages.length > 0) && (
+              <ImageGallery
+                images={[...localImages, ...localTempImages]}
+                onDeleteImage={handleLocalImageDelete}
+                isEditing={true}
+                baseUrl={API_BASE_URL}
+                detectedAspectRatio={detectedAspectRatio}
+              />
+            )}
+          </div>
+
+          {/* Vehicle Details */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Body Type
+                </label>
+                <select
+                  value={localFormData.body_type}
+                  onChange={(e) => handleFieldChange('body_type', e.target.value)}
                   className="w-full p-2 border rounded-lg"
-                  disabled={isUpholsteryLoading}
                 >
-                  <option value="">Select Upholstery</option>
-                  {upholsteryTypes.map((type) => (
-                    <option key={type.id} value={type.id}>{type.name}</option>
+                  {BODY_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
-                {isUpholsteryLoading && <span className="text-sm text-gray-500">Loading upholstery types...</span>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Drivetrain
+                </label>
+                <select
+                  value={localFormData.drivetrain}
+                  onChange={(e) => handleFieldChange('drivetrain', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {DRIVETRAINS.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Seats
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="9"
+                  value={localFormData.seats}
+                  onChange={(e) => handleFieldChange('seats', parseInt(e.target.value))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doors
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={localFormData.doors}
+                  onChange={(e) => handleFieldChange('doors', parseInt(e.target.value))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mileage (km)
+                </label>
+                <input
+                  type="text"
+                  value={formattedMileage}
+                  onChange={handleMileageChange}
+                  className="w-full p-2 border rounded-lg"
+                />
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price (€) {!localFormData.discussedPrice && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              type="text"
-              value={formattedPrice}
-              onChange={handlePriceChange}
-              className={`w-full p-2 border rounded-lg ${validationErrors.price ? 'border-red-500' : ''}`}
-              required={!localFormData.discussedPrice}
-              disabled={localFormData.discussedPrice}
-              placeholder={localFormData.discussedPrice ? 'Price will be discussed' : ''}
-            />
-            <div className="flex items-center mt-2">
-              <input
-                type="checkbox"
-                id="discussedPrice"
-                checked={localFormData.discussedPrice || false}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setLocalFormData(prev => ({ 
-                    ...prev, 
-                    discussedPrice: isChecked,
-                    price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
-                  }));
-                  
-                  setServerFormData(prev => ({ 
-                    ...prev, 
-                    discussedPrice: isChecked,
-                    price: isChecked ? 0 : prev.price // Set price to 0 when discussedPrice is checked
-                  }));
-                }}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="discussedPrice" className="ml-2 text-sm text-gray-700">
-                Discussed price
-              </label>
-            </div>
-            {validationErrors.price && <p className="text-red-500 text-xs mt-1">{validationErrors.price}</p>}
-          </div>
-        </div>
+          {/* Technical Specifications */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Power (HP)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={localFormData.power}
+                  onChange={(e) => handleFieldChange('power', parseInt(e.target.value))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
 
-      {/* Image Upload */}
-<div>
-  <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
-  
-  {/* Image aspect ratio selector */}
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Image Aspect Ratio
-    </label>
-    <select
-      value={selectedAspectRatio.value}
-      onChange={handleAspectRatioChange}
-      className="w-full p-2 border rounded-lg"
-    >
-      {ASPECT_RATIO_OPTIONS.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
-    <p className="mt-1 text-sm text-gray-500">
-      {selectedAspectRatio.value !== 'original' 
-        ? `Selected ratio: ${selectedAspectRatio.width}:${selectedAspectRatio.height}` 
-        : 'Using original image dimensions'}
-    </p>
-  </div>
-  
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
-  </label>
-  <input
-    type="file"
-    accept={ALLOWED_FILE_TYPES.join(',')}
-    multiple
-    onChange={handleLocalImageUpload}
-    className="w-full border border-gray-300 p-2 rounded"
-  />
-  <p className="mt-1 text-sm text-gray-500">
-    Max file size: 5MB. Supported formats: JPEG, PNG, WebP
-  </p>
-  <p className="mt-1 text-sm text-gray-600">
-    <strong>Tip:</strong> Upload images and click the crop icon to adjust them to your preferred aspect ratio.
-  </p>
-  {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
-  {(localImages.length > 0 || localTempImages.length > 0) && (
-    <ImageGallery
-    images={[...localImages, ...localTempImages]}
-    onDeleteImage={handleLocalImageDelete}
-    onUpdateImage={handleLocalImageUpdateWrapper} // Use the wrapper here
-    isEditing={true}
-    baseUrl={API_BASE_URL}
-    selectedAspectRatio={selectedAspectRatio}
-  />
-  )}
-</div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Engine Size (L)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={localFormData.engine_size}
+                  onChange={(e) => handleFieldChange('engine_size', parseFloat(e.target.value))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
 
-        {/* Vehicle Details */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Vehicle Details</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Body Type
-              </label>
-              <select
-                value={localFormData.body_type}
-                onChange={(e) => handleFieldChange('body_type', e.target.value)}
-                className="w-full p-2 border rounded-lg"
-              >
-                {BODY_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={localFormData.weight}
+                  onChange={(e) => handleFieldChange('weight', parseInt(e.target.value))}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Drivetrain
-              </label>
-              <select
-                value={localFormData.drivetrain}
-                onChange={(e) => handleFieldChange('drivetrain', e.target.value)}
-                className="w-full p-2 border rounded-lg"
-              >
-                {DRIVETRAINS.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gearbox
+                </label>
+                <select
+                  value={localFormData.gearbox}
+                  onChange={(e) => handleFieldChange('gearbox', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {GEARBOX_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cylinders
+                </label>
+                <select
+                  value={localFormData.cylinders}
+                  onChange={(e) => handleFieldChange('cylinders', parseInt(e.target.value))}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
+                >
+                  <option value="">Select Cylinders</option>
+                  {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
+                </select>
+                {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Seats
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="9"
-                value={localFormData.seats}
-                onChange={(e) => handleFieldChange('seats', parseInt(e.target.value))}
-                className="w-full p-2 border rounded-lg"
-              />
+          {/* Additional Information */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fuel Type
+                </label>
+                <select
+                  value={localFormData.fuel_type}
+                  onChange={(e) => handleFieldChange('fuel_type', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {FUEL_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Emission Class
+                </label>
+                <select
+                  value={localFormData.emission_class}
+                  onChange={(e) => handleFieldChange('emission_class', e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {EMISSION_CLASSES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Doors
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="6"
-                value={localFormData.doors}
-                onChange={(e) => handleFieldChange('doors', parseInt(e.target.value))}
-                className="w-full p-2 border rounded-lg"
-              />
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Created At <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={localFormData.created_at}
+                  onChange={(e) => handleFieldChange('created_at', e.target.value)}
+                  className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
+                  required
+                />
+                {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
+              </div>
+              
+              <div className="flex items-center mt-6">
+                <input
+                  type="checkbox"
+                  checked={localFormData.customs_paid}
+                  onChange={(e) => handleFieldChange('customs_paid', e.target.checked)}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mileage (km)
-              </label>
-              <input
-                type="text"
-                value={formattedMileage}
-                onChange={handleMileageChange}
-                className="w-full p-2 border rounded-lg"
-              />
+            {/* Checkboxes */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={localFormData.is_used}
+                  onChange={(e) => handleFieldChange('is_used', e.target.checked)}
+                  className="h-4 w-4 text-blue-600"
+                />
+                <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Technical Specifications */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Technical Specifications</h3>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Power (HP)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={localFormData.power}
-                onChange={(e) => handleFieldChange('power', parseInt(e.target.value))}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Engine Size (L)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={localFormData.engine_size}
-                onChange={(e) => handleFieldChange('engine_size', parseFloat(e.target.value))}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Weight (kg)
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={localFormData.weight}
-                onChange={(e) => handleFieldChange('weight', parseInt(e.target.value))}
-                className="w-full p-2 border rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Gearbox
-              </label>
-              <select
-                value={localFormData.gearbox}
-                onChange={(e) => handleFieldChange('gearbox', e.target.value)}
-                className="w-full p-2 border rounded-lg"
-              >
-                {GEARBOX_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cylinders
-              </label>
-              <select
-                value={localFormData.cylinders}
-                onChange={(e) => handleFieldChange('cylinders', parseInt(e.target.value))}
-                className={`w-full p-2 border rounded-lg ${validationErrors.cylinders ? 'border-red-500' : ''}`}
-              >
-                <option value="">Select Cylinders</option>
-                {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((num) => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-              {validationErrors.cylinders && <p className="text-red-500 text-xs mt-1">{validationErrors.cylinders}</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Additional Information */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Additional Information</h3>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fuel Type
-              </label>
-              <select
-                value={localFormData.fuel_type}
-                onChange={(e) => handleFieldChange('fuel_type', e.target.value)}
-                className="w-full p-2 border rounded-lg"
-              >
-                {FUEL_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Emission Class
-              </label>
-              <select
-                value={localFormData.emission_class}
-                onChange={(e) => handleFieldChange('emission_class', e.target.value)}
-                className="w-full p-2 border rounded-lg"
-              >
-                {EMISSION_CLASSES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Created At <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={localFormData.created_at}
-                onChange={(e) => handleFieldChange('created_at', e.target.value)}
-                className={`w-full p-2 border rounded-lg ${validationErrors.created_at ? 'border-red-500' : ''}`}
-                required
-              />
-              {validationErrors.created_at && <p className="text-red-500 text-xs mt-1">{validationErrors.created_at}</p>}
-            </div>
-            
-            <div className="flex items-center mt-6">
-              <input
-                type="checkbox"
-                checked={localFormData.customs_paid}
-                onChange={(e) => handleFieldChange('customs_paid', e.target.checked)}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Customs Paid</label>
-            </div>
-          </div>
-
-          {/* Checkboxes */}
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                checked={localFormData.is_used}
-                onChange={(e) => handleFieldChange('is_used', e.target.checked)}
-                className="h-4 w-4 text-blue-600"
-              />
-              <label className="ml-2 text-sm text-gray-700">Used Vehicle</label>
-            </div>
-          </div>
-        </div>
           
           {/* Options */}
           <div>
@@ -1454,15 +1216,16 @@ return (
   
        {/* Submit Button */}
        <button
-       type="submit"
-       disabled={isLoading}
-       className={`w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
-         ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-     >
-       {isLoading ? 'Saving...' : id ? 'Update Car' : 'Add Car'}
-     </button>
-   </form>
- </div>
-);
+         type="submit"
+         disabled={isLoading}
+         className={`w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 
+           ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+       >
+         {isLoading ? 'Saving...' : id ? 'Update Car' : 'Add Car'}
+       </button>
+     </form>
+   </div>
+  );
 }
-export default CarForm
+
+export default CarForm;

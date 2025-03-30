@@ -1,4 +1,4 @@
-// front-end/src/components/CarForm/persistentImageStorage.ts - Enhanced version
+// front-end/src/components/CarForm/persistentImageStorage.ts - Fixed version
 import { TempImage } from './useCarFormImageUpload'
 
 const TEMP_IMAGES_STORAGE_KEY = 'carform_temp_images';
@@ -7,22 +7,12 @@ const SELECTED_ASPECT_RATIO_KEY = 'carform_aspect_ratio';
 const CAR_FORM_SESSION_KEY = 'carform_session_id'; // Add session ID to prevent conflicts
 
 // Define aspect ratio types
-export type AspectRatioOption = {
+export interface AspectRatioOption {
   label: string;
   value: string;
   width: number;
   height: number;
-};
-
-export const ASPECT_RATIO_OPTIONS: AspectRatioOption[] = [
-  { label: 'Original', value: 'original', width: 0, height: 0 },
-  { label: '16:9 (Landscape)', value: '16:9', width: 16, height: 9 },
-  { label: '4:3 (Standard)', value: '4:3', width: 4, height: 3 },
-  { label: '1:1 (Square)', value: '1:1', width: 1, height: 1 },
-  { label: '3:2 (Classic)', value: '3:2', width: 3, height: 2 },
-  { label: '2:3 (Portrait)', value: '2:3', width: 2, height: 3 },
-  { label: '9:16 (Mobile)', value: '9:16', width: 9, height: 16 },
-];
+}
 
 // Generate a unique session ID or use existing one
 export const getFormSessionId = (): string => {
@@ -224,9 +214,4 @@ export const loadSelectedAspectRatio = (): string => {
     console.error('Error loading selected aspect ratio:', error);
     return 'original';
   }
-};
-
-// Get aspect ratio option by value
-export const getAspectRatioByValue = (value: string): AspectRatioOption => {
-  return ASPECT_RATIO_OPTIONS.find(option => option.value === value) || ASPECT_RATIO_OPTIONS[0];
 };

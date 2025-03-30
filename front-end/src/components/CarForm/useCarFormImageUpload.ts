@@ -1,12 +1,12 @@
-// front-end/src/components/CarForm/useCarFormImageUpload.ts - Enhanced version
+// Modified version of useCarFormImageUpload.ts with fixed function name references
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
-import { prepareImagesForUpload } from '../../utils/imageService';
+import { prepareImagesForUpload, getImageDimensions } from '../../utils/imageService';
 import {
   saveTempImagesToStorage,
   loadTempImagesFromStorage,
-  saveNextTempIdToStorage,
+  saveNextTempIdToStorage,  // Corrected name
   loadNextTempIdFromStorage,
   clearTempImagesFromStorage,
   getFormSessionId
@@ -33,16 +33,17 @@ interface UseCarFormImageUploadResult {
   uploadError: string | null;
   handleImageUpload: (files: FileList) => Promise<void>;
   handleImageDelete: (imageId: number) => Promise<boolean>;
-  handleImageUpdate: (imageId: number, newImageBlob: Blob) => Promise<void>;
   setTempImages: React.Dispatch<React.SetStateAction<TempImage[]>>;
   setNextTempId: React.Dispatch<React.SetStateAction<number>>;
   uploadTempImages: (carSlug: string) => Promise<UploadedImage[]>;
   clearTempImagesStorage: () => void;
+  detectedAspectRatio: string | null;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGES = 10;
+const ASPECT_RATIO_TOLERANCE = 0.1; // 10% tolerance for aspect ratio comparison
 
 export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   const { token } = getStoredAuth();
@@ -51,6 +52,7 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [detectedAspectRatio, setDetectedAspectRatio] = useState<string | null>(null);
   
   // Use a ref to track if image loading is in progress
   const isLoadingImages = useRef(false);
@@ -96,6 +98,17 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
         
         if (storedTempImages.length > 0) {
           setTempImages(storedTempImages);
+          
+          // Calculate aspect ratio from the first loaded image
+          if (storedTempImages[0] && storedTempImages[0].preview) {
+            try {
+              const dimensions = await getImageDimensions(storedTempImages[0].preview);
+              const ratio = dimensions.width / dimensions.height;
+              setDetectedAspectRatio(ratio.toFixed(2));
+            } catch (error) {
+              console.error('Failed to get dimensions of stored image:', error);
+            }
+          }
         }
         
         setIsInitialized(true);
@@ -127,21 +140,33 @@ export const useCarFormImageUpload = (): UseCarFormImageUploadResult => {
       saveTempImagesToStorage(tempImages);
     }
   }, [tempImages, isInitialized]);
-  
 
-// Save temp images to localStorage when they change - improve to always save
-useEffect(() => {
-  if (isInitialized) {
-    // Always save when tempImages changes regardless of loading state
-    saveTempImagesToStorage(tempImages);
-    console.log(`Saved ${tempImages.length} temporary images to localStorage`);
-  }
-}, [tempImages, isInitialized]);
-
-
+  // Check if a new image's aspect ratio matches the existing ones
+  const isAspectRatioConsistent = async (imageFile: File, existingRatio: number | null): Promise<boolean> => {
+    if (!existingRatio) return true; // First image, no ratio to compare with
+    
+    try {
+      // Create a URL for the image file
+      const imageUrl = URL.createObjectURL(imageFile);
+      
+      // Get dimensions
+      const dimensions = await getImageDimensions(imageUrl);
+      const newRatio = dimensions.width / dimensions.height;
+      
+      // Revoke the URL to prevent memory leaks
+      URL.revokeObjectURL(imageUrl);
+      
+      // Compare with tolerance
+      const ratioDeviation = Math.abs(newRatio - existingRatio) / existingRatio;
+      return ratioDeviation <= ASPECT_RATIO_TOLERANCE;
+    } catch (error) {
+      console.error('Error checking aspect ratio:', error);
+      return false;
+    }
+  };
 
   // Validate images before adding them to tempImages
-  const validateImages = useCallback((files: FileList, currentImagesCount: number): string | null => {
+  const validateImages = useCallback(async (files: FileList, currentImagesCount: number): Promise<string | null> => {
     if (files.length + currentImagesCount > MAX_IMAGES) {
       return `Maximum ${MAX_IMAGES} images allowed`;
     }
@@ -154,14 +179,29 @@ useEffect(() => {
         return 'Only JPEG, PNG and WebP images are allowed';
       }
     }
+    
+    // If we already have images, check aspect ratio consistency
+    if (currentImagesCount > 0 && detectedAspectRatio) {
+      // Get the current aspect ratio as a number
+      const currentRatio = parseFloat(detectedAspectRatio);
+      
+      // Check each new file for consistent aspect ratio
+      for (const file of files) {
+        const isConsistent = await isAspectRatioConsistent(file, currentRatio);
+        if (!isConsistent) {
+          return 'All images must have the same aspect ratio';
+        }
+      }
+    }
+    
     return null;
-  }, []);
+  }, [detectedAspectRatio]);
 
-  // Enhanced image upload with better error handling
+  // Enhanced image upload with better error handling and aspect ratio validation
   const handleImageUpload = useCallback(async (files: FileList) => {
     setUploadError(null);
     
-    const validationError = validateImages(files, tempImages.length);
+    const validationError = await validateImages(files, tempImages.length);
     if (validationError) {
       setUploadError(validationError);
       return;
@@ -194,6 +234,17 @@ useEffect(() => {
         });
       }
       
+      // Detect aspect ratio from the first image if we don't have one yet
+      if (!detectedAspectRatio && newTempImages.length > 0) {
+        try {
+          const dimensions = await getImageDimensions(newTempImages[0].preview);
+          const ratio = dimensions.width / dimensions.height;
+          setDetectedAspectRatio(ratio.toFixed(2));
+        } catch (error) {
+          console.error('Failed to get dimensions of new image:', error);
+        }
+      }
+      
       // Update state with the new images
       setTempImages(prev => {
         const updatedImages = [...prev, ...newTempImages];
@@ -203,110 +254,14 @@ useEffect(() => {
       });
       
       setNextTempId(currentTempId);
-      saveNextTempIdToStorage(currentTempId);
+      saveNextTempIdToStorage(currentTempId);  // Use the correct function name
       
       console.log(`Added ${newTempImages.length} new temporary images`);
     } catch (error) {
       console.error('Error handling image upload:', error);
       setUploadError('Error processing images. Please try again.');
     }
-  }, [nextTempId, tempImages.length, validateImages]);
-
-  // Update an existing temporary image
-  const handleImageUpdate = useCallback(async (imageId: number, newImageBlob: Blob) => {
-    setUploadError(null);
-    
-    try {
-      console.log(`Updating image with ID: ${imageId}`);
-      
-      // Create an isolated copy of the blob to prevent reference sharing
-      const blobCopy = new Blob([await newImageBlob.arrayBuffer()], { 
-        type: newImageBlob.type 
-      });
-      
-      // Check if the image is a temporary one or server one
-      if (imageId < 0) {
-        // It's a temporary image, update it locally
-        // Create a unique filename with timestamp and ID to prevent conflicts
-        const uniqueFilename = `cropped-image-${Date.now()}-${imageId}.jpg`;
-        
-        const file = new File([blobCopy], uniqueFilename, {
-          type: 'image/jpeg',
-          lastModified: Date.now()
-        });
-        
-        // Create a new unique preview URL for this file only
-        const preview = URL.createObjectURL(file);
-        
-        console.log(`Created new preview URL for image ${imageId}`);
-        
-        // Update the temp images array - carefully to only modify the target image
-        setTempImages(prev => {
-          // Create a map of existing IDs to detect and prevent duplicate updates
-          const idMap = new Map(prev.map(img => [img.id, true]));
-          
-          // Make sure the image exists
-          if (!idMap.has(imageId)) {
-            console.warn(`Attempted to update non-existent image ID: ${imageId}`);
-            return prev;
-          }
-          
-          const updatedImages = prev.map(img => {
-            if (img.id === imageId) {
-              // Revoke the old preview URL to prevent memory leaks
-              if (img.preview) {
-                URL.revokeObjectURL(img.preview);
-                console.log(`Revoked old preview URL for ${imageId}`);
-              }
-              
-              // Return a completely new object with the updated file and preview
-              return { 
-                id: img.id, // Keep the same ID
-                file, // New file
-                preview // New preview URL
-              };
-            }
-            
-            // Return all other images completely unchanged
-            return img;
-          });
-          
-          // Save the updated array to localStorage
-          saveTempImagesToStorage(updatedImages);
-          console.log(`Saved updated image ${imageId} to localStorage`);
-          
-          return updatedImages;
-        });
-      } else {
-        // It's a server-side image, we need to upload the cropped version
-        if (!token) {
-          throw new Error('Authentication token missing');
-        }
-        
-        console.log(`Updating server image with ID: ${imageId}`);
-        
-        const formData = new FormData();
-        formData.append('image', blobCopy, `cropped-server-${imageId}-${Date.now()}.jpg`);
-        
-        // Use a generic endpoint that updates any image by its ID
-        const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPDATE(imageId), {
-          method: 'PUT', // Use PUT to update
-          headers: { Authorization: `Token ${token}` },
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to update image: ${response.status}`);
-        }
-        
-        console.log('Server image updated successfully');
-      }
-    } catch (error) {
-      console.error('Error updating image:', error);
-      setUploadError(error instanceof Error ? error.message : 'Error updating image');
-      throw error; // Re-throw to allow the caller to handle it
-    }
-  }, [token, setTempImages]);
+  }, [nextTempId, tempImages.length, validateImages, detectedAspectRatio]);
 
   // Enhanced delete function with better error handling
   const handleImageDelete = useCallback(async (imageId: number): Promise<boolean> => {
@@ -327,6 +282,11 @@ useEffect(() => {
           
           // After filtering, update localStorage
           saveTempImagesToStorage(filteredImages);
+          
+          // If we removed all images, reset the aspect ratio
+          if (filteredImages.length === 0) {
+            setDetectedAspectRatio(null);
+          }
           
           return filteredImages;
         });
@@ -356,7 +316,7 @@ useEffect(() => {
     }
   }, [token]);
 
-  // Enhanced upload function with progress tracking
+  // Upload temp images to server
   const uploadTempImages = useCallback(async (carSlug: string): Promise<UploadedImage[]> => {
     if (!tempImages.length) {
       return [];
@@ -443,6 +403,7 @@ useEffect(() => {
     // Clear storage and state
     clearTempImagesFromStorage();
     setTempImages([]);
+    setDetectedAspectRatio(null);
     console.log('Manually cleared temporary images storage');
   }, [tempImages]);
 
@@ -453,10 +414,10 @@ useEffect(() => {
     uploadError,
     handleImageUpload,
     handleImageDelete,
-    handleImageUpdate,
     setTempImages,
     setNextTempId,
     uploadTempImages,
-    clearTempImagesStorage
+    clearTempImagesStorage,
+    detectedAspectRatio
   };
 };

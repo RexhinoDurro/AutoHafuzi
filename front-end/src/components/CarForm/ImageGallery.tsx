@@ -1,38 +1,27 @@
-// src/components/CarForm/ImageGallery.tsx - Enhanced version
-import React, { useState } from 'react';
+// Modified ImageGallery.tsx with removal of crop functionality
+import React from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
 import { getCloudinaryUrl } from '../../utils/imageService';
 import { TempImage } from './useCarFormImageUpload';
-import { AspectRatioOption } from './persistentImageStorage';
-import ImageCropper from './ImageCropper';
-import { Crop, Edit2 } from 'lucide-react';
 
 interface ImageGalleryProps {
   images: (CarImage | TempImage)[];
   onDeleteImage: (id: number) => void;
-  onUpdateImage?: (id: number, imageBlob: Blob) => Promise<void | boolean>; // <-- Allow Promise<void | boolean>
   isEditing: boolean;
   baseUrl?: string;
-  selectedAspectRatio?: AspectRatioOption;
+  detectedAspectRatio?: string | null;
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ 
   images, 
   onDeleteImage, 
-  onUpdateImage,
   isEditing, 
   baseUrl = API_BASE_URL,
-  selectedAspectRatio = { label: 'Original', value: 'original', width: 0, height: 0 }
+  detectedAspectRatio = null
 }) => {
   const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
 
-  // State for crop modal
-  const [cropModalOpen, setCropModalOpen] = useState(false);
-  const [currentImageId, setCurrentImageId] = useState<number | null>(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
-  const [isCurrentImageTemp, setIsCurrentImageTemp] = useState(false);
-  
   // Helper to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
     return 'preview' in image;
@@ -76,65 +65,47 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     return fallbackImageUrl;
   };
   
-  // Calculate the aspect ratio styles based on selectedAspectRatio
-  const getAspectRatioStyles = () => {
-    if (selectedAspectRatio.value === 'original') {
+  // Calculate image style based on detected aspect ratio
+  const getImageStyle = () => {
+    if (!detectedAspectRatio) {
       return {
-        aspectRatio: 'auto',
-        objectFit: 'cover' as const,
+        width: '100%',
         height: '100%',
-        width: '100%'
+        objectFit: 'cover' as const
       };
     }
     
-    // For specific aspect ratios
-    return {
-      aspectRatio: `${selectedAspectRatio.width} / ${selectedAspectRatio.height}`,
-      objectFit: 'cover' as const,
-      height: '100%',
-      width: '100%',
-    };
-  };
-
-  // Handle opening the crop modal
-  const handleOpenCropModal = (image: CarImage | TempImage) => {
-    if (!onUpdateImage) return; // Only proceed if update handler is provided
+    const ratio = parseFloat(detectedAspectRatio);
     
-    const isTemp = isTempImage(image);
-    
-    // Set the current image ID, URL, and temp status
-    setCurrentImageId(image.id);
-    setCurrentImageUrl(getImageUrl(image));
-    setIsCurrentImageTemp(isTemp);
-    setCropModalOpen(true);
-
-    console.log(`Opening crop modal for image ID: ${image.id} (${isTemp ? 'Temporary' : 'Server'} image)`);
-  };
-
-  // Handle crop completion
-  const handleCropComplete = async (croppedImageBlob: Blob): Promise<void> => {
-    if (currentImageId === null || !onUpdateImage) return;
-    
-    try {
-      console.log(`Completing crop for image ID: ${currentImageId} (${isCurrentImageTemp ? 'Temporary' : 'Server'} image)`);
-      
-      // Create an isolated copy of the blob to prevent reference sharing
-      const isolatedBlob = new Blob([await croppedImageBlob.arrayBuffer()], { 
-        type: croppedImageBlob.type 
-      });
-      
-      // Generate a unique operation ID for tracing
-      const operationId = `crop-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      console.log(`Operation ID: ${operationId}`);
-      
-      // Pass the blob to the parent component's update handler
-      await onUpdateImage(currentImageId, isolatedBlob);
-      
-      // Only close the modal after successful update
-      setCropModalOpen(false);
-    } catch (error) {
-      console.error('Error updating image after crop:', error);
-      alert('Failed to update image. Please try again.');
+    // Common aspect ratios
+    if (ratio >= 1.7 && ratio <= 1.8) {
+      // 16:9 ratio (1.77)
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const
+      };
+    } else if (ratio >= 1.3 && ratio <= 1.4) {
+      // 4:3 ratio (1.33)
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const
+      };
+    } else if (ratio >= 0.9 && ratio <= 1.1) {
+      // 1:1 ratio (square)
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const
+      };
+    } else {
+      // Custom ratio
+      return {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover' as const
+      };
     }
   };
   
@@ -156,7 +127,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 src={getImageUrl(image)}
                 alt={isTempImage(image) ? "Preview" : "Car"} 
                 className="rounded"
-                style={getAspectRatioStyles()}
+                style={getImageStyle()}
                 onError={(e) => {
                   console.error(`Failed to load image: ${getImageUrl(image)}`);
                   e.currentTarget.src = fallbackImageUrl;
@@ -164,34 +135,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               />
             </div>
             
-            {/* Action buttons */}
-            <div className="absolute top-2 right-2 flex space-x-1">
-              {/* Edit button */}
-              {isEditing && onUpdateImage && (
-                <button
-                  onClick={() => handleOpenCropModal(image)}
-                  className="bg-blue-500 text-white p-1 rounded-full hover:bg-blue-600"
-                  type="button"
-                  aria-label="Edit image"
-                >
-                  <Edit2 size={16} />
-                </button>
-              )}
-              
-              {/* Crop button */}
-              {isEditing && onUpdateImage && (
-                <button
-                  onClick={() => handleOpenCropModal(image)}
-                  className="bg-green-500 text-white p-1 rounded-full hover:bg-green-600"
-                  type="button"
-                  aria-label="Crop image"
-                >
-                  <Crop size={16} />
-                </button>
-              )}
-              
-              {/* Delete button */}
-              {isEditing && (
+            {/* Delete button only */}
+            {isEditing && (
+              <div className="absolute top-2 right-2">
                 <button
                   onClick={() => onDeleteImage(image.id)}
                   className="bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
@@ -200,8 +146,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 >
                   <span aria-hidden="true">×</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
             
             {/* Display "preview" badge for temporary images */}
             {isTempImage(image) && (
@@ -210,28 +156,15 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               </div>
             )}
             
-            {/* Display image ID for debugging */}
-            {process.env.NODE_ENV === 'development' && (
+            {/* Display aspect ratio info if available */}
+            {detectedAspectRatio && process.env.NODE_ENV === 'development' && (
               <div className="absolute bottom-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-70">
-                ID: {image.id}
+                Ratio: {detectedAspectRatio}
               </div>
             )}
           </div>
         ))}
       </div>
-      
-      {/* Image cropper modal with enhanced props */}
-      {cropModalOpen && currentImageUrl && (
-        <ImageCropper 
-          isOpen={cropModalOpen}
-          onClose={() => setCropModalOpen(false)}
-          imageUrl={currentImageUrl}
-          onCropComplete={handleCropComplete}
-          selectedAspectRatio={selectedAspectRatio}
-          currentImageId={currentImageId}
-          isTempImage={isCurrentImageTemp}
-        />
-      )}
     </>
   );
 };

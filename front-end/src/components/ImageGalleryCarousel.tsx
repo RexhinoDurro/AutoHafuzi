@@ -15,6 +15,7 @@ export interface CarImageCarouselProps {
   isMobile?: boolean; // Kept for backward compatibility
   onImageChange?: (index: number) => void;
   initialIndex?: number;
+  detectedAspectRatio?: string | null; // Added aspect ratio prop
 }
 
 const CarImageCarousel: React.FC<CarImageCarouselProps> = ({ 
@@ -22,7 +23,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   baseUrl = API_BASE_URL,
   isMobile = false, // We keep this for compatibility but don't use it directly
   onImageChange,
-  initialIndex = 0
+  initialIndex = 0,
+  detectedAspectRatio = null
 }) => {
   // We can use isMobile in a console.log to avoid the TS warning
   // or we could remove it from the props if not needed by any callers
@@ -56,34 +58,46 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     }
   }, [selectedIndex, onImageChange]);
 
-  // Helper function to determine if an image is a temporary image
+  // Helper to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
     return 'preview' in image;
   };
 
-  // Helper function to get the optimized image URL
+  // Helper to get the correct image URL
   const getImageUrl = useCallback((image: CarImage | TempImage, width = 800, height = 600): string => {
+    // First, handle temporary images
     if (isTempImage(image)) {
       return image.preview;
     }
     
-    // Check if image.url is available from Cloudinary
-    if ('url' in image && image.url && image.url.includes('cloudinary')) {
-      return getCloudinaryUrl(image.url, width, height, 'auto');
+    // For server images with temp previews (from local editing)
+    if ('tempPreview' in image && image.tempPreview) {
+      return image.tempPreview;
     }
     
-    // For direct HTTP URLs
-    if (image.image && typeof image.image === 'string' && 
-        (image.image.startsWith('http://') || image.image.startsWith('https://'))) {
-      return image.image;
+    // For Cloudinary-stored images
+    if ('url' in image && image.url) {
+      if (image.url.includes('cloudinary.com')) {
+        return getCloudinaryUrl(image.url, width, height, 'auto');
+      }
+      return image.url;
     }
     
-    // Default case for relative URLs - prepend the baseUrl
-    if (typeof image.image === 'string') {
-      return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+    // Handle images with direct paths
+    if ('image' in image && image.image) {
+      if (typeof image.image === 'string') {
+        if (image.image.includes('cloudinary.com')) {
+          return getCloudinaryUrl(image.image, 800, 600, 'auto');
+        }
+        
+        if (image.image.startsWith('http://') || image.image.startsWith('https://')) {
+          return image.image;
+        }
+        
+        return `${baseUrl}${image.image.startsWith('/') ? '' : '/'}${image.image}`;
+      }
     }
     
-    // Complete fallback
     return FALLBACK_IMAGE_URL;
   }, [baseUrl]);
 
@@ -92,6 +106,36 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
     return getImageUrl(image, 100, 100);
   }, [getImageUrl]);
 
+  // Calculate appropriate image classes based on detected aspect ratio
+  const getImageClasses = useCallback((): string => {
+    if (!detectedAspectRatio) {
+      return "w-full h-full object-cover";
+    }
+    
+    const ratio = parseFloat(detectedAspectRatio);
+    
+    // Determine best classes based on aspect ratio
+    if (ratio >= 1.7 && ratio <= 1.8) {
+      // 16:9 ratio (1.77)
+      return "w-full h-full object-contain";
+    } else if (ratio >= 1.3 && ratio <= 1.4) {
+      // 4:3 ratio (1.33)
+      return "w-full h-full object-contain";
+    } else if (ratio >= 0.9 && ratio <= 1.1) {
+      // 1:1 ratio (square)
+      return "w-full h-full object-contain";
+    } else if (ratio < 0.8) {
+      // Portrait/vertical images
+      return "w-auto h-full object-contain";
+    } else if (ratio > 2.0) {
+      // Ultra-wide images
+      return "w-full h-auto max-h-full object-contain";
+    } else {
+      // Default for other ratios
+      return "w-full h-full object-contain";
+    }
+  }, [detectedAspectRatio]);
+  
   // Preload images function
   const preloadImages = useCallback(() => {
     // Clear previous preloaded images to prevent memory leaks
@@ -228,26 +272,36 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   // Always show thumbnails, regardless of device
   const shouldShowThumbnails = images.length > 1;
 
+  // Get appropriate image classes based on aspect ratio
+  const imageClasses = getImageClasses();
+
   return (
     <div className="w-full space-y-2">
       {/* Main selected image with swipe functionality */}
       <div 
-        className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow"
+        className="w-full h-48 md:h-72 lg:h-96 relative overflow-hidden rounded-lg shadow bg-gray-100 flex items-center justify-center"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         <div 
-          className={`absolute inset-0 transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+          className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+            height: '100%'
+          }}
         >
           <ResponsiveImage 
             src={imageErrors[selectedIndex] ? FALLBACK_IMAGE_URL : getImageUrl(images[selectedIndex])}
             alt={`Car view ${selectedIndex + 1}`}
             width={800}
             height={600}
-            className="w-full h-full object-cover"
+            className={imageClasses}
             onLoad={() => {/* Optional loading callback */}}
-            objectFit="cover"
+            objectFit="contain"
             placeholder={FALLBACK_IMAGE_URL}
           />
         </div>
@@ -282,6 +336,13 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs md:text-sm">
           {selectedIndex + 1} / {images.length}
         </div>
+        
+        {/* Aspect ratio info if available - only in development mode */}
+        {detectedAspectRatio && process.env.NODE_ENV === 'development' && (
+          <div className="absolute top-2 left-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+            Ratio: {detectedAspectRatio}:1
+          </div>
+        )}
       </div>
       
       {/* Thumbnails - show on all devices */}
@@ -291,7 +352,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
             <div 
               key={image.id}
               className={`
-                cursor-pointer flex-shrink-0 h-14 w-14 md:h-16 md:w-16 rounded overflow-hidden border-2 transition-all
+                cursor-pointer flex-shrink-0 h-14 w-14 md:h-16 md:w-16 rounded overflow-hidden border-2 transition-all flex items-center justify-center bg-gray-100
                 ${index === selectedIndex ? 'border-blue-500 scale-110' : 'border-transparent hover:border-gray-300'}
               `}
               onClick={() => handleThumbnailClick(index)}
@@ -302,8 +363,8 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 width={100}
                 height={100}
                 lazy={true}
-                className="w-full h-full object-cover"
-                objectFit="cover"
+                className={imageClasses}
+                objectFit="contain"
                 onLoad={() => {/* Optional loading callback */}}
               />
             </div>
