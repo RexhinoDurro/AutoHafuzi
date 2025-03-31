@@ -108,44 +108,19 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
       return {
         width: '100%',
         height: '100%',
-        objectFit: 'cover' as const
+        objectFit: 'contain' as const
       };
     }
     
     // Now we can use detectedAspectRatio directly since it's a number
     const ratio = detectedAspectRatio;
     
-    if (ratio >= 1.7 && ratio <= 1.8) {
-      // 16:9 ratio (1.77)
-      return {
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain' as const
-      };
-    } else if (ratio >= 1.3 && ratio <= 1.4) {
-      // 4:3 ratio (1.33)
-      return {
-        width: '100%', 
-        height: '100%',
-        objectFit: 'contain' as const
-      };
-    } else if (ratio >= 0.9 && ratio <= 1.1) {
-      // 1:1 ratio (square)
-      return {
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain' as const
-      };
-    } else if (ratio < 0.8) {
-      // Portrait/vertical images
-      return {
-        width: 'auto',
-        height: '100%',
-        objectFit: 'contain' as const,
-        maxWidth: '100%'
-      };
-    } else if (ratio > 2.0) {
-      // Ultra-wide images
+    // Container aspect ratio (16:9)
+    const containerRatio = 16 / 9;
+    
+    // Determine the rendering strategy based on the image's aspect ratio
+    if (ratio >= containerRatio) {
+      // Wider than container - fit width
       return {
         width: '100%',
         height: 'auto',
@@ -153,32 +128,35 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
         maxHeight: '100%'
       };
     } else {
-      // Default for other ratios
+      // Taller than container - fit height
       return {
-        width: '100%',
+        width: 'auto',
         height: '100%',
-        objectFit: 'contain' as const
+        objectFit: 'contain' as const,
+        maxWidth: '100%'
       };
     }
   }, [detectedAspectRatio]);
 
   // Get the objectFit value for ResponsiveImage component
   const getObjectFitValue = useCallback((): "fill" | "contain" | "cover" | "none" | "scale-down" => {
-    const styles = getImageStyles();
-    // Convert the objectFit from the style to one of the allowed values
-    switch (styles.objectFit) {
-      case 'contain':
-        return 'contain';
-      case 'cover':
-        return 'cover';
-      case 'none':
-        return 'none';
-      case 'scale-down':
-        return 'scale-down';
-      default:
-        return 'contain'; // Default fallback
+    // Container aspect ratio (16:9)
+    const containerRatio = 16 / 9;
+    
+    if (!detectedAspectRatio) {
+      return 'contain';
     }
-  }, [getImageStyles]);
+    
+    const ratio = detectedAspectRatio;
+    
+    if (ratio >= containerRatio) {
+      // Wider than container - ensure full width is visible
+      return 'contain';
+    } else {
+      // Taller than container - ensure full height is visible
+      return 'contain';
+    }
+  }, [detectedAspectRatio]);
   
   // Preload images function
   const preloadImages = useCallback(() => {
@@ -319,6 +297,9 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
   // Get objectFit value only (not using imageStyles directly)
   const objectFitValue = getObjectFitValue();
 
+  // Get image styles
+  const imageStyles = getImageStyles();
+
   return (
     <div className="w-full space-y-2">
       {/* Main selected image with swipe functionality */}
@@ -346,6 +327,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
             objectFit={objectFitValue}
             onLoad={() => {/* Optional loading callback */}}
             placeholder={FALLBACK_IMAGE_URL}
+            style={imageStyles}
           />
         </div>
         
@@ -408,6 +390,7 @@ const CarImageCarousel: React.FC<CarImageCarouselProps> = ({
                 lazy={true}
                 objectFit={objectFitValue}
                 onLoad={() => {/* Optional loading callback */}}
+                style={imageStyles}
               />
             </div>
           ))}

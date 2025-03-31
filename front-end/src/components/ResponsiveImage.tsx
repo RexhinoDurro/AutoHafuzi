@@ -1,5 +1,5 @@
 // src/components/ResponsiveImage.tsx
-import React, { useState } from 'react';
+import React, { useState, CSSProperties } from 'react';
 import { API_BASE_URL } from '../config/api';
 
 interface ResponsiveImageProps {
@@ -13,6 +13,7 @@ interface ResponsiveImageProps {
   placeholder?: string;
   onLoad?: () => void;
   objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  style?: CSSProperties;
 }
 
 /**
@@ -29,7 +30,8 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   sizes = '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw',
   placeholder = '',
   onLoad,
-  objectFit = 'cover'
+  objectFit = 'cover',
+  style = {}
 }) => {
   const [imageError, setImageError] = useState(false);
   const defaultPlaceholder = `${API_BASE_URL}/api/placeholder/${width}/${height}`;
@@ -80,6 +82,15 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   
   const srcSet = !imageError && isCloudinaryUrl(src) ? generateSrcSet(src) : undefined;
   
+  // Merge default styles with passed styles
+  const mergedStyles: React.CSSProperties = {
+    objectFit,
+    maxWidth: '100%', // Ensure it doesn't overflow container
+    boxSizing: 'border-box', // Include padding and border in the element's dimensions
+    display: 'block', // Prevent default inline behavior which can cause spacing issues
+    ...style // Spread passed styles last to allow overriding
+  };
+  
   return (
     <img
       src={imageSrc}
@@ -92,12 +103,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
       loading={lazy ? 'lazy' : undefined}
       onError={() => setImageError(true)}
       onLoad={onLoad}
-      style={{
-        objectFit,
-        maxWidth: '100%', // Ensure it doesn't overflow container
-        boxSizing: 'border-box', // Include padding and border in the element's dimensions
-        display: 'block', // Prevent default inline behavior which can cause spacing issues
-      }}
+      style={mergedStyles}
     />
   );
 };
