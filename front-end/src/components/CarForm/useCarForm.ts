@@ -1,6 +1,6 @@
-// src/components/CarForm/useCarForm.ts - Enhanced with aspect ratio detection
+// src/components/CarForm/useCarForm.ts - Fixed version
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { FormData as CarFormData, Make, Model, Variant, Upholstery } from '../../types/car';
+import { FormData as CarFormData, Make, Model, Variant, Upholstery, CarImage } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
 import { useCarFormImageUpload } from './useCarFormImageUpload';
@@ -29,6 +29,7 @@ export const useCarForm = (id?: string) => {
   const [newOption, setNewOption] = useState<string>('');
   const initialFetchDone = useRef(false);
   const [detectedAspectRatio, setDetectedAspectRatio] = useState<number | null>(null);
+  const [, setServerImages] = useState<CarImage[]>([]);
   
   // Get current date for defaults
   const currentDate = new Date();
@@ -36,7 +37,7 @@ export const useCarForm = (id?: string) => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentDay = currentDate.getDate();
 
-  // Integrate image upload functionality with enhanced aspect ratio detection
+  // Integrate image upload functionality with enhanced approach
   const {
     tempImages,
     nextTempId,
@@ -47,9 +48,9 @@ export const useCarForm = (id?: string) => {
     setTempImages,
     setNextTempId,
     uploadTempImages,
-    clearTempImagesStorage,
+    clearTempImages,
     detectedAspectRatio: uploadDetectedAspectRatio
-  } = useCarFormImageUpload();
+  } = useCarFormImageUpload(id);
 
   // Sync the detected aspect ratio from the upload hook
   useEffect(() => {
@@ -134,28 +135,54 @@ export const useCarForm = (id?: string) => {
     return `${detectedAspectRatio.toFixed(2)}:1`;
   }, [detectedAspectRatio]);
 
-  // Custom image upload handler that preserves existing images
+  // Enhanced image upload handler
   const handleImageUpload = useCallback(async (files: FileList) => {
     try {
-      // Use the hook's handler but make sure we're appending, not replacing
-      const newImages = await hookHandleImageUpload(files);
+      console.log(`Processing ${files.length} images for upload`);
       
-      // Try to detect aspect ratio from first image if not already set
-      if (!detectedAspectRatio && newImages && newImages.length > 0 && newImages[0].preview) {
-        try {
-          const dimensions = await getImageDimensions(newImages[0].preview);
-          setDetectedAspectRatio(dimensions.aspectRatio);
-        } catch (error) {
-          console.error('Error detecting aspect ratio:', error);
-        }
+      // Use the hook's handler but make sure we have the right context (editing or creating)
+      const result = await hookHandleImageUpload(files);
+      
+      // If editing a car (we have an ID), these are server images that were just uploaded
+      if (id && result && result.length > 0 && 'url' in result[0]) {
+        const serverUploadedImages = result as unknown as CarImage[];
+        
+        // Update form data with new server images
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...serverUploadedImages]
+        }));
+        
+        console.log(`Added ${serverUploadedImages.length} server images to form data`);
       }
       
-      return newImages;
+      return result;
     } catch (error) {
       console.error('Error in handleImageUpload:', error);
       return [];
     }
-  }, [hookHandleImageUpload, detectedAspectRatio]);
+  }, [hookHandleImageUpload, id]);
+
+  // Enhanced image delete handler
+  const handleImageDelete = useCallback(async (imageId: number) => {
+    console.log(`Deleting image with ID: ${imageId}`);
+    
+    // Use the hook's handler
+    const success = await hookHandleImageDelete(imageId);
+    
+    if (success) {
+      // If it's a server image (positive ID), remove it from formData.images too
+      if (imageId > 0) {
+        setFormData(prev => ({
+          ...prev,
+          images: prev.images.filter(img => img.id !== imageId)
+        }));
+        console.log(`Removed server image ${imageId} from form data`);
+      }
+    }
+    
+    return success;
+  }, [hookHandleImageDelete]);
 
   const fetchMakes = useCallback(async () => {
     setIsMakesLoading(true);
@@ -254,6 +281,7 @@ export const useCarForm = (id?: string) => {
     }
   }, [formData.model_id, fetchVariants]);
 
+  // Improved fetch car details with proper image handling
   const fetchCarDetails = useCallback(async () => {
     if (!id || initialFetchDone.current) return;
     
@@ -265,31 +293,40 @@ export const useCarForm = (id?: string) => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       
-      console.log("Fetched car data:", data); // For debugging
+      console.log("Fetched car data:", data);
       
-      // Process images to ensure they work with Cloudinary
+      // Process images for Cloudinary
+      let processedImages: CarImage[] = [];
+      
       if (data.images && data.images.length > 0) {
-        // Make sure each image has the necessary properties
-        data.images = data.images.map((img: any) => ({
+        processedImages = data.images.map((img: any) => ({
           ...img,
-          // If URL is available but image is not, set image to URL for backward compatibility
+          id: img.id,
           image: img.image || img.url || '',
-          // Optimize Cloudinary URLs if present
-          url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
+          url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : (
+            img.image && img.image.includes('cloudinary.com') 
+              ? getCloudinaryUrl(img.image, 800, 600, 'auto') 
+              : img.image || ''
+          ),
+          is_primary: img.is_primary || false,
+          order: img.order || 0
         }));
 
         // Try to detect aspect ratio from the first image
-        if (data.images[0]?.url) {
+        if (processedImages[0]?.url) {
           try {
-            const dimensions = await getImageDimensions(data.images[0].url);
+            const dimensions = await getImageDimensions(processedImages[0].url);
             setDetectedAspectRatio(dimensions.aspectRatio);
           } catch (error) {
             console.error('Error detecting aspect ratio from image:', error);
           }
         }
+        
+        // Save server images
+        setServerImages(processedImages);
       }
       
-      // FIXED: Create a complete car data object instead of merging with current formData
+      // Create a complete car data object
       const carData = {
         make_id: data.make,
         model_id: data.model,
@@ -331,7 +368,7 @@ export const useCarForm = (id?: string) => {
         weight: data.weight || 1200,
         emission_class: data.emission_class || 'Euro 6',
         fuel_type: data.fuel_type || 'Petrol',
-        images: data.images || [],
+        images: processedImages, // Use the processed images
         // Make sure we have option_ids
         option_ids: data.options?.map((opt: any) => opt.id || opt) || [],
         options: [],
@@ -451,6 +488,7 @@ export const useCarForm = (id?: string) => {
     return formDataObj;
   }, [currentDay, currentMonth, currentYear]);
 
+  // Improved form submission with better error handling
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -505,9 +543,9 @@ export const useCarForm = (id?: string) => {
       const carSlug = carData.slug;
       console.log("Using car slug for images:", carSlug);
       
-      // Step 2: Upload any temporary images using the enhanced image upload
+      // Step 2: Upload any temporary images
       if (tempImages.length > 0 && carSlug) {
-        console.log(`Uploading ${tempImages.length} compressed images for car slug: ${carSlug}`);
+        console.log(`Uploading ${tempImages.length} temporary images for car slug: ${carSlug}`);
         
         try {
           // Use the uploadTempImages function from useCarFormImageUpload
@@ -531,7 +569,7 @@ export const useCarForm = (id?: string) => {
               }));
             }
             
-            // FIXED: Using a function version of setFormData to avoid dependency on current formData
+            // Update formData with the complete updated car data
             setFormData({
               make_id: updatedCar.make,
               model_id: updatedCar.model,
@@ -584,6 +622,9 @@ export const useCarForm = (id?: string) => {
         }
       }
       
+      // Clear any temporary images
+      clearTempImages();
+      
       return true; // Return success
     } catch (error) {
       console.error('Full error details:', error);
@@ -592,9 +633,9 @@ export const useCarForm = (id?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, id, prepareFormDataForSubmission, tempImages, token, uploadTempImages, currentDay, currentMonth, currentYear]);
+  }, [formData, id, prepareFormDataForSubmission, tempImages, token, uploadTempImages, clearTempImages, currentDay, currentMonth, currentYear]);
 
-  // FIXED: Add dependency array and use useRef to track initial load
+  // Initialize with data fetching
   useEffect(() => {
     fetchMakes();
     fetchUpholsteryTypes();
@@ -605,7 +646,11 @@ export const useCarForm = (id?: string) => {
     
     // Cleanup function to revoke object URLs
     return () => {
-      tempImages.forEach(image => URL.revokeObjectURL(image.preview));
+      tempImages.forEach(image => {
+        if (image.preview) {
+          URL.revokeObjectURL(image.preview);
+        }
+      });
     };
   }, [fetchMakes, fetchUpholsteryTypes, fetchCarDetails, id, tempImages]);
 
@@ -626,7 +671,7 @@ export const useCarForm = (id?: string) => {
     setNewOption, 
     tempImages, 
     handleImageUpload, 
-    handleImageDelete: hookHandleImageDelete, 
+    handleImageDelete, 
     handleSubmit,
     fetchVariants,
     fetchModels,
@@ -637,10 +682,14 @@ export const useCarForm = (id?: string) => {
     // Additional image-related properties
     isUploading,
     uploadError,
-    // Export the clearTempImagesStorage function
-    clearTempImagesStorage,
+    // Export the clearTempImages function
+    clearTempImagesStorage: clearTempImages,
     // Aspect ratio related
     detectedAspectRatio,
-    formatAspectRatio
+    formatAspectRatio,
+    // All images (server + temporary)
+    getAllImages: useCallback(() => {
+      return [...formData.images, ...tempImages];
+    }, [formData.images, tempImages])
   };
 };

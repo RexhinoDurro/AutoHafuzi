@@ -14,8 +14,7 @@ import {
 } from './constants';
 import { TempImage } from './useCarFormImageUpload';
 
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGES = 10;
+
 
 const CarForm = () => {
   const navigate = useNavigate();
@@ -50,6 +49,7 @@ const CarForm = () => {
   const [localImages, setLocalImages] = useState<CarImage[]>([]);
   const [localTempImages, setLocalTempImages] = useState<TempImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // Update local form state when server data changes (initial load or after submit)
   useEffect(() => {
@@ -233,42 +233,29 @@ const CarForm = () => {
   // Local image handlers (fixes image refresh issue)
   const handleLocalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Call the hook's handler but preserve existing images
+      setIsUploading(true);
       hookHandleImageUpload(e.target.files).then(() => {
-        // We don't need to do anything with newImages - the hook updates tempImages already
-        
-        // Clear the file input so the same files can be selected again if needed
-        e.target.value = '';
+        setIsUploading(false);
+        e.target.value = ''; // Clear the file input
       }).catch(error => {
         console.error('Error uploading images:', error);
-        // Clear the file input on error too
-        e.target.value = '';
+        setIsUploading(false);
+        e.target.value = ''; // Clear the file input on error
       });
     }
   };
 
   const handleLocalImageDelete = (imageId: number) => {
-    // Make a copy of current form data to preserve it
     const currentFormData = { ...localFormData };
-    
-    // Handle locally based on image type
-    if (imageId < 0) {
-      // It's a temporary image
-      setLocalTempImages(prev => prev.filter(img => img.id !== imageId));
-      
-      // Also call the hook handler to stay in sync
-      hookHandleImageDelete(imageId);
-    } else {
-      // It's a server image - remove from local display but don't call API yet
-      setLocalImages(prev => prev.filter(img => img.id !== imageId));
-      
-      // Track that we should delete this on submit
-      setImagesToDelete(prev => [...prev, imageId]);
-    }
-    
-    // Restore the form data to prevent clearing
-    setLocalFormData(currentFormData);
-    setServerFormData(currentFormData);
+
+    hookHandleImageDelete(imageId).then(success => {
+      if (!success) {
+        setLocalFormData(currentFormData); // Restore form data on failure
+      }
+    }).catch(error => {
+      console.error('Error deleting image:', error);
+      setLocalFormData(currentFormData); // Restore form data on error
+    });
   };
 
   // Fetch exterior and interior colors
@@ -843,7 +830,7 @@ return (
   <h3 className="text-lg font-medium text-gray-800 mb-3">Images</h3>
   
   {/* Detected aspect ratio display */}
-  {hookTempImages.length > 0 && (
+  {detectedAspectRatio && (
     <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded">
       <p className="text-sm font-medium text-blue-800">
         Detected aspect ratio: {formatAspectRatio()}
@@ -855,11 +842,11 @@ return (
   )}
   
   <label className="block text-sm font-medium text-gray-700 mb-2">
-    Car Images <span className="text-gray-500">({MAX_IMAGES} max)</span>
+    Car Images <span className="text-gray-500">(10 max)</span>
   </label>
   <input
     type="file"
-    accept={ALLOWED_FILE_TYPES.join(',')}
+    accept="image/jpeg,image/png,image/webp"
     multiple
     onChange={handleLocalImageUpload}
     className="w-full border border-gray-300 p-2 rounded"
@@ -867,8 +854,17 @@ return (
   <p className="mt-1 text-sm text-gray-500">
     Max file size: 5MB. Supported formats: JPEG, PNG, WebP
   </p>
-  {isLoading && <p className="mt-2 text-blue-500">Uploading images...</p>}
+  {isUploading && (
+    <div className="mt-2">
+      <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div className="bg-blue-600 h-2.5 rounded-full animate-pulse"></div>
+      </div>
+      <p className="mt-1 text-sm text-blue-500">Uploading images...</p>
+    </div>
+  )}
   {uploadError && <p className="mt-2 text-red-500">{uploadError}</p>}
+  
+  {/* Image Gallery */}
   {(localImages.length > 0 || localTempImages.length > 0) && (
     <ImageGallery
       images={[...localImages, ...localTempImages]}

@@ -1,5 +1,5 @@
-// Modified ImageGallery.tsx to support detected aspect ratio
-import React from 'react';
+// src/components/CarForm/ImageGallery.tsx - Fixed version with better error handling
+import React, { useState } from 'react';
 import { CarImage } from '../../types/car';
 import { API_BASE_URL } from '../../config/api';
 import { getCloudinaryUrl } from '../../utils/imageService';
@@ -20,7 +20,8 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
   baseUrl = API_BASE_URL,
   detectedAspectRatio = null
 }) => {
-  const fallbackImageUrl = `${baseUrl}/api/placeholder/800/600`;
+  const [loadErrors, setLoadErrors] = useState<Record<number, boolean>>({});
+  const placeholderImageUrl = `${baseUrl}/api/placeholder/800/600`;
   
   // Helper to determine if an image is a temporary image
   const isTempImage = (image: CarImage | TempImage): image is TempImage => {
@@ -62,7 +63,16 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
     
     // Last resort fallback - rarely needed with Cloudinary
-    return fallbackImageUrl;
+    return placeholderImageUrl;
+  };
+  
+  // Handle image loading error
+  const handleImageError = (imageId: number) => {
+    console.error(`Failed to load image with ID: ${imageId}`);
+    setLoadErrors(prev => ({
+      ...prev,
+      [imageId]: true
+    }));
   };
   
   // Calculate the aspect ratio styles based on detectedAspectRatio
@@ -115,16 +125,24 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
               backgroundColor: '#f1f1f1'
             }}
           >
-            <img 
-              src={getImageUrl(image)}
-              alt={isTempImage(image) ? "Preview" : "Car"} 
-              className="rounded"
-              style={getAspectRatioStyles()}
-              onError={(e) => {
-                console.error(`Failed to load image: ${getImageUrl(image)}`);
-                e.currentTarget.src = fallbackImageUrl;
-              }}
-            />
+            {loadErrors[image.id] ? (
+              // Fallback for failed images
+              <div className="flex flex-col items-center justify-center text-gray-500 p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 18h16" />
+                </svg>
+                <p className="text-xs text-center">Image could not be loaded</p>
+              </div>
+            ) : (
+              <img 
+                src={getImageUrl(image)}
+                alt={isTempImage(image) ? "Preview" : "Car"} 
+                className="rounded"
+                style={getAspectRatioStyles()}
+                onError={() => handleImageError(image.id)}
+              />
+            )}
           </div>
           {isEditing && (
             <button
@@ -144,6 +162,15 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
           )}
         </div>
       ))}
+      {images.length === 0 && (
+        <div className="col-span-3 p-6 text-center text-gray-500 border border-dashed border-gray-300 rounded">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 18h16" />
+          </svg>
+          <p>No images uploaded yet</p>
+        </div>
+      )}
     </div>
   );
 };

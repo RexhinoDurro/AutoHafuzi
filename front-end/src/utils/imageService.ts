@@ -1,4 +1,4 @@
-// front-end/src/utils/enhancedImageService.ts
+// front-end/src/utils/imageService.ts
 
 /**
  * Enhanced Image Service for optimizing and converting images
@@ -304,6 +304,11 @@ export const getImageDimensions = (url: string): Promise<{
     };
     img.src = url;
   });
+};
+
+// Create a placeholder image URL
+export const getPlaceholderImageUrl = (width: number, height: number): string => {
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'%3E%3Crect width='${width}' height='${height}' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='14px' fill='%23999'%3E${width}x${height}%3C/text%3E%3C/svg%3E`;
 };
 
 // Initialize the image service when the module is imported

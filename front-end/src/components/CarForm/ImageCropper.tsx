@@ -1,4 +1,5 @@
-// src/components/CarForm/ImageCropper.tsx - Enhanced version with better integration
+
+// src/components/CarForm/ImageCropper.tsx - Fixed version
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AspectRatioOption, saveSelectedAspectRatio } from './persistentImageStorage';
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw } from 'lucide-react';
@@ -46,8 +47,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   const [panStartPos, setPanStartPos] = useState({ x: 0, y: 0 });
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   
-  // Session ID for better tracking and debugging
-  const sessionIdRef = useRef<string | null>(null);
+  // Used for error handling
+  const [, setImageLoadError] = useState(false);
   
   // Min and max zoom levels
   const MIN_ZOOM = 0.5;
@@ -58,6 +59,16 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Reset the component when the image URL changes
+  useEffect(() => {
+    if (imageUrl) {
+      setImageLoadError(false);
+      setZoomLevel(1);
+      setRotation(0);
+      setImagePosition({ x: 0, y: 0 });
+    }
+  }, [imageUrl]);
 
   // Initialize crop area when image loads
   const handleImageLoad = useCallback(() => {
@@ -72,7 +83,6 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     
     console.log(`Image loaded - Display: ${offsetWidth}x${offsetHeight}, Natural: ${naturalWidth}x${naturalHeight}`);
     console.log(`Working with image ID: ${currentImageId}, Temp image: ${isTempImage}`);
-    console.log(`Session ID: ${sessionIdRef.current || 'N/A'}`);
     
     // Reset zoom and position
     setZoomLevel(1);
@@ -107,6 +117,8 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
       height: cropHeight
     });
   }, [selectedAspectRatio, currentImageId, isTempImage]);
+
+  // Handle image loading error
 
   // Enforce aspect ratio during crop area changes
   const enforceCropAspectRatio = useCallback((newCrop: CropArea): CropArea => {
@@ -354,7 +366,7 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     };
   }, [isOpen, handleMouseMove, handleMouseUp, handleWheel]);
 
-  // Enhanced generate the cropped image function with better error handling
+  // Generate the cropped image function with better error handling
   const generateCroppedImage = useCallback(async (): Promise<Blob | null> => {
     if (!imageRef.current || !canvasRef.current) {
       console.error('Missing image or canvas reference');
@@ -373,7 +385,6 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
     // Add enhanced logging for debugging
     console.log(`===== CROP OPERATION START =====`);
     console.log(`Image ID: ${currentImageId} (${isTempImage ? 'Temporary' : 'Server'} image)`);
-    console.log(`Session ID: ${sessionIdRef.current}`);
     console.log(`Crop settings: zoom=${zoomLevel}, rotation=${rotation}, position=(${imagePosition.x},${imagePosition.y})`);
     console.log(`Crop area: x=${cropArea.x}, y=${cropArea.y}, w=${cropArea.width}, h=${cropArea.height}`);
     console.log(`Natural image dimensions: ${naturalImageSizeRef.current.width}x${naturalImageSizeRef.current.height}`);
@@ -433,7 +444,6 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
               console.log(`Created blob: ${blob.size} bytes, type: ${blob.type}`);
               
               // Create a completely isolated blob to prevent reference sharing
-              // This is critical to fixing the issue where all images update at once
               const isolatedBlob = new Blob([await blob.arrayBuffer()], { 
                 type: 'image/jpeg' 
               });
@@ -474,7 +484,6 @@ const ImageCropper: React.FC<ImageCropperProps> = ({
         console.log(`Crop operation ID: ${cropOperationId}`);
         
         // Apply the crop by calling the parent component's handler
-        // This will either update a temp image or a server image
         await onCropComplete(croppedBlob);
         
         // Save the selected aspect ratio to localStorage for future use
