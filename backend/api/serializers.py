@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Car, CarMake, CarModel, CarImage, CarVariant, Option, ExteriorColor, InteriorColor, Upholstery, SiteVisit, ContactMessage
-from django.conf import settings
 
 class CarMakeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,16 +35,17 @@ class CarImageSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     
     def get_url(self, obj):
-        """Get the Cloudinary URL for the image"""
-        if obj.public_id:
-            # Construct URL directly from public_id
-            cloud_name = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
-            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{obj.public_id}"
+        """Get the full URL for the image"""
+        request = self.context.get('request')
+        if obj.image and request:
+            return request.build_absolute_uri(obj.image.url)
+        elif obj.image:
+            return obj.image.url
         return None
 
     class Meta:
         model = CarImage
-        fields = ['id', 'image', 'is_primary', 'order', 'url', 'public_id']
+        fields = ['id', 'image', 'is_primary', 'order', 'url']
         
 class OptionSerializer(serializers.ModelSerializer):
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -63,8 +63,8 @@ class CarSerializer(serializers.ModelSerializer):
     model = serializers.PrimaryKeyRelatedField(queryset=CarModel.objects.all())
     variant = serializers.PrimaryKeyRelatedField(queryset=CarVariant.objects.all(), required=False, allow_null=True)
     view_count = serializers.IntegerField(read_only=True)
-    slug = serializers.SlugField(read_only=True)  # Include slug in serializer
-    url = serializers.SerializerMethodField()  # Add URL method field
+    slug = serializers.SlugField(read_only=True)
+    url = serializers.SerializerMethodField()
     
     # Add explicit fields for first registration values
     first_registration_day = serializers.IntegerField(required=False, allow_null=True)
@@ -96,7 +96,7 @@ class CarSerializer(serializers.ModelSerializer):
     interior_color_hex = serializers.CharField(source='interior_color.hex_code', read_only=True)
     
     created_at = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
-    images = CarImageSerializer(many=True, read_only=True)
+    images = CarImageSerializer(many=True, read_only=True, context={'request': None})
     options = serializers.PrimaryKeyRelatedField(
         many=True, 
         queryset=Option.objects.all(),
@@ -134,7 +134,7 @@ class CarSerializer(serializers.ModelSerializer):
             'first_registration', 'full_service_history', 
             'customs_paid', 'power', 'gearbox', 'engine_size', 'gears', 'cylinders', 
             'weight', 'emission_class', 'fuel_type', 'options', 'view_count',
-            'slug', 'url'  # Added slug and url fields to the output
+            'slug', 'url'
         ]
 
     def validate(self, data):
@@ -159,9 +159,7 @@ class SiteVisitSerializer(serializers.ModelSerializer):
         fields = ['id', 'session_id', 'path', 'visited_at', 'ip_address', 'user_agent', 'referrer']
         
 class ContactMessageSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Contact Message model
-    """
+    """Serializer for Contact Message model"""
     class Meta:
         model = ContactMessage
         fields = ['id', 'name', 'email', 'phone', 'subject', 'message', 'is_read', 'created_at']

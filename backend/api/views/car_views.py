@@ -1,5 +1,5 @@
 # car_views.py - Update views to use slug instead of car_id
-import cloudinary
+import os
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -323,25 +323,14 @@ def delete_car(request, car_slug):
     try:
         car = get_object_or_404(Car, slug=car_slug)
         
-        # Delete all associated images first to properly clean up Cloudinary
+        # Delete all associated images and their files
         for image in car.images.all():
             try:
-                # Get the image's public_id for Cloudinary
-                public_id = image.public_id
-                
-                # Configure Cloudinary
-                cloudinary.config(
-                    cloud_name=settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
-                    api_key=settings.CLOUDINARY_STORAGE['API_KEY'],
-                    api_secret=settings.CLOUDINARY_STORAGE['API_SECRET'],
-                    secure=settings.CLOUDINARY_STORAGE['SECURE']
-                )
-                
-                # Delete from Cloudinary if public_id exists
-                if public_id:
-                    cloudinary.uploader.destroy(public_id)
+                # Delete the file from filesystem
+                if image.image and os.path.isfile(image.image.path):
+                    os.remove(image.image.path)
             except Exception as e:
-                logger.error(f"Error deleting image from Cloudinary: {str(e)}")
+                logger.error(f"Error deleting image file: {str(e)}")
         
         # Now delete the car (which will cascade delete related objects)
         car.delete()

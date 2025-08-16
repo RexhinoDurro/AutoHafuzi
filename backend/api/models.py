@@ -4,7 +4,15 @@ from django.contrib.auth.models import User
 import os
 import uuid
 from django.utils.text import slugify
-from cloudinary.models import CloudinaryField
+
+def car_image_upload_path(instance, filename):
+    """Generate upload path for car images"""
+    # Get file extension
+    ext = filename.split('.')[-1]
+    # Generate unique filename
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    # Return path: media/cars/{car_id}/{filename}
+    return f"cars/{instance.car.id}/{filename}"
 
 class CarMake(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -34,14 +42,14 @@ class CarVariant(models.Model):
 
 class ExteriorColor(models.Model):
     name = models.CharField(max_length=100, unique=True)
-    hex_code = models.CharField(max_length=7, default="#000000")  # Store color hex codes
+    hex_code = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
         return self.name
 
 class InteriorColor(models.Model):
     name = models.CharField(max_length=100)
-    hex_code = models.CharField(max_length=7, default="#000000")  # Store color hex codes
+    hex_code = models.CharField(max_length=7, default="#000000")
 
     def __str__(self):
         return self.name 
@@ -72,34 +80,6 @@ class Option(models.Model):
     def __str__(self):
         return self.name
 
-class CarImage(models.Model):
-    car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
-    # Replace ImageField with CloudinaryField
-    image = CloudinaryField(
-        'image',
-        folder='autohafuzi/cars',
-        resource_type='image',
-        transformation={'quality': 'auto:good'},
-        format='auto'
-    )
-    # Store the Cloudinary public_id for direct access
-    public_id = models.CharField(max_length=255, blank=True, null=True)
-    is_primary = models.BooleanField(default=False)
-    order = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['order', 'created_at']
-
-    def __str__(self):
-        return f"Image for {self.car} ({'primary' if self.is_primary else 'secondary'})"
-    
-    def save(self, *args, **kwargs):
-        # Ensure images are saved to structured folders by car ID
-        if not self.public_id and self.car and self.car.id:
-            self.public_id = f"autohafuzi/cars/{self.car.id}/{uuid.uuid4().hex[:8]}"
-        super().save(*args, **kwargs)
-
 class Car(models.Model):
     make = models.ForeignKey(CarMake, on_delete=models.CASCADE)
     model = models.ForeignKey(CarModel, on_delete=models.CASCADE)
@@ -116,10 +96,10 @@ class Car(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     view_count = models.IntegerField(default=0)
     
-    # The slug field already exists in the database, just include it in the model
+    # The slug field
     slug = models.SlugField(max_length=255, unique=True, blank=True)
 
-    # Car specifications (remaining fields are the same)
+    # Car specifications
     body_type = models.CharField(max_length=50, default="Sedan")
     is_used = models.BooleanField(default=True)
     drivetrain = models.CharField(max_length=50, default="FWD")
@@ -184,15 +164,36 @@ class Car(models.Model):
     def __str__(self):
         return f"{self.make.name} {self.model.name} ({self.first_registration_year or 'N/A'})"
 
+class CarImage(models.Model):
+    car = models.ForeignKey('Car', related_name='images', on_delete=models.CASCADE)
+    # Use regular ImageField instead of CloudinaryField
+    image = models.ImageField(upload_to=car_image_upload_path)
+    is_primary = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"Image for {self.car} ({'primary' if self.is_primary else 'secondary'})"
+    
+    def delete(self, *args, **kwargs):
+        # Delete the actual file when the model instance is deleted
+        if self.image:
+            if os.path.isfile(self.image.path):
+                os.remove(self.image.path)
+        super().delete(*args, **kwargs)
+
 class CarView(models.Model):
     """Track unique views for cars by storing visitor sessions"""
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='views')
-    session_id = models.CharField(max_length=40)  # Store the session ID
-    ip_address = models.GenericIPAddressField(null=True, blank=True)  # Optional: store IP for analytics
+    session_id = models.CharField(max_length=40)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
     viewed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ['car', 'session_id']  # Ensure each session only counts once per car
+        unique_together = ['car', 'session_id']
         ordering = ['-viewed_at']
     
     def __str__(self):
@@ -214,9 +215,7 @@ class SiteVisit(models.Model):
         return f"Visit to {self.path} at {self.visited_at}"
     
 class ContactMessage(models.Model):
-    """
-    Model for storing contact form submissions
-    """
+    """Model for storing contact form submissions"""
     name = models.CharField(max_length=100)
     email = models.EmailField()
     phone = models.CharField(max_length=20, blank=True, null=True)

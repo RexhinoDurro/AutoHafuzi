@@ -32,16 +32,7 @@ ALLOWED_HOSTS = [
     '192.168.0.102'
 ]
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dka3gcr36'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4'),
-    'SECURE': True,  # Always use HTTPS
-    'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
-    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],  # Keep everything by default
-}
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django_extensions',
@@ -54,7 +45,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
-
 ]
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Store sessions in the database
@@ -73,7 +63,6 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
 CSRF_COOKIE_HTTPONLY = False  # JavaScript needs access to CSRF token
 
-
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -86,8 +75,6 @@ MIDDLEWARE = [
     'api.middleware.SiteVisitMiddleware',
 ]
 
-
-
 ROOT_URLCONF = 'backend.urls'
 
 CORS_ALLOW_CREDENTIALS = True
@@ -97,7 +84,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.0.102:5173",
     "https://autohafuzi-fe.onrender.com"
 ]
-
 
 # Additional CORS settings for handling cookies
 CORS_ALLOW_METHODS = [
@@ -211,5 +197,6 @@ STATIC_ROOT = BASE_DIR/'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Media files configuration
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

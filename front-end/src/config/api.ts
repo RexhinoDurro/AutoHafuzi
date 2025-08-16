@@ -1,5 +1,5 @@
 // src/config/api.ts
-export const API_BASE_URL = 'https://autohafuzi.onrender.com';
+export const API_BASE_URL = 'http://127.0.0.1:8000/';
 
 export const API_ENDPOINTS = {
   MAKES: `${API_BASE_URL}/api/makes/`,

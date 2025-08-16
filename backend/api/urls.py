@@ -11,7 +11,8 @@ from .views import (
     get_site_analytics, contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message, placeholder_image,
     about_page
 )
-from .views import cloudinary_views
+# Update import for image views (renamed from cloudinary_views)
+from .views import image_views
 
 urlpatterns = [
     # Car endpoints - specific patterns first
@@ -19,13 +20,13 @@ urlpatterns = [
     path('cars/update/<str:car_slug>/', update_car, name='update_car'),
     path('cars/delete/<str:car_slug>/', delete_car, name='delete_car'),
     
-    # Cloudinary image handling endpoints
-    path('cars/<str:car_slug>/images/', cloudinary_views.add_car_images, name='add_car_images'),
-    path('cars/images/<int:image_id>/', cloudinary_views.delete_car_image, name='delete_car_image'),
-    path('cars/images/update/<int:image_id>/', cloudinary_views.update_car_image, name='update_car_image'),
-    path('cars/<str:car_slug>/images/<int:image_id>/primary/', cloudinary_views.set_primary_image, name='set_primary_image'),
-    path('cars/<str:car_slug>/images/reorder/', cloudinary_views.reorder_car_images, name='reorder_car_images'),
-    path('cars/<str:car_slug>/images/list/', cloudinary_views.get_car_images, name='get_car_images'),
+    # Image handling endpoints (renamed from cloudinary)
+    path('cars/<str:car_slug>/images/', image_views.add_car_images, name='add_car_images'),
+    path('cars/images/<int:image_id>/', image_views.delete_car_image, name='delete_car_image'),
+    path('cars/images/update/<int:image_id>/', image_views.update_car_image, name='update_car_image'),
+    path('cars/<str:car_slug>/images/<int:image_id>/primary/', image_views.set_primary_image, name='set_primary_image'),
+    path('cars/<str:car_slug>/images/reorder/', image_views.reorder_car_images, name='reorder_car_images'),
+    path('cars/<str:car_slug>/images/list/', image_views.get_car_images, name='get_car_images'),
     
     # More general car patterns last
     path('cars/', get_cars, name='get_cars'),

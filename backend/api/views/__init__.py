@@ -2,7 +2,7 @@ from .auth_views import admin_login
 from .car_views import (
     get_cars, get_car, add_car, update_car, delete_car, about_page, get_site_analytics
 )
-from .cloudinary_views import add_car_images, delete_car_image, set_primary_image, get_car_images, reorder_car_images, update_car_image
+from .image_views import add_car_images, delete_car_image, set_primary_image, get_car_images, reorder_car_images, update_car_image
 from .make_model_views import (
     get_makes, get_models, get_variants, 
     add_make, update_make, delete_make,
@@ -17,6 +17,7 @@ from .color_views import (
 )
 from .contact_views import contact_page, submit_contact_form, get_contact_messages, mark_message_as_read, delete_message
 from .placeholder_views import placeholder_image
+
 __all__ = [
     'admin_login',
     'get_cars',
@@ -29,6 +30,7 @@ __all__ = [
     'set_primary_image',
     'get_car_images',
     'reorder_car_images',
+    'update_car_image',
     'get_makes',
     'add_make',
     'update_make',
@@ -63,7 +65,6 @@ __all__ = [
     'submit_contact_form', 
     'get_contact_messages',
     'mark_message_as_read',
-    'delete_message'
+    'delete_message',
     'placeholder_image'
-    'update_car_image'
 ]

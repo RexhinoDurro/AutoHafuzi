@@ -28,10 +28,9 @@ MIDDLEWARE = [
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
   "https://autohafuzi-fe.onrender.com",
-  "https://res.cloudinary.com", 
 ]
 
-# Add cloudinary to INSTALLED_APPS
+# Application definition - Remove Cloudinary apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django_extensions',
@@ -39,9 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',  # Must come before django.contrib.staticfiles
     'django.contrib.staticfiles',
-    'cloudinary',  # Add cloudinary itself
     'api',
     'corsheaders',
     'rest_framework',
@@ -66,22 +63,6 @@ TEMPLATES = [
     },
 ]
 
-# Cloudinary configuration
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'dka3gcr36'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '135938953269971'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'x_ZYp9JhCW-HTYStn6ZoZhvTrK4'),
-    'SECURE': True,  # Always use HTTPS
-    'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
-    'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],  # Keep everything by default
-}
-
-# Media files configuration - Use Cloudinary for media
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
-# Static files configuration - Use both old and new settings syntax for compatibility
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
 # Database configuration
 DATABASES = {
     'default': dj_database_url.config(
@@ -91,14 +72,11 @@ DATABASES = {
 }
 
 # Static files configuration
-# IMPORTANT: Comment this out if the directory doesn't exist
-# STATICFILES_DIRS = [
-#    os.path.join(BASE_DIR, 'dist'),  # This directory doesn't exist on Render
-# ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Media files configuration
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media files configuration for production
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static root setting
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
