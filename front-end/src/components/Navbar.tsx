@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Phone, CarIcon, Home, Menu, X, Heart } from 'lucide-react';
-import logo from '../assets/logo.png';
+import logo from '../assets/autologo1.webp';
 import { useFavorites } from '../context/FavouritesContext';
 
 const Navbar = () => {
@@ -21,7 +21,7 @@ const Navbar = () => {
             <Link to="/" className="flex items-center space-x-2">
               <img 
                 src={logo} 
-                alt="Hafuzi Auto" 
+                alt=" Auto" 
                 className="h-12 w-auto"
               />
             </Link>
@@ -35,7 +35,7 @@ const Navbar = () => {
 
               <Link to="/search" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">
                 <CarIcon className="h-5 w-5" />
-                <span className="font-medium">Makina në Shitje</span>
+                <span className="font-medium">Makina me qera</span>
               </Link>
 
               <Link to="/contact" className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors">

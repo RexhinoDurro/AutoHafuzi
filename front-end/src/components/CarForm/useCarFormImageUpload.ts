@@ -1,4 +1,4 @@
-// src/components/CarForm/useCarFormImageUpload.ts - Fixed version
+// src/components/CarForm/useCarFormImageUpload.ts - FIXED VERSION
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getStoredAuth } from '../../utils/auth';
 import { API_ENDPOINTS } from '../../config/api';
@@ -127,9 +127,14 @@ export const useCarFormImageUpload = (carSlug?: string) => {
     return null;
   }, []);
 
-  // IMPROVED: Handle image upload with two paths - immediate upload or temporary storage
+  // FIXED: Handle image upload with proper error handling and validation
   const handleImageUpload = useCallback(async (files: FileList) => {
     setUploadError(null);
+    
+    if (!files || files.length === 0) {
+      setUploadError('No files selected');
+      return [];
+    }
     
     const validationError = validateImages(files, tempImages.length);
     if (validationError) {
@@ -140,26 +145,38 @@ export const useCarFormImageUpload = (carSlug?: string) => {
     setIsUploading(true);
     
     try {
+      console.log(`Processing ${files.length} files for upload. Car slug: ${carSlug || 'none'}`);
+      
       // IMMEDIATE UPLOAD PATH: If editing an existing car (we have carSlug)
       if (carSlug) {
         console.log(`Direct upload path for car slug: ${carSlug}`);
         
+        if (!token) {
+          throw new Error('Authentication token is missing');
+        }
+        
         // Create FormData with all selected files
         const imageFormData = new FormData();
-        Array.from(files).forEach(file => {
+        Array.from(files).forEach((file, index) => {
+          console.log(`Adding file ${index}: ${file.name} (${file.size} bytes)`);
           imageFormData.append('images', file);
         });
         
         // Upload directly to the server
+        console.log(`Uploading to: ${API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug)}`);
         const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug), {
           method: 'POST',
-          headers: { Authorization: `Token ${token}` },
+          headers: { 
+            Authorization: `Token ${token}`,
+            // Don't set Content-Type - let browser set it with boundary for FormData
+          },
           body: imageFormData,
         });
         
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Failed to upload images: ${errorText}`);
+          console.error('Upload failed:', response.status, errorText);
+          throw new Error(`Failed to upload images: ${response.status} - ${errorText}`);
         }
         
         const data = await response.json();
@@ -167,6 +184,7 @@ export const useCarFormImageUpload = (carSlug?: string) => {
         
         // Return the uploaded images info from server
         const uploadedImages = data.uploaded || [];
+        console.log(`Successfully uploaded ${uploadedImages.length} images`);
         
         // Try to detect aspect ratio if it's not already set
         if (!detectedAspectRatio && uploadedImages.length > 0 && uploadedImages[0].url) {
@@ -187,27 +205,25 @@ export const useCarFormImageUpload = (carSlug?: string) => {
       else {
         console.log('Temporary storage path - car not created yet');
         
-        // Compress files for temporary storage
-        const compressedFiles = await prepareImagesForUpload(Array.from(files), {
-          maxWidth: 1920,
-          maxHeight: 1080,
-          quality: 0.85
-        });
-        
         let currentTempId = nextTempId;
         const newTempImages: TempImage[] = [];
         
-        // Process each image for local preview
-        for (const file of compressedFiles) {
+        // Process each image for local preview (no compression for temp storage)
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          console.log(`Processing temp image ${i}: ${file.name} (${file.size} bytes)`);
+          
           // Detect aspect ratio
           let imageAspectRatio;
           try {
             imageAspectRatio = await detectAspectRatio(file);
+            console.log(`Detected aspect ratio: ${imageAspectRatio}`);
             
             // If this is the first image, set it as the reference aspect ratio
             if (tempImages.length === 0 && newTempImages.length === 0 && !detectedAspectRatio) {
               if (isMounted.current) {
                 setDetectedAspectRatio(imageAspectRatio);
+                console.log(`Set reference aspect ratio: ${imageAspectRatio}`);
               }
             } else if (detectedAspectRatio && !hasCorrectAspectRatio(imageAspectRatio)) {
               // Skip images with incorrect aspect ratio
@@ -221,20 +237,28 @@ export const useCarFormImageUpload = (carSlug?: string) => {
           
           // Create object URL for preview
           const preview = URL.createObjectURL(file);
+          console.log(`Created preview URL for temp image: ${preview}`);
           
-          newTempImages.push({
+          const tempImage: TempImage = {
             id: currentTempId,
             file,
             preview,
             aspectRatio: imageAspectRatio
-          });
+          };
           
+          newTempImages.push(tempImage);
           currentTempId -= 1;
         }
         
+        console.log(`Created ${newTempImages.length} temporary images`);
+        
         // Update state with new images
         if (isMounted.current) {
-          setTempImages(prev => [...prev, ...newTempImages]);
+          setTempImages(prev => {
+            const updated = [...prev, ...newTempImages];
+            console.log(`Total temp images after update: ${updated.length}`);
+            return updated;
+          });
           setNextTempId(currentTempId);
         }
         
@@ -251,50 +275,61 @@ export const useCarFormImageUpload = (carSlug?: string) => {
     }
   }, [tempImages.length, nextTempId, validateImages, carSlug, token, detectAspectRatio, detectedAspectRatio, hasCorrectAspectRatio]);
 
-  // IMPROVED: Delete image - handles both temporary and server images
+  // FIXED: Delete image - handles both temporary and server images
   const handleImageDelete = useCallback(async (imageId: number): Promise<boolean> => {
+    console.log(`Attempting to delete image with ID: ${imageId}`);
+    
     try {
       // TEMPORARY IMAGE: If it's a temp image (negative ID), just remove it locally
       if (imageId < 0) {
+        console.log(`Deleting temporary image: ${imageId}`);
+        
         setTempImages(prev => {
-          const filtered = prev.filter(img => img.id !== imageId);
-          
-          // Revoke object URL for the removed image
-          const removedImage = prev.find(img => img.id === imageId);
-          if (removedImage?.preview) {
-            URL.revokeObjectURL(removedImage.preview);
+          const imageToDelete = prev.find(img => img.id === imageId);
+          if (imageToDelete?.preview) {
+            console.log(`Revoking object URL: ${imageToDelete.preview}`);
+            URL.revokeObjectURL(imageToDelete.preview);
           }
           
+          const filtered = prev.filter(img => img.id !== imageId);
+          console.log(`Temp images after deletion: ${filtered.length}`);
           return filtered;
         });
         
         // If all images are removed, reset aspect ratio detection
         if (tempImages.length <= 1) {
           setDetectedAspectRatio(null);
+          console.log('Reset aspect ratio detection - no images left');
         }
         
         return true;
       }
       // SERVER IMAGE: If it's a server-side image, delete via API
       else {
+        console.log(`Deleting server image: ${imageId}`);
+        
         if (!token) {
           setUploadError('Authentication token missing');
           return false;
         }
         
-        console.log(`Deleting server image with ID: ${imageId}`);
         setIsUploading(true);
 
-        const response = await fetch(API_ENDPOINTS.CARS.IMAGES.DELETE(imageId), {
+        const deleteUrl = API_ENDPOINTS.CARS.IMAGES.DELETE(imageId);
+        console.log(`Deleting from: ${deleteUrl}`);
+        
+        const response = await fetch(deleteUrl, {
           method: 'DELETE',
           headers: { Authorization: `Token ${token}` },
         });
         
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`Failed to delete image: ${errorText}`);
+          console.error('Delete failed:', response.status, errorText);
+          throw new Error(`Failed to delete image: ${response.status} - ${errorText}`);
         }
         
+        console.log(`Successfully deleted server image: ${imageId}`);
         setIsUploading(false);
         return true;
       }
@@ -306,9 +341,12 @@ export const useCarFormImageUpload = (carSlug?: string) => {
     }
   }, [token, tempImages.length]);
 
-  // Upload all temporary images to the server - used when form is submitted
+  // FIXED: Upload all temporary images to the server - used when form is submitted
   const uploadTempImages = useCallback(async (carSlug: string): Promise<UploadedImage[]> => {
+    console.log(`Starting upload of ${tempImages.length} temporary images to car: ${carSlug}`);
+    
     if (!tempImages.length) {
+      console.log('No temporary images to upload');
       return [];
     }
     
@@ -321,22 +359,41 @@ export const useCarFormImageUpload = (carSlug?: string) => {
     setUploadError(null);
     
     try {
-      console.log(`Uploading ${tempImages.length} temporary images to car: ${carSlug}`);
+      // Compress images before upload for better performance
+      console.log('Compressing images before upload...');
+      const compressedFiles = await prepareImagesForUpload(
+        tempImages.map(img => img.file),
+        {
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 0.85
+        }
+      );
+      
+      console.log(`Compressed ${compressedFiles.length} images for upload`);
       
       const imageFormData = new FormData();
-      tempImages.forEach(img => {
-        imageFormData.append('images', img.file);
+      compressedFiles.forEach((file, index) => {
+        console.log(`Adding compressed file ${index}: ${file.name} (${file.size} bytes)`);
+        imageFormData.append('images', file);
       });
       
-      const response = await fetch(API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug), {
+      const uploadUrl = API_ENDPOINTS.CARS.IMAGES.UPLOAD(carSlug);
+      console.log(`Uploading compressed images to: ${uploadUrl}`);
+      
+      const response = await fetch(uploadUrl, {
         method: 'POST',
-        headers: { Authorization: `Token ${token}` },
+        headers: { 
+          Authorization: `Token ${token}`,
+          // Don't set Content-Type - let browser set it with boundary for FormData
+        },
         body: imageFormData,
       });
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to upload images: ${errorText}`);
+        console.error('Upload failed:', response.status, errorText);
+        throw new Error(`Failed to upload images: ${response.status} - ${errorText}`);
       }
       
       const data = await response.json();
@@ -347,18 +404,20 @@ export const useCarFormImageUpload = (carSlug?: string) => {
       // Clear temp images after successful upload
       tempImages.forEach(img => {
         if (img.preview) {
+          console.log(`Revoking object URL after upload: ${img.preview}`);
           URL.revokeObjectURL(img.preview);
         }
       });
       
       if (isMounted.current) {
         setTempImages([]);
+        console.log('Cleared temporary images after successful upload');
       }
       
       setIsUploading(false);
       return uploadedImages;
     } catch (error) {
-      console.error('Error uploading images:', error);
+      console.error('Error uploading temporary images:', error);
       setUploadError(
         error instanceof Error ? error.message : 'Failed to upload images'
       );
@@ -369,15 +428,20 @@ export const useCarFormImageUpload = (carSlug?: string) => {
 
   // Clear all temporary images
   const clearTempImages = useCallback(() => {
+    console.log(`Clearing ${tempImages.length} temporary images`);
+    
     // Revoke all object URLs to prevent memory leaks
     tempImages.forEach(img => {
       if (img.preview) {
+        console.log(`Revoking object URL: ${img.preview}`);
         URL.revokeObjectURL(img.preview);
       }
     });
     
     setTempImages([]);
     setDetectedAspectRatio(null);
+    setUploadError(null);
+    console.log('Cleared all temporary images and reset state');
   }, [tempImages]);
 
   return {

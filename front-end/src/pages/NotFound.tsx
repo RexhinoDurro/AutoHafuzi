@@ -16,7 +16,7 @@ const NotFound: React.FC = () => {
           <div className="flex justify-center mb-6">
             <img 
               src="/assets/logo.png" 
-              alt="Auto Hafuzi" 
+              alt="Auto " 
               className="h-20 w-auto" 
             />
           </div>

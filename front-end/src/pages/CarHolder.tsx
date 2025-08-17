@@ -222,20 +222,20 @@ const CarHolder: React.FC = () => {
 
   // Generate page title and description based on filters
   const generateSeoTitle = (): string => {
-    let title = "Makina për Shitje | Auto Hafuzi";
+    let title = "Makina për Shitje | Auto ";
     
     if (currentFilters.make && makeNames[currentFilters.make]) {
       const makeName = makeNames[currentFilters.make];
-      title = `${makeName} Makina për Shitje | Auto Hafuzi`;
+      title = `${makeName} Makina për Shitje | Auto `;
       
       if (currentFilters.model && modelNames[currentFilters.model]) {
         const modelName = modelNames[currentFilters.model];
-        title = `${makeName} ${modelName} për Shitje | Auto Hafuzi`;
+        title = `${makeName} ${modelName} për Shitje | Auto `;
       }
     }
     
     if (currentFilters.fuel_type) {
-      title = `Makina ${currentFilters.fuel_type} për Shitje | Auto Hafuzi`;
+      title = `Makina ${currentFilters.fuel_type} për Shitje | Auto `;
     }
     
     return title;
@@ -257,7 +257,7 @@ const CarHolder: React.FC = () => {
     if (currentFilters.first_registration_from) filterDetails.push(`vit nga ${currentFilters.first_registration_from}`);
     
     if (filterDetails.length > 0) {
-      description = `Kërkoni makina ${filterDetails.join(', ')} në Auto Hafuzi. Koleksioni ynë ofron cilësi të lartë, garanci dhe çmime konkurruese.`;
+      description = `Kërkoni makina ${filterDetails.join(', ')} në Auto . Koleksioni ynë ofron cilësi të lartë, garanci dhe çmime konkurruese.`;
     }
     
     return description;

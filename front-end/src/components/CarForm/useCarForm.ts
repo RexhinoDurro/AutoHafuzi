@@ -1,4 +1,4 @@
-// src/components/CarForm/useCarForm.ts - Fixed version
+// src/components/CarForm/useCarForm.ts - FIXED VERSION
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FormData as CarFormData, Make, Model, Variant, Upholstery, CarImage } from '../../types/car';
 import { getStoredAuth } from '../../utils/auth';
@@ -26,7 +26,6 @@ export const useCarForm = (id?: string) => {
   const [models, setModels] = useState<Model[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [upholsteryTypes, setUpholsteryTypes] = useState<Upholstery[]>([]);
-  const [newOption, setNewOption] = useState<string>('');
   const initialFetchDone = useRef(false);
   const [detectedAspectRatio, setDetectedAspectRatio] = useState<number | null>(null);
   const [, setServerImages] = useState<CarImage[]>([]);
@@ -135,13 +134,18 @@ export const useCarForm = (id?: string) => {
     return `${detectedAspectRatio.toFixed(2)}:1`;
   }, [detectedAspectRatio]);
 
-  // Enhanced image upload handler
+  // FIXED: Enhanced image upload handler with better error handling
   const handleImageUpload = useCallback(async (files: FileList) => {
+    console.log(`handleImageUpload called with ${files.length} files`);
+    
     try {
-      console.log(`Processing ${files.length} images for upload`);
+      // Clear any previous upload errors
+      setError('');
       
-      // Use the hook's handler but make sure we have the right context (editing or creating)
+      // Use the hook's handler
       const result = await hookHandleImageUpload(files);
+      
+      console.log('Upload result:', result);
       
       // If editing a car (we have an ID), these are server images that were just uploaded
       if (id && result && result.length > 0 && 'url' in result[0]) {
@@ -155,33 +159,49 @@ export const useCarForm = (id?: string) => {
         
         console.log(`Added ${serverUploadedImages.length} server images to form data`);
       }
+      // If creating a new car, the result will be temporary images handled by the hook
+      else if (!id && result && result.length > 0) {
+        console.log(`Added ${result.length} temporary images for new car`);
+      }
       
       return result;
     } catch (error) {
       console.error('Error in handleImageUpload:', error);
+      setError(error instanceof Error ? error.message : 'Failed to upload images');
       return [];
     }
   }, [hookHandleImageUpload, id]);
 
-  // Enhanced image delete handler
+  // FIXED: Enhanced image delete handler
   const handleImageDelete = useCallback(async (imageId: number) => {
-    console.log(`Deleting image with ID: ${imageId}`);
+    console.log(`handleImageDelete called with ID: ${imageId}`);
     
-    // Use the hook's handler
-    const success = await hookHandleImageDelete(imageId);
-    
-    if (success) {
-      // If it's a server image (positive ID), remove it from formData.images too
-      if (imageId > 0) {
-        setFormData(prev => ({
-          ...prev,
-          images: prev.images.filter(img => img.id !== imageId)
-        }));
-        console.log(`Removed server image ${imageId} from form data`);
+    try {
+      // Clear any previous errors
+      setError('');
+      
+      // Use the hook's handler
+      const success = await hookHandleImageDelete(imageId);
+      
+      if (success) {
+        // If it's a server image (positive ID), remove it from formData.images too
+        if (imageId > 0) {
+          setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter(img => img.id !== imageId)
+          }));
+          console.log(`Removed server image ${imageId} from form data`);
+        }
+      } else {
+        setError('Failed to delete image');
       }
+      
+      return success;
+    } catch (error) {
+      console.error('Error in handleImageDelete:', error);
+      setError(error instanceof Error ? error.message : 'Failed to delete image');
+      return false;
     }
-    
-    return success;
   }, [hookHandleImageDelete]);
 
   const fetchMakes = useCallback(async () => {
@@ -394,11 +414,13 @@ export const useCarForm = (id?: string) => {
     }
   }, [id, token, fetchVariants, currentDay, currentMonth, currentYear]);
 
-  // Improved form data preparation for submission to handle all fields properly
+  // FIXED: Improved form data preparation for submission with better debugging
   const prepareFormDataForSubmission = useCallback((data: CarFormData) => {
     if (!data) {
       throw new Error('Form data is undefined');
     }
+    
+    console.log('Preparing form data for submission:', data);
     
     // Create a new FormData object for multipart/form-data submission
     const formDataObj = new FormData();
@@ -479,22 +501,33 @@ export const useCarForm = (id?: string) => {
     
     // OPTIONS HANDLING
     if (Array.isArray(data.option_ids) && data.option_ids.length > 0) {
+      console.log('Adding options to form data:', data.option_ids);
       // For FormData/multipart submissions, DRF expects multiple fields with the same name
       data.option_ids.forEach(optionId => {
         formDataObj.append('options', optionId.toString());
       });
     }
     
+    // Log the FormData contents for debugging
+    console.log('FormData contents:');
+    for (const [key, value] of formDataObj.entries()) {
+      console.log(`${key}: ${value}`);
+    }
+    
     return formDataObj;
   }, [currentDay, currentMonth, currentYear]);
 
-  // Improved form submission with better error handling
+  // FIXED: Improved form submission with better error handling and image upload flow
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log('Form submission started');
+    
     setIsLoading(true);
     setError('');
+    
     try {
-      // Step 1: Create or update car with properly formatted data
+      // STEP 1: Create or update car with properly formatted data
+      console.log('Step 1: Creating/updating car record');
       const formDataObj = prepareFormDataForSubmission(formData);
       
       // The server expects PUT for updates, not PATCH
@@ -537,15 +570,15 @@ export const useCarForm = (id?: string) => {
       }
       
       const carData = await response.json();
-      console.log("Car creation/update response:", carData); // Debug log
+      console.log("Car creation/update response:", carData);
       
       // IMPORTANT: Use the slug for image operations
       const carSlug = carData.slug;
       console.log("Using car slug for images:", carSlug);
       
-      // Step 2: Upload any temporary images
+      // STEP 2: Upload any temporary images (only if we have temp images and a car slug)
       if (tempImages.length > 0 && carSlug) {
-        console.log(`Uploading ${tempImages.length} temporary images for car slug: ${carSlug}`);
+        console.log(`Step 2: Uploading ${tempImages.length} temporary images for car slug: ${carSlug}`);
         
         try {
           // Use the uploadTempImages function from useCarFormImageUpload
@@ -553,78 +586,86 @@ export const useCarForm = (id?: string) => {
           console.log("Successfully uploaded images:", uploadedImages);
           
           // After successful upload, fetch the updated car data to get the new images
-          const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carSlug), {
-            headers: { Authorization: `Token ${token}` },
-          });
-          
-          if (updatedCarResponse.ok) {
-            const updatedCar = await updatedCarResponse.json();
-            // Make sure to process the images with Cloudinary URLs
-            if (updatedCar.images && updatedCar.images.length > 0) {
-              updatedCar.images = updatedCar.images.map((img: any) => ({
-                ...img,
-                image: img.image || img.url || '',
-                // Optimize Cloudinary URLs
-                url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
-              }));
-            }
-            
-            // Update formData with the complete updated car data
-            setFormData({
-              make_id: updatedCar.make,
-              model_id: updatedCar.model,
-              variant_id: updatedCar.variant,
-              make: updatedCar.make?.toString() || '',
-              model: updatedCar.model?.toString() || '',
-              variant: updatedCar.variant?.toString() || '',
-              exterior_color_id: updatedCar.exterior_color,
-              exterior_color_name: updatedCar.exterior_color_name || '',
-              exterior_color_hex: updatedCar.exterior_color_hex || '',
-              interior_color_id: updatedCar.interior_color,
-              interior_color_name: updatedCar.interior_color_name || '',
-              interior_color_hex: updatedCar.interior_color_hex || '',
-              upholstery_id: updatedCar.upholstery,
-              upholstery_name: updatedCar.upholstery_name || '',
-              first_registration_day: updatedCar.first_registration_day || currentDay,
-              first_registration_month: updatedCar.first_registration_month || currentMonth,
-              first_registration_year: updatedCar.first_registration_year || currentYear,
-              discussedPrice: updatedCar.discussed_price || false,
-              price: updatedCar.price || 0,
-              description: updatedCar.description || '',
-              image: null,
-              created_at: updatedCar.created_at || new Date().toISOString().split('T')[0],
-              body_type: updatedCar.body_type || 'Sedan',
-              is_used: updatedCar.is_used !== undefined ? updatedCar.is_used : true,
-              drivetrain: updatedCar.drivetrain || 'FWD',
-              seats: updatedCar.seats || 5,
-              doors: updatedCar.doors || 4,
-              mileage: updatedCar.mileage || 0,
-              general_inspection_date: updatedCar.general_inspection_date || '',
-              full_service_history: updatedCar.full_service_history || false,
-              customs_paid: updatedCar.customs_paid || false,
-              power: updatedCar.power || 100,
-              gearbox: updatedCar.gearbox || 'Manual',
-              engine_size: updatedCar.engine_size || 1.6,
-              gears: updatedCar.gears || 5,
-              cylinders: updatedCar.cylinders || 4,
-              weight: updatedCar.weight || 1200,
-              emission_class: updatedCar.emission_class || 'Euro 6',
-              fuel_type: updatedCar.fuel_type || 'Petrol',
-              images: updatedCar.images || [],
-              option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
-              options: [],
-              slug: updatedCar.slug
+          if (uploadedImages.length > 0) {
+            console.log('Fetching updated car data after image upload');
+            const updatedCarResponse = await fetch(API_ENDPOINTS.CARS.GET(carSlug), {
+              headers: { Authorization: `Token ${token}` },
             });
+            
+            if (updatedCarResponse.ok) {
+              const updatedCar = await updatedCarResponse.json();
+              console.log('Updated car data after image upload:', updatedCar);
+              
+              // Make sure to process the images with Cloudinary URLs
+              if (updatedCar.images && updatedCar.images.length > 0) {
+                updatedCar.images = updatedCar.images.map((img: any) => ({
+                  ...img,
+                  image: img.image || img.url || '',
+                  // Optimize Cloudinary URLs
+                  url: img.url ? getCloudinaryUrl(img.url, 800, 600, 'auto') : img.url
+                }));
+              }
+              
+              // Update formData with the complete updated car data
+              setFormData({
+                make_id: updatedCar.make,
+                model_id: updatedCar.model,
+                variant_id: updatedCar.variant,
+                make: updatedCar.make?.toString() || '',
+                model: updatedCar.model?.toString() || '',
+                variant: updatedCar.variant?.toString() || '',
+                exterior_color_id: updatedCar.exterior_color,
+                exterior_color_name: updatedCar.exterior_color_name || '',
+                exterior_color_hex: updatedCar.exterior_color_hex || '',
+                interior_color_id: updatedCar.interior_color,
+                interior_color_name: updatedCar.interior_color_name || '',
+                interior_color_hex: updatedCar.interior_color_hex || '',
+                upholstery_id: updatedCar.upholstery,
+                upholstery_name: updatedCar.upholstery_name || '',
+                first_registration_day: updatedCar.first_registration_day || currentDay,
+                first_registration_month: updatedCar.first_registration_month || currentMonth,
+                first_registration_year: updatedCar.first_registration_year || currentYear,
+                discussedPrice: updatedCar.discussed_price || false,
+                price: updatedCar.price || 0,
+                description: updatedCar.description || '',
+                image: null,
+                created_at: updatedCar.created_at || new Date().toISOString().split('T')[0],
+                body_type: updatedCar.body_type || 'Sedan',
+                is_used: updatedCar.is_used !== undefined ? updatedCar.is_used : true,
+                drivetrain: updatedCar.drivetrain || 'FWD',
+                seats: updatedCar.seats || 5,
+                doors: updatedCar.doors || 4,
+                mileage: updatedCar.mileage || 0,
+                general_inspection_date: updatedCar.general_inspection_date || '',
+                full_service_history: updatedCar.full_service_history || false,
+                customs_paid: updatedCar.customs_paid || false,
+                power: updatedCar.power || 100,
+                gearbox: updatedCar.gearbox || 'Manual',
+                engine_size: updatedCar.engine_size || 1.6,
+                gears: updatedCar.gears || 5,
+                cylinders: updatedCar.cylinders || 4,
+                weight: updatedCar.weight || 1200,
+                emission_class: updatedCar.emission_class || 'Euro 6',
+                fuel_type: updatedCar.fuel_type || 'Petrol',
+                images: updatedCar.images || [],
+                option_ids: updatedCar.options?.map((opt: any) => opt.id || opt) || [],
+                options: [],
+                slug: updatedCar.slug
+              });
+            }
           }
         } catch (imageError) {
           console.error("Error uploading images:", imageError);
-          // Allow the submission to succeed even if image upload fails
+          // Don't fail the entire submission if image upload fails
+          setError('Car saved successfully, but there was an error uploading some images.');
         }
       }
       
-      // Clear any temporary images
+      // STEP 3: Clear any temporary images
+      console.log('Step 3: Clearing temporary images');
       clearTempImages();
       
+      console.log('Form submission completed successfully');
       return true; // Return success
     } catch (error) {
       console.error('Full error details:', error);
@@ -667,8 +708,6 @@ export const useCarForm = (id?: string) => {
     upholsteryTypes,
     formData, 
     setFormData, 
-    newOption, 
-    setNewOption, 
     tempImages, 
     handleImageUpload, 
     handleImageDelete, 

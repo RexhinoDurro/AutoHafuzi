@@ -19,16 +19,16 @@ const AboutPage = () => {
 
   useEffect(() => {
     // Ensure content is crawlable by setting it up immediately
-    document.title = "Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri";
+    document.title = "Auto  - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri";
     
     // Define meta description for SEO
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute('content', 'Që nga viti 2010, Auto Hafuzi ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.');
+      metaDescription.setAttribute('content', 'Që nga viti 2010, Auto  ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.');
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Që nga viti 2010, Auto Hafuzi ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.';
+      meta.content = 'Që nga viti 2010, Auto  ofron makina të cilësisë së lartë, përfshirë modele Mercedes, BMW, Audi dhe më shumë, me motor diesel dhe benzinë për çdo buxhet.';
       document.head.appendChild(meta);
     }
 
@@ -58,7 +58,7 @@ const AboutPage = () => {
   if (isLoading) {
     return (
       <div ref={contentRef} className="flex justify-center items-center min-h-screen">
-        <h1 className="text-3xl font-bold">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
+        <h1 className="text-3xl font-bold">Auto  - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
       </div>
     );
@@ -80,7 +80,7 @@ const AboutPage = () => {
         
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 text-white animate-fade-in-up">
-            Auto Hafuzi
+            Auto 
           </h1>
           <p className="text-xl md:text-2xl text-white mb-8 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
             Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri
@@ -125,7 +125,7 @@ const AboutPage = () => {
 
         <div className="container mx-auto px-4 relative z-10">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['overview'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-white">Rreth Auto Hafuzi</h2>
+            <h2 className="text-4xl font-bold mb-6 text-white">Rreth Auto </h2>
             <div className="w-24 h-1 bg-yellow-400 mx-auto mb-8"></div>
             <p className="text-xl text-white max-w-3xl mx-auto">
               {companyDescription}
@@ -195,7 +195,7 @@ const AboutPage = () => {
             
             {/* Timeline items */}
             {[
-              { year: "2010", title: "Themelimi", description: "Auto Hafuzi hapi dyert e saj me një koleksion të vogël të automjeteve premium, me fokus të veçantë në modelet diesel dhe benzinë të Mercedes-Benz." },
+              { year: "2010", title: "Themelimi", description: "Auto  hapi dyert e saj me një koleksion të vogël të automjeteve premium, me fokus të veçantë në modelet diesel dhe benzinë të Mercedes-Benz." },
               { year: "2015", title: "Zgjerimi", description: "Ne zgjeruam inventarin tonë dhe u zhvendosëm në një sallë ekspozimi më të madhe për t'i shërbyer më mirë bazës sonë gjithnjë në rritje të klientëve, duke përfshirë një gamë më të gjerë të markave dhe modeleve." },
               { year: "2018", title: "Qendra e Shërbimit", description: "Lançuam qendrën tonë moderne të shërbimit për të ofruar shërbime gjithëpërfshirëse të mirëmbajtjes dhe riparimit për të gjitha markat kryesore të automjeteve, me specializim të veçantë në modelet gjermane." },
               { year: "2023", title: "Transformimi Dixhital", description: "Përqafuam teknologjinë më të fundit për të përmirësuar përvojën e blerjes së makinave si online ashtu edhe personalisht, duke ofruar një proces të thjeshtë për të blerë makinën tuaj të ëndrrave." }
@@ -264,7 +264,7 @@ const AboutPage = () => {
       <section id="contact" className="py-20 bg-gray-100">
         <div className="container mx-auto px-4">
           <div className={`text-center mb-16 transition-all duration-1000 ${isVisible['contact'] ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform translate-y-10'}`}>
-            <h2 className="text-4xl font-bold mb-6 text-gray-900">Kontaktoni Auto Hafuzi</h2>
+            <h2 className="text-4xl font-bold mb-6 text-gray-900">Kontaktoni Auto </h2>
             <div className="w-24 h-1 bg-blue-600 mx-auto mb-8"></div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Na vizitoni në ekspozitën tonë në Fushë-Kruje ose na kontaktoni përmes telefonit apo email
@@ -286,7 +286,7 @@ const AboutPage = () => {
                   </p>
                   <p className="mb-3 flex items-start">
                     <strong className="inline-block w-24">Email:</strong> 
-                    <span>info@hafuziauto.ch</span>
+                    <span>info@auto.ch</span>
                   </p>
                 </address>
                 
@@ -311,15 +311,15 @@ const AboutPage = () => {
                   {/* Replace with actual map component */}
                   <div className="h-64 rounded-lg mb-4 overflow-hidden">
                   <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2990.5073550711737!2d19.708632776587684!3d41.47988367129211!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1351d3ca6f984ff9%3A0x189de1053736cdca!2sAuto%20Hafuzi!5e0!3m2!1sen!2sus!4v1711815843136!5m2!1sen!2sus" 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3825.5435566562167!2d15.933348674891367!3d-19.14164415031907!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1bdf3c7d9d5ec4c5%3A0xefdcd0ee83c540e!2sEtosha%20National%20Park!5e0!3m2!1sen!2sus!4v1692309321501!5m2!1sen!2sus" 
                     width="100%" 
                     height="100%" 
                     style={{ border: 0 }} 
                     allowFullScreen 
                     loading="lazy" 
                     referrerPolicy="no-referrer-when-downgrade"
-                    title="Auto Hafuzi Location Map"
-                    aria-label="Google Maps showing the location of Auto Hafuzi in Fushe-Kruje, Albania"
+                    title="Auto  Location Map"
+                    aria-label="Google Maps showing the location of Auto  in Fushe-Kruje, Albania"
                   ></iframe>
                 </div>
                 </div>
@@ -378,7 +378,7 @@ const AboutPage = () => {
       {/* Server-side rendering enhancement - Add noscript fallback content for SEO */}
       <noscript>
         <div className="text-center p-10">
-          <h1 className="text-3xl font-bold">Auto Hafuzi - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
+          <h1 className="text-3xl font-bold">Auto  - Partneri juaj i besuar në përsosmërinë e automjeteve në Shqipëri</h1>
           <p className="mt-4">Që nga viti 2010, ne jemi përkushtuar ndaj sigurimit të makinave të cilësisë më të lartë për klientët tanë.</p>
           <p className="mt-4">Me një përzgjedhje të gjerë të makinave nga markat më të mira si Mercedes, BMW, Audi dhe më shumë, ne ofrojmë automjete për çdo nevojë dhe buxhet.</p>
           <p className="mt-4">Na vizitoni në ekspozitën tonë në Fushë-Kruje ose na kontaktoni në 069 931 1111.</p>

@@ -30,7 +30,7 @@ const ContactPage: React.FC = () => {
   const [contactInfo, setContactInfo] = useState<ContactInfo>({
     address: 'Fushë-Kruje, Albania, E762, Fushë Krujë',
     phone: '069 931 1111',
-    email: 'info@hafuziauto.ch',
+    email: 'info@auto.ch',
     working_hours: 'E hënë deri të premte: 9:00 - 18:00, E shtunë: 10:00 - 16:00'
   });
   
@@ -159,15 +159,15 @@ const ContactPage: React.FC = () => {
           {/* Add a Google Maps embed or a static map image here */}
           <div className="mt-6 h-48 rounded overflow-hidden">
           <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2990.5073550711737!2d19.708632776587684!3d41.47988367129211!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1351d3ca6f984ff9%3A0x189de1053736cdca!2sAuto%20Hafuzi!5e0!3m2!1sen!2sus!4v1711815843136!5m2!1sen!2sus" 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3825.5435566562167!2d15.933348674891367!3d-19.14164415031907!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1bdf3c7d9d5ec4c5%3A0xefdcd0ee83c540e!2sEtosha%20National%20Park!5e0!3m2!1sen!2sus!4v1692309321501!5m2!1sen!2sus" 
             width="100%" 
             height="100%" 
             style={{ border: 0 }} 
             allowFullScreen 
             loading="lazy" 
             referrerPolicy="no-referrer-when-downgrade"
-            title="Auto Hafuzi Location Map"
-            aria-label="Google Maps showing the location of Auto Hafuzi in Fushe-Kruje, Albania"
+            title="Auto  Location Map"
+            aria-label="Google Maps showing the location of Auto  in Fushe-Kruje, Albania"
           ></iframe>
         </div>
         </div>

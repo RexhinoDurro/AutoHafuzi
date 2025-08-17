@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
-import hafuzilogo from '../assets/logo.png';
+import logo from '../assets/autologo1.webp';
 
 const Footer = () => {
   return (
@@ -11,8 +11,8 @@ const Footer = () => {
           <div className="space-y-4">
             <Link to="/" className="block">
               <img 
-                src={hafuzilogo} 
-                alt="Hafuzi Auto" 
+                src={logo} 
+                alt=" Auto" 
                 className="h-12 w-auto" 
               />
             </Link>
@@ -55,8 +55,8 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
                 <Mail className="h-4 w-4" />
-                <a href="mailto:info@hafuziauto.ch" className="hover:text-white transition-colors">
-                  info@hafuziauto.ch
+                <a href="mailto:info@auto.ch" className="hover:text-white transition-colors">
+                  info@auto.ch
                 </a>
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
@@ -71,7 +71,7 @@ const Footer = () => {
             <h3 className="text-lg font-semibold text-green-600">Na Ndiqni</h3>
             <div className="flex space-x-4">
               <a 
-                href="https://www.facebook.com/autohafuzi/" 
+                href="https://www.facebook.com/auto/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -80,7 +80,7 @@ const Footer = () => {
                 <Facebook className="h-6 w-6" />
               </a>
               <a 
-                href="https://www.instagram.com/autohafuzi" 
+                href="https://www.instagram.com/auto" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors"
@@ -96,7 +96,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} Hafuzi Auto. Të gjitha të drejtat e rezervuara.
+              © {new Date().getFullYear()}  Auto. Të gjitha të drejtat e rezervuara.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link to="/privatesia" className="text-gray-400 text-sm hover:text-white transition-colors">

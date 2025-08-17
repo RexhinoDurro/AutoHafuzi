@@ -176,13 +176,13 @@ const CarDetail: React.FC = () => {
     if (!car) return;
     
     const carTitle = `${car.brand} ${car.model_name} ${car.variant_name || ''}`;
-    const pageTitle = `${carTitle} | Auto Hafuzi`;
+    const pageTitle = `${carTitle} | Auto `;
     
     // Update document title
     document.title = pageTitle;
     
     // Create or update meta description
-    const metaDescription = `${carTitle} - ${car.fuel_type}, ${car.mileage.toLocaleString()} km, ${car.first_registration_year}. Oferta ekskluzive nga Auto Hafuzi.`;
+    const metaDescription = `${carTitle} - ${car.fuel_type}, ${car.mileage.toLocaleString()} km, ${car.first_registration_year}. Oferta ekskluzive nga Auto .`;
     let metaDescTag = document.querySelector('meta[name="description"]');
     if (!metaDescTag) {
       metaDescTag = document.createElement('meta');
@@ -778,11 +778,11 @@ const CarDetail: React.FC = () => {
             <span>Na telefononi: 069 931 1111</span>
           </a>
           <a 
-            href={`mailto:info@hafuziauto.ch?subject=Interes për ${car.brand} ${car.model_name} ${car.variant_name || ''}&body=Përshëndetje, jam i interesuar për makinën ${car.brand} ${car.model_name} me ID: ${car.id}. Ju lutem më kontaktoni me informacione të mëtejshme.`} 
+            href={`mailto:info@auto.ch?subject=Interes për ${car.brand} ${car.model_name} ${car.variant_name || ''}&body=Përshëndetje, jam i interesuar për makinën ${car.brand} ${car.model_name} me ID: ${car.id}. Ju lutem më kontaktoni me informacione të mëtejshme.`} 
             className="flex items-center justify-center gap-2 bg-green-600 text-white py-2 md:py-3 px-4 rounded-lg hover:bg-green-700 transition-colors"
           >
             <Mail size={18} className="md:size-20" />
-            <span>Dërgoni email: info@hafuziauto.ch</span>
+            <span>Dërgoni email: info@auto.ch</span>
           </a>
         </div>
       </div>

@@ -4,7 +4,7 @@ const zlib = require('zlib');
 const path = require('path');
 
 // Set the primary domain consistently for all SEO-related files
-const PRIMARY_DOMAIN = 'https://autohafuzi-fe.onrender.com';
+const PRIMARY_DOMAIN = 'https://auto-fe.onrender.com';
 
 // Create the XML sitemap content
 const generateSitemap = () => {
@@ -82,7 +82,7 @@ const generateSitemap = () => {
 
 // Create the robots.txt content with proper sitemap references
 const generateRobotsTxt = () => {
-  return `# robots.txt for autohafuzi.com
+  return `# robots.txt for auto.com
 User-agent: *
 Allow: /
 

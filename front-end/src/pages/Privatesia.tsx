@@ -6,7 +6,7 @@ import { Shield, User, Database, Lock, Eye, Clock, ArrowLeft } from 'lucide-reac
 const PrivacyPolicyPage: React.FC = () => {
   // Update document title for SEO
   useEffect(() => {
-    document.title = "Politika e Privatësisë | Auto Hafuzi";
+    document.title = "Politika e Privatësisë | Auto ";
     
     // Add meta description
     let metaDescription = document.querySelector('meta[name="description"]');
@@ -15,7 +15,7 @@ const PrivacyPolicyPage: React.FC = () => {
       metaDescription.setAttribute('name', 'description');
       document.head.appendChild(metaDescription);
     }
-    metaDescription.setAttribute('content', 'Politika e Privatësisë e Auto Hafuzi përcakton se si ne mbledhim, përdorim dhe mbrojmë informacionin tuaj personal gjatë përdorimit të faqes sonë.');
+    metaDescription.setAttribute('content', 'Politika e Privatësisë e Auto  përcakton se si ne mbledhim, përdorim dhe mbrojmë informacionin tuaj personal gjatë përdorimit të faqes sonë.');
     
     return () => {
       // Clean up if needed
@@ -35,7 +35,7 @@ const PrivacyPolicyPage: React.FC = () => {
       
       <div className="prose prose-lg max-w-none">
         <p className="text-gray-600 mb-8">
-          Në Auto Hafuzi, ne e vlerësojmë dhe respektojmë privatësinë tuaj. Kjo Politikë e Privatësisë shpjegon se si mbledhim, përdorim dhe mbrojmë informacionin tuaj personal. Duke vizituar dhe përdorur faqen tonë të internetit, ju pranoni praktikat e përshkruara në këtë politikë.
+          Në Auto , ne e vlerësojmë dhe respektojmë privatësinë tuaj. Kjo Politikë e Privatësisë shpjegon se si mbledhim, përdorim dhe mbrojmë informacionin tuaj personal. Duke vizituar dhe përdorur faqen tonë të internetit, ju pranoni praktikat e përshkruara në këtë politikë.
         </p>
 
         <div className="bg-blue-50 p-6 rounded-lg mb-8 border border-blue-100">
@@ -119,7 +119,7 @@ const PrivacyPolicyPage: React.FC = () => {
             <li>Të drejtën për të kufizuar përpunimin e informacionit tuaj</li>
             <li>Të drejtën për të tërhequr pëlqimin tuaj në çdo kohë</li>
           </ul>
-          <p>Për të ushtruar ndonjë nga këto të drejta, ju lutemi na kontaktoni në info@hafuziauto.ch.</p>
+          <p>Për të ushtruar ndonjë nga këto të drejta, ju lutemi na kontaktoni në info@auto.ch.</p>
         </section>
 
         <section className="mb-8">
@@ -135,9 +135,9 @@ const PrivacyPolicyPage: React.FC = () => {
           <h2 className="text-2xl font-semibold mb-4">Kontaktoni Në</h2>
           <p className="mb-4">Nëse keni pyetje ose shqetësime në lidhje me privatësinë tuaj ose këtë politikë, ju lutemi të na kontaktoni në:</p>
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <p className="font-semibold">Auto Hafuzi</p>
+            <p className="font-semibold">Auto </p>
             <p>Adresa: Fushë-Kruje, E762, Fushë Krujë</p>
-            <p>Email: info@hafuziauto.ch</p>
+            <p>Email: info@auto.ch</p>
             <p>Telefon: 069 931 1111</p>
           </div>
         </section>
